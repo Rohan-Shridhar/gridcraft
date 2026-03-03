@@ -3,7 +3,7 @@
   --text-color: #e5e5e5;
   --header-bg-color: #1a1a1a;
   --header-text-color: #e5e5e5;
-  --header-title-size: 5vh;
+  --header-title-size: 10vh;
   --header-subtitle-size: 2vh;
   --menu-bg-color: #1a1a1a;
   --menu-text-color: #e5e5e5;
@@ -40,7 +40,15 @@ header {
   background-color: var(--header-bg-color);
   color: var(--header-text-color);
 }
+.jersey-10-regular {
+  font-family: "Jersey 10", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: var(--header-title-size);
+}
+
 .header-cont {
+  font-family: "Jersey 10", sans-serif;
   text-align: center;
 }
 .header-cont h1 {
