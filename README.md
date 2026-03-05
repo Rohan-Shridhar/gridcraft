@@ -43,7 +43,7 @@ Experience GridCraft here: **[GridCraft Live](https://rohan-shridhar.github.io/g
 
     ```bash
     cd gridcraft
-    Open in your browser
+    # Open in your browser
 
 3. Open in your browser
     ```bash
@@ -112,6 +112,56 @@ This project uses React loaded directly from a CDN rather than a build tool setu
 - Perfect for simple, focused applications
 - All React features available via global `React` object
 
+## How to Contribute 
+
+1. **Fork the repository**
+   - Click the "Fork" button at the top right of the repository page
+
+2. **Clone your fork**
+   ```bash
+   git clone https://github.com/your-username/gridcraft.git
+   cd gridcraft
+  
+3. **Create a feature branch
+
+  ```bash
+  git checkout -b feature/YourFeatureName
+  ```
+
+4. Make your changes
+
+- Edit files in your code editor
+- Test your changes by opening index.html in your browser
+
+5. Commit your changes
+
+  ```bash
+  git add .
+  git commit -m "Add: brief description of your changes"
+  ```
+
+6. Push to your fork
+
+  ```bash
+  git push origin feature/YourFeatureName
+  ```
+
+7. Open a Pull Request
+
+- Go to your fork on GitHub
+- Click "Compare & pull request"
+- Provide a clear description of your changes
+- Reference any related issues (e.g., "Closes #2")
+
+## Guidelines
+
+- Keep pull requests focused on a single feature or fix
+- Test your changes locally before submitting
+- Update documentation if your changes affect usage
+- Be respectful and constructive in discussions
+- If adding a new feature, consider adding a brief explanation of why it's useful
+
+
 ## Future Improvements (Ideas for Contributors) 
 
 - **Keyboard shortcuts** - Ctrl+Z for undo, Ctrl+Y for redo
@@ -119,3 +169,6 @@ This project uses React loaded directly from a CDN rather than a build tool setu
 - **Touch support** - Make it work on tablets and phones
 - **Share feature** - Generate shareable URLs that recreate drawings
 
+## License 📄
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
