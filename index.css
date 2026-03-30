@@ -115,6 +115,14 @@ header {
 }
 
 /* ── Tools ──────────────────────────────────────── */
+.tools-cont button {
+  background-color: transparent;
+  height: 80%;
+}
+.tools-cont label {
+  background-color: transparent;
+  height: 50%;
+}
 .tools-cont {
   display: flex;
   justify-content: center;
@@ -127,7 +135,6 @@ header {
 }
 .tool-btn {
   padding: 0.4rem 1.1rem;
-  background-color: transparent;
   color: var(--tools-text-color);
   border: 1px solid var(--tools-text-color);
   border-radius: 6px;
@@ -142,9 +149,9 @@ header {
   background-color: var(--tools-text-color);
   color: var(--tools-bg-color);
 }
-.tool-btn--active {
-  background-color: var(--tools-text-color);
-  color: var(--tools-bg-color);
+.tools-cont .tool-btn--active {
+  background-color: white;
+  color: black;
 }
 .tool-btn--disabled {
   opacity: 0.35;
@@ -166,17 +173,4 @@ header {
 }
 .color-picker-label:hover {
   background-color: #2e2e2e;
-}
-.color-preview {
-  display: inline-block;
-  width: 1rem;
-  height: 1rem;
-  border-radius: 3px;
-  border: 1px solid #555;
-}
-.color-input {
-  display: flex;
-  position: fixed;
-  top: 45%;
-  right: 75%;
 }

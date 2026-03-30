@@ -7,7 +7,7 @@ const Tools = ({ undo, redo, canUndo, canRedo, selectedColor, setSelectedColor, 
                 disabled={!canUndo}
                 title="Undo (last 5)"
             >
-                ↩ Undo
+                <i className="fa-solid fa-rotate-left"></i>
             </button>
             <button
                 className={`tool-btn${!canRedo ? ' tool-btn--disabled' : ''}`}
@@ -15,18 +15,17 @@ const Tools = ({ undo, redo, canUndo, canRedo, selectedColor, setSelectedColor, 
                 disabled={!canRedo}
                 title="Redo (last 5)"
             >
-                ↪ Redo
+                <i className="fa-solid fa-rotate-right"></i>
             </button>
             <button
                 className={`tool-btn${isEraser ? ' tool-btn--active' : ''}`}
                 onClick={() => setIsEraser(e => !e)}
                 title="Eraser"
             >
-                🧽 Eraser
+                <i className="fa-solid fa-eraser"></i>
             </button>
             <label className="color-picker-label" title="Pick a color">
-                <span className="color-preview" style={{ backgroundColor: selectedColor }} />
-                Color
+                <i className="fa-solid fa-palette"></i>
                 <input
                     type="color"
                     className="color-input"
@@ -39,7 +38,7 @@ const Tools = ({ undo, redo, canUndo, canRedo, selectedColor, setSelectedColor, 
                 onClick={clearAll}
                 title="Clear All"
             >
-                ✦ Clear All
+                <i className="fa-solid fa-trash-can"></i>
             </button>
         </div>
     );
