@@ -1,6 +1,6 @@
 # GridCraft 🎨
 
-A React-powered pixel art tool that lets you paint on a 14x14 grid with the full RGB color spectrum.
+A React-powered pixel art tool that lets you paint on a 15x15 grid with the full RGB color spectrum.
 
 ## Why GridCraft? 🎯
 
@@ -18,13 +18,6 @@ Built with React, GridCraft demonstrates how modern component-based architecture
 - **Clear Canvas** - Start fresh with a single click
 - **Real-time Updates** - See your changes instantly as you draw
 
-## How to Use 🎮
-
-1. **Select a Color** - Use the RGB color picker to choose your desired color
-2. **Draw** - Right-click on any grid cell to fill it with the selected color
-3. **Erase** - Switch to erase mode to remove colors from cells
-4. **Undo/Redo** - Use the undo/redo buttons to step through your drawing history
-5. **Clear** - Click clear to reset the entire grid
 
 ## Live Demo 🚀
 
@@ -101,11 +94,6 @@ gridcraft/
 - **HTML5** - Structure and download API
 - **GitHub Pages** - Hosting and deployment
 
-This project uses React loaded directly from a CDN rather than a build tool setup. This approach:
-- Requires no build step or dependency installation
-- Lightweight and portable
-- Perfect for simple, focused applications
-- All React features available via global `React` object
 
 ## How to Contribute 
 
@@ -164,14 +152,6 @@ Thanks to these amazing people who contributed ❤️
 - Update documentation if your changes affect usage
 - Be respectful and constructive in discussions
 - If adding a new feature, consider adding a brief explanation of why it's useful
-
-
-## Future Improvements (Ideas for Contributors) 
-
-- **Keyboard shortcuts** - Ctrl+Z for undo, Ctrl+Y for redo
-- **Grid resize options** - 8x8, 16x16, 32x32 modes
-- **Touch support** - Make it work on tablets and phones
-- **Share feature** - Generate shareable URLs that recreate drawings
 
 ## License 📄
 
