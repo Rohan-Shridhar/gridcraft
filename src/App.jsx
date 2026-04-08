@@ -1,6 +1,7 @@
-const { useState, useRef } = React;
+const { useState, useRef, useCallback } = React;
 
-const TOTAL_CELLS = 15;
+const GRID_SIZES = [15, 32];
+const DEFAULT_GRID_SIZE = 15;
 const MAX_HISTORY = 15;
 const DEFAULT_COLOR = '#2a2a2a';
 
@@ -8,7 +9,8 @@ const rgbToHex = (r, g, b) =>
   '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
 
 const App = () => {
-  const [cells, setCells] = useState(Array(TOTAL_CELLS * TOTAL_CELLS).fill(DEFAULT_COLOR));
+  const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
+  const [cells, setCells] = useState(Array(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE).fill(DEFAULT_COLOR));
   const [history, setHistory] = useState([]);
   const [future, setFuture] = useState([]);
   const [selectedColor, setSelectedColor] = useState('#e63946');
@@ -22,16 +24,23 @@ const App = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const changeGridSize = (newSize) => {
+    setGridSize(newSize);
+    setHistory([]);
+    setFuture([]);
+    setCells(Array(newSize * newSize).fill(DEFAULT_COLOR));
+  };
+
   const triggerImport = () => fileInputRef.current?.click();
 
-  const paintCell = (index) => {
+  const paintCell = useCallback((index) => {
     const newCells = [...cells];
     newCells[index] = isEraser ? DEFAULT_COLOR : selectedColor;
 
     setHistory(prev => [...prev.slice(-MAX_HISTORY + 1), cells]);
     setFuture([]);
     setCells(newCells);
-  };
+  }, [cells, isEraser, selectedColor]);
 
   const undo = () => {
     if (!history.length) return;
@@ -54,7 +63,7 @@ const App = () => {
   const clearAll = () => {
     setHistory(prev => [...prev.slice(-MAX_HISTORY + 1), cells]);
     setFuture([]);
-    setCells(Array(TOTAL_CELLS * TOTAL_CELLS).fill(DEFAULT_COLOR));
+    setCells(Array(gridSize * gridSize).fill(DEFAULT_COLOR));
   };
 
   const downloadImage = async () => {
@@ -92,18 +101,18 @@ const App = () => {
 
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        canvas.width = TOTAL_CELLS;
-        canvas.height = TOTAL_CELLS;
+        canvas.width = gridSize;
+        canvas.height = gridSize;
 
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, TOTAL_CELLS, TOTAL_CELLS);
+        ctx.drawImage(img, 0, 0, gridSize, gridSize);
 
-        const pixels = ctx.getImageData(0, 0, TOTAL_CELLS, TOTAL_CELLS).data;
+        const pixels = ctx.getImageData(0, 0, gridSize, gridSize).data;
 
         const newCells = [];
         const uniqueColors = new Set();
 
-        for (let i = 0; i < TOTAL_CELLS * TOTAL_CELLS; i++) {
+        for (let i = 0; i < gridSize * gridSize; i++) {
           const r = pixels[i * 4];
           const g = pixels[i * 4 + 1];
           const b = pixels[i * 4 + 2];
@@ -146,7 +155,20 @@ const App = () => {
 
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
-      <Grid cells={cells} paintCell={paintCell} />
+      <Grid cells={cells} gridSize={gridSize} paintCell={paintCell} />
+
+      <div className="grid-size-selector">
+        <span className="grid-size-label">Grid:</span>
+        {GRID_SIZES.map(size => (
+          <button
+            key={size}
+            className={`grid-size-btn${gridSize === size ? ' grid-size-btn--active' : ''}`}
+            onClick={() => changeGridSize(size)}
+          >
+            {size}×{size}
+          </button>
+        ))}
+      </div>
 
       <Tools
         undo={undo}

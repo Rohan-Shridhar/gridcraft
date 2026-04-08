@@ -7,7 +7,7 @@
   --header-subtitle-size: 2vh;
   --menu-bg-color: #1a1a1a;
   --menu-text-color: #e5e5e5;
-  --grid-box-size: 3vh;
+  --grid-box-size: clamp(12px, 3vh, 32px);
   --grid-box-count: 15;
   --grid-bg-color: #1a1a1a;
   --grid-text-color: #e5e5e5;
@@ -86,6 +86,41 @@ header {
 .menu-btn:hover {
   background-color: var(--menu-text-color);
   color: var(--menu-bg-color);
+}
+
+/* ── Grid Size Selector ─────────────────────────── */
+.grid-size-selector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  height: 6vh;
+  width: 100vw;
+}
+.grid-size-label {
+  color: var(--text-color);
+  font-size: 0.95rem;
+  margin-right: 0.25rem;
+}
+.grid-size-btn {
+  padding: 0.3rem 0.8rem;
+  background-color: transparent;
+  color: var(--text-color);
+  border: 1px solid var(--text-color);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.grid-size-btn:hover {
+  background-color: var(--text-color);
+  color: var(--bg-color);
+}
+.grid-size-btn--active {
+  background-color: var(--text-color);
+  color: var(--bg-color);
 }
 
 /* ── Grid ───────────────────────────────────────── */
