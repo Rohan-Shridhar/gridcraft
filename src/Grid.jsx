@@ -1,7 +1,7 @@
-const Grid = ({ cells, paintCell }) => {
+const Grid = ({ cells, gridSize, paintCell }) => {
     const [isMouseDown, setIsMouseDown] = React.useState(false);
     return (
-        <div className="grid-cont" onMouseUp={() => setIsMouseDown(false)} id="pixel-grid">
+        <div className="grid-cont" onMouseUp={() => setIsMouseDown(false)} id="pixel-grid" style={{ '--grid-box-count': gridSize }}>
             {cells.map((color, i) => (
                 <div
                     key={i}
