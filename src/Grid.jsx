@@ -1,4 +1,4 @@
-const Grid = ({ cells, gridSize, showGrid, paintCell }) => {
+const Grid = ({ cells, gridSize, showGrid, isFill, paintCell }) => {
     const [isMouseDown, setIsMouseDown] = React.useState(false);
     return (
         <div
@@ -15,9 +15,10 @@ const Grid = ({ cells, gridSize, showGrid, paintCell }) => {
                         backgroundColor: color || '#2a2a2a',
                         border: showGrid ? undefined : 'none',
                         borderRadius: showGrid ? undefined : '0',
+                        cursor: isFill ? 'cell' : 'crosshair',
                     }}
                     onMouseDown={() => { paintCell(i); setIsMouseDown(true); }}
-                    onMouseEnter={() => isMouseDown && paintCell(i)}
+                    onMouseEnter={() => isMouseDown && !isFill && paintCell(i)}
                     onMouseUp={() => setIsMouseDown(false)}
                 />
             ))}
