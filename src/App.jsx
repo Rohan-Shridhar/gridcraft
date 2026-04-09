@@ -25,6 +25,7 @@ const App = () => {
   };
 
   const changeGridSize = (newSize) => {
+    if(!window.confirm('Changing grid size will clear your current drawing. Continue?')) return;
     setGridSize(newSize);
     setHistory([]);
     setFuture([]);
