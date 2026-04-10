@@ -13,14 +13,17 @@
   --grid-text-color: #e5e5e5;
   --tools-bg-color: #1a1a1a;
   --tools-text-color: #e5e5e5;
+  --grid-board-size: min(calc(100vw - 2rem), 580px);
 }
 body {
+  margin: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
   width: 100vw;
+  overflow-x: hidden;
   background-color: var(--bg-color);
   background-image: url("src/images/bg.jpg");
   background-size: cover;
@@ -126,15 +129,19 @@ header {
 /* ── Grid ───────────────────────────────────────── */
 .grid-cont {
   display: grid;
-  grid-template-columns: repeat(var(--grid-box-count), var(--grid-box-size));
-  grid-template-rows: repeat(var(--grid-box-count), var(--grid-box-size));
+  grid-template-columns: repeat(var(--grid-box-count), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--grid-box-count), minmax(0, 1fr));
   gap: var(--grid-gap, 2px);
+  width: var(--grid-board-size);
+  height: var(--grid-board-size);
   padding: 1.5rem;
+  box-sizing: border-box;
   background-color: var(--bg-color);
 }
 .grid-cell {
-  width: var(--grid-box-size);
-  height: var(--grid-box-size);
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
   background-color: #2a2a2a;
   border: 1px solid #3a3a3a;
   border-radius: 5%;
@@ -257,6 +264,12 @@ header {
 
 .toast i {
   font-size: 16px;
+}
+
+@media (max-width: 640px) {
+  .grid-cont {
+    padding: 0.75rem;
+  }
 }
 
 @keyframes toast-slide-in {

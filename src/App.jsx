@@ -1,19 +1,27 @@
 const { useState, useRef, useCallback } = React;
 
-const GRID_SIZES = [15, 32];
+const GRID_SIZES = [15, 32, 64, 128];
 const DEFAULT_GRID_SIZE = 15;
 const MAX_HISTORY = 15;
-const DEFAULT_COLOR = '#2a2a2a';
+const DEFAULT_COLOR = "#2a2a2a";
 
 const rgbToHex = (r, g, b) =>
-  '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+  "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
+
+const getGridGap = (gridSize, showGrid) => {
+  if (!showGrid) return 0;
+  if (gridSize >= 32) return 0;
+  return 2;
+};
 
 const App = () => {
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
-  const [cells, setCells] = useState(Array(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE).fill(DEFAULT_COLOR));
+  const [cells, setCells] = useState(
+    Array(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE).fill(DEFAULT_COLOR)
+  );
   const [history, setHistory] = useState([]);
   const [future, setFuture] = useState([]);
-  const [selectedColor, setSelectedColor] = useState('#e63946');
+  const [selectedColor, setSelectedColor] = useState("#e63946");
   const [isEraser, setIsEraser] = useState(false);
   const [isFill, setIsFill] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
@@ -24,24 +32,30 @@ const App = () => {
   React.useEffect(() => {
     const handleBeforeUnload = (e) => {
       e.preventDefault();
-      e.returnValue = ''; 
+      e.returnValue = "";
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, []);
 
-  const showToast = (msg, type = 'error') => {
+  const showToast = (msg, type = "error") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
   const changeGridSize = (newSize) => {
-    if(!window.confirm('Changing grid size will clear your current drawing. Continue?')) return;
+    if (
+      !window.confirm(
+        "Changing grid size will clear your current drawing. Continue?"
+      )
+    )
+      return;
     setGridSize(newSize);
+    setShowGrid(newSize < 32);
     setHistory([]);
     setFuture([]);
     setCells(Array(newSize * newSize).fill(DEFAULT_COLOR));
@@ -81,33 +95,36 @@ const App = () => {
     return newCells;
   };
 
-  const paintCell = useCallback((index) => {
-    if (isFill) {
-      const targetColor = cells[index];
-      const fillColor = selectedColor;
-      const newCells = floodFill(cells, index, targetColor, fillColor);
-      if (newCells === cells) return;
+  const paintCell = useCallback(
+    (index) => {
+      if (isFill) {
+        const targetColor = cells[index];
+        const fillColor = selectedColor;
+        const newCells = floodFill(cells, index, targetColor, fillColor);
+        if (newCells === cells) return;
 
-      setHistory(prev => [...prev.slice(-MAX_HISTORY + 1), cells]);
+        setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
+        setFuture([]);
+        setCells(newCells);
+        return;
+      }
+
+      const newCells = [...cells];
+      newCells[index] = isEraser ? DEFAULT_COLOR : selectedColor;
+
+      setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
       setFuture([]);
       setCells(newCells);
-      return;
-    }
-
-    const newCells = [...cells];
-    newCells[index] = isEraser ? DEFAULT_COLOR : selectedColor;
-
-    setHistory(prev => [...prev.slice(-MAX_HISTORY + 1), cells]);
-    setFuture([]);
-    setCells(newCells);
-  }, [cells, isEraser, isFill, selectedColor, gridSize]);
+    },
+    [cells, isEraser, isFill, selectedColor, gridSize]
+  );
 
   const undo = () => {
     if (!history.length) return;
     const prev = history.at(-1);
 
-    setFuture(f => [cells, ...f.slice(0, MAX_HISTORY - 1)]);
-    setHistory(h => h.slice(0, -1));
+    setFuture((f) => [cells, ...f.slice(0, MAX_HISTORY - 1)]);
+    setHistory((h) => h.slice(0, -1));
     setCells(prev);
   };
 
@@ -115,13 +132,13 @@ const App = () => {
     if (!future.length) return;
     const next = future[0];
 
-    setHistory(h => [...h.slice(-MAX_HISTORY + 1), cells]);
-    setFuture(f => f.slice(1));
+    setHistory((h) => [...h.slice(-MAX_HISTORY + 1), cells]);
+    setFuture((f) => f.slice(1));
     setCells(next);
   };
 
   const clearAll = () => {
-    setHistory(prev => [...prev.slice(-MAX_HISTORY + 1), cells]);
+    setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
     setFuture([]);
     setCells(Array(gridSize * gridSize).fill(DEFAULT_COLOR));
   };
@@ -133,7 +150,7 @@ const App = () => {
 
     const canvas = await html2canvas(grid, {
       backgroundColor: null,
-      scale: 8
+      scale: 8,
     });
 
     grid.classList.remove("no-border", "no-gap");
@@ -146,11 +163,11 @@ const App = () => {
 
   const importImage = (e) => {
     const file = e.target.files?.[0];
-    e.target.value = '';
+    e.target.value = "";
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      showToast('Invalid image file');
+    if (!file.type.startsWith("image/")) {
+      showToast("Invalid image file");
       return;
     }
 
@@ -160,11 +177,11 @@ const App = () => {
       const img = new Image();
 
       img.onload = () => {
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         canvas.width = gridSize;
         canvas.height = gridSize;
 
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, gridSize, gridSize);
 
         const pixels = ctx.getImageData(0, 0, gridSize, gridSize).data;
@@ -187,11 +204,11 @@ const App = () => {
           if (!window.confirm("Image too detailed. Continue?")) return;
         }
 
-        setHistory(prev => [...prev.slice(-MAX_HISTORY + 1), cells]);
+        setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
         setFuture([]);
         setCells(newCells);
 
-        showToast('Image imported!', 'success');
+        showToast("Image imported!", "success");
       };
 
       img.src = ev.target.result;
@@ -209,28 +226,37 @@ const App = () => {
         type="file"
         accept="image/*"
         ref={fileInputRef}
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
         onChange={importImage}
       />
 
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
-      <Grid cells={cells} gridSize={gridSize} showGrid={showGrid} isFill={isFill} paintCell={paintCell} />
+      <Grid
+        cells={cells}
+        gridSize={gridSize}
+        showGrid={showGrid}
+        isFill={isFill}
+        paintCell={paintCell}
+        gridGap={getGridGap(gridSize, showGrid)}
+      />
 
       <div className="grid-size-selector">
         <span className="grid-size-label">Grid:</span>
-        {GRID_SIZES.map(size => (
+        {GRID_SIZES.map((size) => (
           <button
             key={size}
-            className={`grid-size-btn${gridSize === size ? ' grid-size-btn--active' : ''}`}
+            className={`grid-size-btn${
+              gridSize === size ? " grid-size-btn--active" : ""
+            }`}
             onClick={() => changeGridSize(size)}
           >
             {size}×{size}
           </button>
         ))}
         <button
-          className={`grid-size-btn${showGrid ? ' grid-size-btn--active' : ''}`}
-          onClick={() => setShowGrid(s => !s)}
+          className={`grid-size-btn${showGrid ? " grid-size-btn--active" : ""}`}
+          onClick={() => setShowGrid((s) => !s)}
           title="Toggle grid lines"
         >
           <i className="fa-solid fa-border-all"></i>
