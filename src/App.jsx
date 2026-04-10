@@ -21,6 +21,19 @@ const App = () => {
 
   const fileInputRef = useRef(null);
 
+  React.useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = ''; 
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   const showToast = (msg, type = 'error') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
