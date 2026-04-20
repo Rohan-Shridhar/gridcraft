@@ -42,14 +42,7 @@ gridcraft/
 ├── LICENSE                 # License file
 └── README.md               # Documentation
 ````
-<p align="center">
-  <img 
-    width="700" 
-    src="https://github.com/Rohan-Shridhar/gridcraft/blob/main/src/images/project-structure.jpg"
-    alt="Project Structure"
-    style="border:1px solid #d0d7de; border-radius:8px; padding:6px; background-color:black;"
-  />
-</p>
+![Project Structure](./src/images/project-structure.png)
 ## Technical Implementation 🔧
 
 - **React 18 (CDN)** - Loaded via unpkg, no build step required
