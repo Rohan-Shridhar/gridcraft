@@ -59,13 +59,15 @@ const App = () => {
       !window.confirm(
         "Changing grid size will clear your current drawing. Continue?"
       )
-    )
-      return;
+    ) return;
+
     setGridSize(newSize);
     setShowGrid(newSize < 32);
     setHistory([]);
     setFuture([]);
     setCells(Array(newSize * newSize).fill(DEFAULT_COLOR));
+
+    showToast(`Grid set to ${newSize}×${newSize}`, "success");
   };
 
   const triggerImport = () => fileInputRef.current?.click();
@@ -283,6 +285,7 @@ const App = () => {
         isFill={isFill}
         setIsFill={setIsFill}
         clearAll={clearAll}
+        showToast={showToast}
       />
 
       <Footer />
