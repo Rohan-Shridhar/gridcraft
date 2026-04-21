@@ -49,9 +49,19 @@ const App = () => {
     };
   }, []);
 
+
+  const toastTimeoutRef = useRef(null);
+
   const showToast = (msg, type = "error") => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 3000);
   };
 
   const changeGridSize = (newSize) => {
