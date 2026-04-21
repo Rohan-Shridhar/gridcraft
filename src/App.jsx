@@ -49,9 +49,19 @@ const App = () => {
     };
   }, []);
 
+
+  const toastTimeoutRef = useRef(null);
+
   const showToast = (msg, type = "error") => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 3000);
   };
 
   const changeGridSize = (newSize) => {
@@ -59,13 +69,15 @@ const App = () => {
       !window.confirm(
         "Changing grid size will clear your current drawing. Continue?"
       )
-    )
-      return;
+    ) return;
+
     setGridSize(newSize);
     setShowGrid(newSize < 32);
     setHistory([]);
     setFuture([]);
     setCells(Array(newSize * newSize).fill(DEFAULT_COLOR));
+
+    showToast(`Grid set to ${newSize}×${newSize}`, "success");
   };
 
   const triggerImport = () => fileInputRef.current?.click();
@@ -283,6 +295,7 @@ const App = () => {
         isFill={isFill}
         setIsFill={setIsFill}
         clearAll={clearAll}
+        showToast={showToast}
       />
 
       <Footer />
