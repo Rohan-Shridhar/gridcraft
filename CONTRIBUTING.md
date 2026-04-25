@@ -76,6 +76,54 @@ If it fits the project, you’re welcome to implement it!
 
 ---
 
+## 📝 Pull Request Template
+
+Use this template for the description of every Pull Request. Copy it into the PR body and fill out each section. Sections that don't apply can be marked `N/A` rather than removed -- it makes review faster when the structure is consistent across PRs.
+
+```markdown
+## Summary
+
+<!-- One or two sentences describing what this PR changes and why. -->
+
+## Related Issue
+
+<!-- Link the issue this PR addresses, e.g. "Closes #123" or "Relates to #45". -->
+
+## Type of Change
+
+<!-- Check whichever applies. Multiple is fine. -->
+
+- [ ] 🐞 Bug fix
+- [ ] ✨ New feature / grid utility
+- [ ] 🎨 UI improvement
+- [ ] 🚀 Performance optimization
+- [ ] 📚 Documentation update
+- [ ] 🧹 Refactor (no behavior change)
+- [ ] 🧪 Tests only
+
+## Screenshots / Recording
+
+<!-- For any UI change, include a before/after screenshot or short clip.
+     For non-UI changes, write "N/A". -->
+
+## How to Test
+
+<!-- Steps a reviewer can follow to verify the change locally:
+     1. Open `index.html` in a browser
+     2. ...
+     3. Expected: ... -->
+
+## Checklist
+
+- [ ] My code runs without errors
+- [ ] I tested the change in a browser
+- [ ] PR is focused on a single feature or fix
+- [ ] No new dependencies added (or, if added, justified above)
+- [ ] Updated documentation if behavior changed
+```
+
+---
+
 ## 🙌 Final Note
 
 Keep it clean. Keep it useful.  
