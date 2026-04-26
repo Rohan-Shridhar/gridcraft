@@ -125,13 +125,16 @@ header {
     background-color 0.2s ease,
     color 0.2s ease;
 }
-.grid-size-btn:hover {
+.grid-size-btn:hover:not(:disabled) {
   background-color: var(--text-color);
   color: var(--bg-color);
 }
 .grid-size-btn--active {
   background-color: var(--text-color);
   color: var(--bg-color);
+}
+.grid-size-btn:disabled {
+  cursor: not-allowed;
 }
 
 /* ── Grid ───────────────────────────────────────── */

@@ -65,6 +65,8 @@ const App = () => {
   };
 
   const changeGridSize = (newSize) => {
+    if (newSize === gridSize) return;
+
     if (
       !window.confirm(
         "Changing grid size will clear your current drawing. Continue?"
@@ -270,6 +272,9 @@ const App = () => {
             className={`grid-size-btn${gridSize === size ? " grid-size-btn--active" : ""
               }`}
             onClick={() => changeGridSize(size)}
+            disabled={gridSize === size}
+            aria-pressed={gridSize === size}
+            title={gridSize === size ? `Already on ${size}×${size}` : `Switch to ${size}×${size}`}
           >
             {size}×{size}
           </button>
