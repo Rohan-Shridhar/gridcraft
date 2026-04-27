@@ -22,7 +22,7 @@ const Tools = ({
                     showToast("Undo", "success");
                 }}
                 disabled={!canUndo}
-                title="Undo"
+                title="Undo (Ctrl+Z)"
             >
                 <i className="fa-solid fa-rotate-left"></i>
             </button>
@@ -35,7 +35,7 @@ const Tools = ({
                     showToast("Redo", "success");
                 }}
                 disabled={!canRedo}
-                title="Redo"
+                title="Redo (Ctrl+Y)"
             >
                 <i className="fa-solid fa-rotate-right"></i>
             </button>
