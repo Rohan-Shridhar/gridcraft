@@ -230,6 +230,11 @@ header {
 .color-picker-label:hover {
   background-color: #2e2e2e;
 }
+.color-picker-label--disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .toast {
   position: fixed;
