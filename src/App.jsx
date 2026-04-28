@@ -31,6 +31,7 @@ const App = () => {
   const fileInputRef = useRef(null);
 
   const handleKeyPress = useCallback((event) => {
+    if (!showGrid) return;
     if (event.key === "z" && event.ctrlKey && history.length) {
       undo()
       showToast("Undo", "success")
@@ -39,7 +40,7 @@ const App = () => {
       redo()
       showToast("Redo", "success")
     }
-  }, [history, future]);
+  }, [history, future, showGrid]);
 
   React.useEffect(() => {
     document.addEventListener('keydown', handleKeyPress);
@@ -320,6 +321,7 @@ const App = () => {
         setIsFill={setIsFill}
         clearAll={clearAll}
         showToast={showToast}
+        isPreview={!showGrid}
       />
 
       <Footer />

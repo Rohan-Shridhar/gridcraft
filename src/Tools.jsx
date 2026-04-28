@@ -10,39 +10,41 @@ const Tools = ({
     isFill,
     setIsFill,
     clearAll,
-    showToast
+    showToast,
+    isPreview = false
 }) => {
+    const previewTitle = isPreview ? "Disabled in preview mode" : null;
     return (
         <div className="tools-cont">
             {/* Undo */}
             <button
-                className={`tool-btn${!canUndo ? ' tool-btn--disabled' : ''}`}
+                className={`tool-btn${!canUndo || isPreview ? ' tool-btn--disabled' : ''}`}
                 onClick={() => {
                     undo();
                     showToast("Undo", "success");
                 }}
-                disabled={!canUndo}
-                title="Undo (Ctrl+Z)"
+                disabled={!canUndo || isPreview}
+                title={previewTitle ?? "Undo (Ctrl+Z)"}
             >
                 <i className="fa-solid fa-rotate-left"></i>
             </button>
 
             {/* Redo */}
             <button
-                className={`tool-btn${!canRedo ? ' tool-btn--disabled' : ''}`}
+                className={`tool-btn${!canRedo || isPreview ? ' tool-btn--disabled' : ''}`}
                 onClick={() => {
                     redo();
                     showToast("Redo", "success");
                 }}
-                disabled={!canRedo}
-                title="Redo (Ctrl+Y)"
+                disabled={!canRedo || isPreview}
+                title={previewTitle ?? "Redo (Ctrl+Y)"}
             >
                 <i className="fa-solid fa-rotate-right"></i>
             </button>
 
             {/* Eraser */}
             <button
-                className={`tool-btn${isEraser ? ' tool-btn--active' : ''}`}
+                className={`tool-btn${isEraser ? ' tool-btn--active' : ''}${isPreview ? ' tool-btn--disabled' : ''}`}
                 onClick={() => {
                     const next = !isEraser;
                     setIsEraser(next);
@@ -51,14 +53,15 @@ const Tools = ({
                         showToast("🧽 Eraser selected", "success");
                     }
                 }}
-                title="Eraser"
+                disabled={isPreview}
+                title={previewTitle ?? "Eraser"}
             >
                 <i className="fa-solid fa-eraser"></i>
             </button>
 
             {/* Fill */}
             <button
-                className={`tool-btn${isFill ? ' tool-btn--active' : ''}`}
+                className={`tool-btn${isFill ? ' tool-btn--active' : ''}${isPreview ? ' tool-btn--disabled' : ''}`}
                 onClick={() => {
                     const next = !isFill;
                     setIsFill(next);
@@ -67,19 +70,25 @@ const Tools = ({
                         showToast("🪣 Fill tool selected", "success");
                     }
                 }}
-                title="Fill"
+                disabled={isPreview}
+                title={previewTitle ?? "Fill"}
             >
                 <i className="fa-solid fa-fill-drip"></i>
             </button>
 
             {/* Color Picker */}
-            <label className="color-picker-label" title="Pick a color">
+            <label
+                className={`color-picker-label${isPreview ? ' color-picker-label--disabled' : ''}`}
+                title={previewTitle ?? "Pick a color"}
+            >
                 <i className="fa-solid fa-palette"></i>
                 <input
                     type="color"
                     className="color-input"
                     value={selectedColor}
+                    disabled={isPreview}
                     onChange={e => {
+                        if (isPreview) return;
                         setSelectedColor(e.target.value);
                         setIsEraser(false);
                         setIsFill(false);
@@ -90,13 +99,14 @@ const Tools = ({
 
             {/* Clear All */}
             <button
-                className="tool-btn"
+                className={`tool-btn${isPreview ? ' tool-btn--disabled' : ''}`}
                 onClick={() => {
                     if (!window.confirm("Clear the entire canvas?")) return;
                     clearAll();
                     showToast("Canvas cleared", "success");
                 }}
-                title="Clear All"
+                disabled={isPreview}
+                title={previewTitle ?? "Clear All"}
             >
                 <i className="fa-solid fa-trash-can"></i>
             </button>
