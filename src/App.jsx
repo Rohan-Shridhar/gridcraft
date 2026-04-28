@@ -30,6 +30,25 @@ const App = () => {
 
   const fileInputRef = useRef(null);
 
+  const handleKeyPress = useCallback((event) => {
+    if (event.key === "z" && event.ctrlKey && history.length) {
+      undo()
+      showToast("Undo", "success")
+    }
+    else if (event.key === "y" && event.ctrlKey && future.length){
+      redo()
+      showToast("Redo", "success")
+    }
+  }, [history, future]);
+
+  React.useEffect(() => {
+    document.addEventListener('keydown', handleKeyPress);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [handleKeyPress]);
+
   React.useEffect(() => {
     const handleBeforeUnload = (e) => {
       e.preventDefault();
