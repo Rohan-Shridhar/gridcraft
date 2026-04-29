@@ -56,6 +56,19 @@ const App = () => {
       e.returnValue = "";
     };
 
+    const isMobile = () => {
+      if (navigator.userAgentData) {
+        return navigator.userAgentData.mobile;
+      }
+
+      // Fallback for browsers that don't support userAgentData.mobile
+      return /Mobi|Android/i.test(navigator.userAgent);
+      };
+
+    if (isMobile()) {
+      showToast("Switch to desktop");
+    }
+
     const handleResize = () => {
       setIsSmallScreen(window.innerWidth < 768 || window.innerHeight < 768);
     };
