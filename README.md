@@ -18,6 +18,19 @@ Built with React, GridCraft demonstrates how modern component-based architecture
 - **Clear Canvas** - Start fresh with a single click
 - **Real-time Updates** - See your changes instantly as you draw
 
+## Keyboard Shortcuts
+
+Shortcuts work while the drawing grid is visible:
+
+| Action | Shortcut |
+| --- | --- |
+| Undo | `Ctrl + Z` |
+| Redo | `Ctrl + Y` |
+| Eraser | `E` |
+| Bucket / Fill tool | `B` |
+| Color picker / Paint brush | `A` |
+| Clear canvas | `C` |
+
 
 ## Live Demo 🚀
 
