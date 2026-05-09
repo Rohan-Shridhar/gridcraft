@@ -6,7 +6,7 @@ const Header = ({ isDarkTheme, toggleTheme }) => {
                 onClick={toggleTheme}
                 className="menu-btn"
                 title="Toggle theme"
-                style={{ position: 'absolute', top: '1rem', right: '1rem' }}
+                style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 1000 }}
             >
                 {isDarkTheme ? <i class="fa-regular fa-sun"></i> : <i class="fa-regular fa-moon"></i>}
             </button>
