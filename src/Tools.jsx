@@ -54,7 +54,7 @@ const Tools = ({
                     }
                 }}
                 disabled={isPreview}
-                title={previewTitle ?? "Eraser"}
+                title={previewTitle ?? "Eraser (E)"}
             >
                 <i className="fa-solid fa-eraser"></i>
             </button>
@@ -71,7 +71,7 @@ const Tools = ({
                     }
                 }}
                 disabled={isPreview}
-                title={previewTitle ?? "Fill"}
+                title={previewTitle ?? "Fill (B)"}
             >
                 <i className="fa-solid fa-fill-drip"></i>
             </button>
@@ -79,7 +79,7 @@ const Tools = ({
             {/* Color Picker */}
             <label
                 className={`color-picker-label${isPreview ? ' color-picker-label--disabled' : ''}`}
-                title={previewTitle ?? "Pick a color"}
+                title={previewTitle ?? "Pick a color (A)"}
             >
                 <i className="fa-solid fa-palette"></i>
                 <input
@@ -106,7 +106,7 @@ const Tools = ({
                     showToast("Canvas cleared", "success");
                 }}
                 disabled={isPreview}
-                title={previewTitle ?? "Clear All"}
+                title={previewTitle ?? "Clear All (C)"}
             >
                 <i className="fa-solid fa-trash-can"></i>
             </button>

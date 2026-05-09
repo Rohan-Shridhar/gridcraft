@@ -32,13 +32,44 @@ const App = () => {
 
   const handleKeyPress = useCallback((event) => {
     if (!showGrid) return;
-    if (event.key === "z" && event.ctrlKey && history.length) {
+    const eventKey=event.key.toLowerCase();
+    
+    if (eventKey === "z" && event.ctrlKey && history.length) {
       undo()
       showToast("Undo", "success")
     }
-    else if (event.key === "y" && event.ctrlKey && future.length){
+    else if (eventKey === "y" && event.ctrlKey && future.length){
       redo()
       showToast("Redo", "success")
+    }
+    else if(eventKey==="e"){
+      setIsEraser((prev)=>{
+        const newValue=!prev;
+        if(newValue){
+          showToast("Eraser tool selected","success");
+        }
+        return newValue;
+      })
+      setIsFill(false);
+    }
+    else if(eventKey==="b"){
+      setIsFill((prev)=>{
+        const newValue=!prev;
+        if(newValue){
+          showToast("Fill tool selected","success");
+        }
+        return newValue;
+      })
+      setIsEraser(false);
+    }
+    else if(eventKey==="a"){
+      setIsEraser(false);
+      setIsFill(false);
+      showToast("Paint brush tool selected","success");
+    }else if(eventKey==="c"){
+      if (!window.confirm("Clear the entire canvas?")) return;
+      clearAll();
+      showToast("Canvas cleared", "success");
     }
   }, [history, future, showGrid]);
 
