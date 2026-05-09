@@ -8,7 +8,7 @@ const Header = ({ isDarkTheme, toggleTheme }) => {
                 title="Toggle theme"
                 style={{ position: 'absolute', top: '1rem', right: '1rem' }}
             >
-                {isDarkTheme ? '☀️ Light' : '🌙 Dark'}
+                {isDarkTheme ? <i class="fa-regular fa-sun"></i> : <i class="fa-regular fa-moon"></i>}
             </button>
             <div className="lines">
                 <div className="line"></div>
