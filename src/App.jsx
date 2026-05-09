@@ -28,6 +28,16 @@ const App = () => {
   const [toast, setToast] = useState(null);
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 768 || window.innerHeight < 768);
 
+  //dual theme; light and dark
+  const [isDarkTheme, setIsDarkTheme] = useState(true);
+
+  const toggleTheme = () => {
+    setIsDarkTheme(prev => {
+      document.body.classList.toggle('light-theme', prev);
+      return !prev;
+    });
+  };
+
   const fileInputRef = useRef(null);
 
   const handleKeyPress = useCallback((event) => {
@@ -306,7 +316,7 @@ const App = () => {
 
   return (
     <>
-      <Header />
+      <Header isDarkTheme={isDarkTheme} toggleTheme={toggleTheme} />
 
       <Menu downloadImage={downloadImage} onImport={triggerImport} />
       <input
