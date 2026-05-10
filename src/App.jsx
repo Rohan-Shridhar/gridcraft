@@ -242,6 +242,13 @@ const App = () => {
     setCells(Array(gridSize * gridSize).fill(EMPTY_CELL));
   };
 
+  const fillBackground = () => {
+    const newCells = cells.map(c => c === EMPTY_CELL ? selectedColor : c);
+    setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
+    setFuture([]);
+    setCells(newCells);
+  };
+
   const downloadImage = async () => {
     const grid = document.getElementById("pixel-grid");
 
@@ -385,6 +392,7 @@ const App = () => {
         setIsFill={setIsFill}
         backgroundColor={backgroundColor}
         setBackgroundColor={setBackgroundColor}
+        fillBackground={fillBackground}
         clearAll={clearAll}
         showToast={showToast}
         isPreview={isPreview}

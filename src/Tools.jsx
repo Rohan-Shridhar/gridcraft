@@ -11,6 +11,7 @@ const Tools = ({
     setIsEraser,
     isFill,
     setIsFill,
+    fillBackground,
     clearAll,
     showToast,
     isPreview = false,
@@ -171,6 +172,20 @@ const Tools = ({
                     }}
                 />
             </label>
+
+            <button
+                className={`tool-btn tool-btn--fill-bg${isPreview ? " tool-btn--disabled" : ""}`}
+                onClick={() => {
+                    if (isPreview) return;
+                    fillBackground();
+                    showToast("Background filled", "success");
+                }}
+                disabled={isPreview}
+                title={previewTitle ?? "Fill transparent cells with selected color"}
+            >
+                <i class="fa-solid fa-image-portrait"></i>
+
+            </button>
 
             <button
                 className={`tool-btn${isPreview ? " tool-btn--disabled" : ""}`}

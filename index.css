@@ -253,6 +253,19 @@ body.light-theme .grid-size-btn {
   opacity: 0.35;
   cursor: not-allowed;
 }
+.tool-btn--fill-bg {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: #16a34a;
+  color: #fff;
+  border-color: #16a34a;
+}
+.tool-btn--fill-bg:hover:not(:disabled) {
+  background-color: #15803d;
+  color: #fff;
+  border-color: #15803d;
+}
 
 /* Color picker */
 .color-picker-label {
