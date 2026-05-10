@@ -3,7 +3,8 @@ const { useState, useRef, useCallback } = React;
 const GRID_SIZES = [16, 32, 64, 128];
 const DEFAULT_GRID_SIZE = 15;
 const MAX_HISTORY = 15;
-const DEFAULT_COLOR = "#2a2a2a";
+const DEFAULT_BACKGROUND_COLOR = "#2a2a2a";
+const EMPTY_CELL = null;
 
 const rgbToHex = (r, g, b) =>
   "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
@@ -17,11 +18,12 @@ const getGridGap = (gridSize, showGrid) => {
 const App = () => {
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
   const [cells, setCells] = useState(
-    Array(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE).fill(DEFAULT_COLOR)
+    Array(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE).fill(EMPTY_CELL)
   );
   const [history, setHistory] = useState([]);
   const [future, setFuture] = useState([]);
   const [selectedColor, setSelectedColor] = useState("#e63946");
+  const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR);
   const [isEraser, setIsEraser] = useState(false);
   const [isFill, setIsFill] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
@@ -151,7 +153,7 @@ const App = () => {
     setShowGrid(newSize < 32);
     setHistory([]);
     setFuture([]);
-    setCells(Array(newSize * newSize).fill(DEFAULT_COLOR));
+    setCells(Array(newSize * newSize).fill(EMPTY_CELL));
 
     showToast(`Grid set to ${newSize}×${newSize}`, "success");
   };
@@ -207,7 +209,7 @@ const App = () => {
       }
 
       const newCells = [...cells];
-      newCells[index] = isEraser ? DEFAULT_COLOR : selectedColor;
+  newCells[index] = isEraser ? EMPTY_CELL : selectedColor;
 
       setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
       setFuture([]);
@@ -237,7 +239,7 @@ const App = () => {
   const clearAll = () => {
     setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
     setFuture([]);
-    setCells(Array(gridSize * gridSize).fill(DEFAULT_COLOR));
+    setCells(Array(gridSize * gridSize).fill(EMPTY_CELL));
   };
 
   const downloadImage = async () => {
@@ -294,7 +296,7 @@ const App = () => {
 
           uniqueColors.add(`${r}-${g}-${b}`);
 
-          newCells.push(a < 30 ? DEFAULT_COLOR : rgbToHex(r, g, b));
+          newCells.push(a < 30 ? EMPTY_CELL : rgbToHex(r, g, b));
         }
 
         if (uniqueColors.size > 80) {
@@ -343,6 +345,7 @@ const App = () => {
         isFill={isFill}
         paintCell={paintCell}
         gridGap={getGridGap(gridSize, showGrid)}
+        backgroundColor={backgroundColor}
       />
 
       <div className="grid-size-selector">
@@ -380,6 +383,8 @@ const App = () => {
         setIsEraser={setIsEraser}
         isFill={isFill}
         setIsFill={setIsFill}
+        backgroundColor={backgroundColor}
+        setBackgroundColor={setBackgroundColor}
         clearAll={clearAll}
         showToast={showToast}
         isPreview={isPreview}
