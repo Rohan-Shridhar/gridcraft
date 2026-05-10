@@ -13,7 +13,7 @@ const Menu = ({ downloadImage, onImport }) => {
 
             <button
                 className="menu-btn"
-                onClick={() => openLink("/Manual.md")}
+                onClick={() => openLink("https://github.com/Rohan-Shridhar/gridcraft/blob/main/Manual.md")}
                 title="Check out manual"
             >
                 <i className="fa-solid fa-book"></i>
