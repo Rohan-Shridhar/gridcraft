@@ -28,6 +28,9 @@ body.light-theme {
   --tools-bg-color: #e8e8e0;
   --tools-text-color: #1a1a1a;
 }
+i {
+  color: inherit;
+}
 body {
   margin: 0;
   display: flex;
@@ -258,12 +261,10 @@ body.light-theme .grid-size-btn {
   align-items: center;
   gap: 0.4rem;
   background-color: #16a34a;
-  color: #fff;
   border-color: #16a34a;
 }
 .tool-btn--fill-bg:hover:not(:disabled) {
   background-color: #15803d;
-  color: #fff;
   border-color: #15803d;
 }
 

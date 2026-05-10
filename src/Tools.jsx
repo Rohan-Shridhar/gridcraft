@@ -139,7 +139,7 @@ const Tools = ({
                 disabled={isPreview}
                 title={previewTitle ?? "Paint brush (A)"}
             >
-                <i className="fa-solid fa-paintbrush"></i>
+                <i class="fa-solid fa-brush"></i>
             </button>
 
             <button
@@ -152,7 +152,7 @@ const Tools = ({
                 disabled={isPreview}
                 title={previewTitle ?? "Fill transparent cells with selected color"}
             >
-                <i class="fa-solid fa-image-portrait"></i>
+                <i class="fa-brands fa-flipboard"></i>
 
             </button>
 
@@ -174,7 +174,7 @@ const Tools = ({
                 className={`color-picker-label${isPreview ? " color-picker-label--disabled" : ""}`}
                 title={previewTitle ?? "Pick a color"}
             >
-                <span>Color</span>
+                <span>Color:</span>
                 <input
                     type="color"
                     className="color-input"
