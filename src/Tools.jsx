@@ -50,7 +50,7 @@ const Tools = ({
                     setIsEraser(next);
                     if (next) {
                         setIsFill(false);
-                        showToast("🧽 Eraser selected", "success");
+                        showToast("Eraser selected", "success");
                     }
                 }}
                 disabled={isPreview}
@@ -67,7 +67,7 @@ const Tools = ({
                     setIsFill(next);
                     if (next) {
                         setIsEraser(false);
-                        showToast("🪣 Fill tool selected", "success");
+                        showToast("Fill tool selected", "success");
                     }
                 }}
                 disabled={isPreview}
@@ -92,7 +92,7 @@ const Tools = ({
                         setSelectedColor(e.target.value);
                         setIsEraser(false);
                         setIsFill(false);
-                        showToast(`🎨 Color selected`, "success");
+                        showToast("Color selected", "success");
                     }}
                 />
             </label>
