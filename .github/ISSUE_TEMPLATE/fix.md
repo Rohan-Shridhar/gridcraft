@@ -4,7 +4,6 @@ about: Request a fix or correction for an existing issue
 title: ''
 labels: ''
 assignees: ''
-
 ---
 
 **What needs to be fixed?**
