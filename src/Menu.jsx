@@ -8,10 +8,22 @@ const Menu = ({ downloadImage, onImport }) => {
             </button>
 
             <button className="menu-btn" onClick={onImport} title="Import">
-                <i class="fa-solid fa-download"></i>
+                <i className="fa-solid fa-download"></i>
             </button>
 
-            <button className="menu-btn" onClick={() => openLink("https://github.com/Rohan-Shridhar/gridcraft")} title="Github">
+            <button
+                className="menu-btn"
+                onClick={() => openLink("/Manual.md")}
+                title="Check out manual"
+            >
+                <i className="fa-solid fa-book"></i>
+            </button>
+
+            <button
+                className="menu-btn"
+                onClick={() => openLink("https://github.com/Rohan-Shridhar/gridcraft")}
+                title="Github"
+            >
                 <i className="fab fa-github"></i>
             </button>
         </div>
