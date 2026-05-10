@@ -101,8 +101,15 @@ const Tools = ({
             </button>
 
             <button
-                className={`tool-btn${isEraser && !isPreview ? " tool-btn--active" : ""}${isPreview ? " tool-btn--disabled" : ""}`}
-                onClick={handleToggleEraser}
+                className={`tool-btn${isEraser ? ' tool-btn--active' : ''}${isPreview ? ' tool-btn--disabled' : ''}`}
+                onClick={() => {
+                    const next = !isEraser;
+                    setIsEraser(next);
+                    if (next) {
+                        setIsFill(false);
+                        showToast("Eraser selected", "success");
+                    }
+                }}
                 disabled={isPreview}
                 title={previewTitle ?? "Eraser (E)"}
             >
@@ -110,8 +117,15 @@ const Tools = ({
             </button>
 
             <button
-                className={`tool-btn${isFill && !isPreview ? " tool-btn--active" : ""}${isPreview ? " tool-btn--disabled" : ""}`}
-                onClick={handleToggleFill}
+                className={`tool-btn${isFill ? ' tool-btn--active' : ''}${isPreview ? ' tool-btn--disabled' : ''}`}
+                onClick={() => {
+                    const next = !isFill;
+                    setIsFill(next);
+                    if (next) {
+                        setIsEraser(false);
+                        showToast("Fill tool selected", "success");
+                    }
+                }}
                 disabled={isPreview}
                 title={previewTitle ?? "Fill (B)"}
             >
@@ -148,29 +162,13 @@ const Tools = ({
                     className="color-input"
                     value={selectedColor}
                     disabled={isPreview}
-                    onInput={(e) => handleSelectColor(e.target.value)}
-                    onChange={(e) => handleSelectColor(e.target.value)}
-                />
-            </label>
-
-            <label
-                className={`color-picker-label${isPreview ? " color-picker-label--disabled" : ""}`}
-                title={previewTitle ?? "Set background color for blank cells"}
-                style={{
-                    backgroundColor,
-                    color: getReadableTextColor(backgroundColor),
-                    borderColor: backgroundColor,
-                }}
-            >
-                <i className="fa-solid fa-layer-group"></i>
-                <span>Background</span>
-                <input
-                    type="color"
-                    className="color-input"
-                    value={backgroundColor}
-                    disabled={isPreview}
-                    onInput={(e) => handleBackgroundColor(e.target.value)}
-                    onChange={(e) => handleBackgroundColor(e.target.value)}
+                    onChange={e => {
+                        if (isPreview) return;
+                        setSelectedColor(e.target.value);
+                        setIsEraser(false);
+                        setIsFill(false);
+                        showToast("Color selected", "success");
+                    }}
                 />
             </label>
 
