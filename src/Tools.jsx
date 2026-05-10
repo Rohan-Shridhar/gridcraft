@@ -17,6 +17,16 @@ const Tools = ({
 }) => {
     const previewTitle = isPreview ? "Disabled in preview mode" : null;
 
+    const getReadableTextColor = (hexColor) => {
+        const normalized = hexColor.replace("#", "");
+        const red = parseInt(normalized.slice(0, 2), 16);
+        const green = parseInt(normalized.slice(2, 4), 16);
+        const blue = parseInt(normalized.slice(4, 6), 16);
+        const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+
+        return luminance > 0.6 ? "#111111" : "#ffffff";
+    };
+
     const handleSelectColor = (value) => {
         if (isPreview) return;
         setSelectedColor(value);
@@ -146,20 +156,14 @@ const Tools = ({
             <label
                 className={`color-picker-label${isPreview ? " color-picker-label--disabled" : ""}`}
                 title={previewTitle ?? "Set background color for blank cells"}
+                style={{
+                    backgroundColor,
+                    color: getReadableTextColor(backgroundColor),
+                    borderColor: backgroundColor,
+                }}
             >
                 <i className="fa-solid fa-layer-group"></i>
                 <span>Background</span>
-                <span
-                    aria-hidden="true"
-                    style={{
-                        width: "1rem",
-                        height: "1rem",
-                        borderRadius: "50%",
-                        border: "1px solid currentColor",
-                        backgroundColor,
-                        display: "inline-block",
-                    }}
-                />
                 <input
                     type="color"
                     className="color-input"
