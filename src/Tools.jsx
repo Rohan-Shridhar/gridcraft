@@ -142,37 +142,6 @@ const Tools = ({
                 <i className="fa-solid fa-paintbrush"></i>
             </button>
 
-            <label
-                className={`color-picker-label${isPreview ? " color-picker-label--disabled" : ""}`}
-                title={previewTitle ?? "Pick a color"}
-            >
-                <i className="fa-solid fa-palette"></i>
-                <span
-                    aria-hidden="true"
-                    style={{
-                        width: "1rem",
-                        height: "1rem",
-                        borderRadius: "50%",
-                        border: "1px solid currentColor",
-                        backgroundColor: selectedColor,
-                        display: "inline-block",
-                    }}
-                />
-                <input
-                    type="color"
-                    className="color-input"
-                    value={selectedColor}
-                    disabled={isPreview}
-                    onChange={e => {
-                        if (isPreview) return;
-                        setSelectedColor(e.target.value);
-                        setIsEraser(false);
-                        setIsFill(false);
-                        showToast("Color selected", "success");
-                    }}
-                />
-            </label>
-
             <button
                 className={`tool-btn tool-btn--fill-bg${isPreview ? " tool-btn--disabled" : ""}`}
                 onClick={() => {
@@ -200,6 +169,26 @@ const Tools = ({
             >
                 <i className="fa-solid fa-trash-can"></i>
             </button>
+
+            <label
+                className={`color-picker-label${isPreview ? " color-picker-label--disabled" : ""}`}
+                title={previewTitle ?? "Pick a color"}
+            >
+                <span>Color</span>
+                <input
+                    type="color"
+                    className="color-input"
+                    value={selectedColor}
+                    disabled={isPreview}
+                    onChange={e => {
+                        if (isPreview) return;
+                        setSelectedColor(e.target.value);
+                        setIsEraser(false);
+                        setIsFill(false);
+                        showToast("Color selected", "success");
+                    }}
+                />
+            </label>
         </div>
     );
 };
