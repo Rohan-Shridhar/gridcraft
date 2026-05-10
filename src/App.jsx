@@ -3,7 +3,7 @@ const { useState, useRef, useCallback } = React;
 const GRID_SIZES = [16, 32, 64, 128];
 const DEFAULT_GRID_SIZE = 15;
 const MAX_HISTORY = 15;
-const DEFAULT_BACKGROUND_COLOR = "#2a2a2a";
+const DEFAULT_BACKGROUND_COLOR = "transparent";
 const EMPTY_CELL = null;
 
 const rgbToHex = (r, g, b) =>
