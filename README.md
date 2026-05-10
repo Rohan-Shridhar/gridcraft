@@ -36,6 +36,10 @@ Shortcuts work while the drawing grid is visible:
 
 Experience GridCraft here: **[GridCraft Live](https://rohan-shridhar.github.io/gridcraft/)**
 
+## User Manual
+
+Need step-by-step usage instructions? Read the [GridCraft Manual](Manual.md).
+
 
 ## Repository Structure 📁
 ```txt
