@@ -316,6 +316,13 @@ const App = () => {
     reader.readAsDataURL(file);
   };
 
+  const isPreview = !showGrid;
+  const getGridSizeTitle = (size) => {
+    if (isPreview) return "Disabled in preview mode";
+    if (gridSize === size) return `Already on ${size}×${size}`;
+    return `Switch to ${size}×${size}`;
+  };
+
   return (
     <>
       <Header isDarkTheme={isDarkTheme} toggleTheme={toggleTheme} />
@@ -347,11 +354,11 @@ const App = () => {
           <button
             key={size}
             className={`grid-size-btn${gridSize === size ? " grid-size-btn--active" : ""
-              }`}
+              }${isPreview ? " grid-size-btn--disabled" : ""}`}
             onClick={() => changeGridSize(size)}
-            disabled={gridSize === size}
+            disabled={isPreview || gridSize === size}
             aria-pressed={gridSize === size}
-            title={gridSize === size ? `Already on ${size}×${size}` : `Switch to ${size}×${size}`}
+            title={getGridSizeTitle(size)}
           >
             {size}×{size}
           </button>
@@ -380,7 +387,7 @@ const App = () => {
         setBackgroundColor={setBackgroundColor}
         clearAll={clearAll}
         showToast={showToast}
-        isPreview={!showGrid}
+        isPreview={isPreview}
       />
 
       <Footer />

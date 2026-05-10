@@ -20,6 +20,26 @@ This project is all about building and experimenting with grid-based layouts and
 
 ---
 
+## Branch Naming
+
+Use a short, descriptive branch name that matches the type of change:
+
+| Purpose | Branch name pattern |
+| --- | --- |
+| New feature | `feature/short-description` |
+| Bug fix | `fix/short-description` |
+| Documentation | `docs/short-description` |
+| CI / tooling | `ci/short-description` |
+
+Examples:
+
+```bash
+git checkout -b docs/update-readme
+git checkout -b fix/navbar-overflow
+```
+
+---
+
 ## ⚙️ Setup
 
 ```bash
