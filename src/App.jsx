@@ -3,7 +3,7 @@ const { useState, useRef, useCallback } = React;
 const GRID_SIZES = [16, 32, 64, 128];
 const DEFAULT_GRID_SIZE = 15;
 const MAX_HISTORY = 15;
-const DEFAULT_BACKGROUND_COLOR = "#2a2a2a";
+const DEFAULT_BACKGROUND_COLOR = "transparent";
 const EMPTY_CELL = null;
 
 const rgbToHex = (r, g, b) =>
@@ -242,6 +242,13 @@ const App = () => {
     setCells(Array(gridSize * gridSize).fill(EMPTY_CELL));
   };
 
+  const fillBackground = () => {
+    const newCells = cells.map(c => c === EMPTY_CELL ? selectedColor : c);
+    setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
+    setFuture([]);
+    setCells(newCells);
+  };
+
   const downloadImage = async () => {
     const grid = document.getElementById("pixel-grid");
 
@@ -385,6 +392,7 @@ const App = () => {
         setIsFill={setIsFill}
         backgroundColor={backgroundColor}
         setBackgroundColor={setBackgroundColor}
+        fillBackground={fillBackground}
         clearAll={clearAll}
         showToast={showToast}
         isPreview={isPreview}
