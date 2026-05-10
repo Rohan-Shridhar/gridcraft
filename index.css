@@ -160,6 +160,9 @@ header {
 .grid-size-btn:disabled {
   cursor: not-allowed;
 }
+.grid-size-btn--disabled {
+  opacity: 0.35;
+}
 
 /* ── Grid ───────────────────────────────────────── */
 .grid-cont {
