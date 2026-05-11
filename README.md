@@ -1,4 +1,6 @@
 # GridCraft 🎨
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)
 
 A React-powered pixel art tool that lets you paint on a 15x15 grid with the full RGB color spectrum.
 
