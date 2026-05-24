@@ -44,41 +44,41 @@ const App = () => {
 
   const handleKeyPress = useCallback((event) => {
     if (!showGrid) return;
-    const eventKey=event.key.toLowerCase();
-    
+    const eventKey = event.key.toLowerCase();
+
     if (eventKey === "z" && event.ctrlKey && history.length) {
       undo()
       showToast("Undo", "success")
     }
-    else if (eventKey === "y" && event.ctrlKey && future.length){
+    else if (eventKey === "y" && event.ctrlKey && future.length) {
       redo()
       showToast("Redo", "success")
     }
-    else if(eventKey==="e"){
-      setIsEraser((prev)=>{
-        const newValue=!prev;
-        if(newValue){
-          showToast("Eraser tool selected","success");
+    else if (eventKey === "e") {
+      setIsEraser((prev) => {
+        const newValue = !prev;
+        if (newValue) {
+          showToast("Eraser tool selected", "success");
         }
         return newValue;
       })
       setIsFill(false);
     }
-    else if(eventKey==="b"){
-      setIsFill((prev)=>{
-        const newValue=!prev;
-        if(newValue){
-          showToast("Fill tool selected","success");
+    else if (eventKey === "b") {
+      setIsFill((prev) => {
+        const newValue = !prev;
+        if (newValue) {
+          showToast("Fill tool selected", "success");
         }
         return newValue;
       })
       setIsEraser(false);
     }
-    else if(eventKey==="a"){
+    else if (eventKey === "a") {
       setIsEraser(false);
       setIsFill(false);
-      showToast("Paint brush tool selected","success");
-    }else if(eventKey==="c"){
+      showToast("Paint brush tool selected", "success");
+    } else if (eventKey === "c") {
       if (!window.confirm("Clear the entire canvas?")) return;
       clearAll();
       showToast("Canvas cleared", "success");
@@ -106,7 +106,7 @@ const App = () => {
 
       // Fallback for browsers that don't support userAgentData.mobile
       return /Mobi|Android/i.test(navigator.userAgent);
-      };
+    };
 
     if (isMobile()) {
       showToast("Switch to desktop");
@@ -209,7 +209,7 @@ const App = () => {
       }
 
       const newCells = [...cells];
-  newCells[index] = isEraser ? EMPTY_CELL : selectedColor;
+      newCells[index] = isEraser ? EMPTY_CELL : selectedColor;
 
       setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
       setFuture([]);
@@ -372,7 +372,11 @@ const App = () => {
         ))}
         <button
           className={`grid-size-btn${!showGrid ? " grid-size-btn--active" : ""}`}
-          onClick={() => setShowGrid((s) => !s)}
+          onClick={() => setShowGrid((s) => {
+            const next = !s;
+            showToast(next ? "Preview disabled" : "Preview enabled", next ? "success" : "error");
+            return next;
+          })}
           title="Toggle grid lines"
         >
           <i class="fa-solid fa-eye"></i>

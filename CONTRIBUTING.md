@@ -81,6 +81,23 @@ When creating an issue:
 
 ---
 
+## 🗨️ Commenting on an Issue
+
+When commenting on an issue to ask the admin to assign it to you:
+- Keep it simple
+- If the issue is related to a bug, you may suggest ways you will fix it (optional)
+- Mention admin @Rohan-Shridhar in the comment  
+- Examples:
+```md
+@Rohan-Shridhar, I'd like to work on this
+
+@Rohan-Shridhar, Could you assign this to me?
+
+@Rohan-Shridhar, I want to fix this bug by <*something*>, can you assign this to me??
+````
+
+---
+
 ## 💡 Feature Requests
 
 Have an idea? Open an issue and describe it clearly.  
