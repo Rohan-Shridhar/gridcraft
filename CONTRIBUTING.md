@@ -5,6 +5,19 @@ This project is all about building and experimenting with grid-based layouts and
 
 ---
 
+## Table of contents
+[How to Contribute](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-how-to-contribute)
+[Branch Naming](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#branch-naming)
+[Setup](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-what-you-can-contribute)
+[Coding Guidelines](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-coding-guidelines)
+[Reporting Issues](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-reporting-issues)
+[Commenting on an Issue](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#%EF%B8%8F-commenting-on-an-issue)
+[Feature Requests](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-feature-requests)
+[Pull Request Description](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-pull-request-template)
+[Final Note](http://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-final-note)
+
+---
+
 ## 🛠 How to Contribute
 
 1. Fork the repo
@@ -47,16 +60,6 @@ git clone https://github.com/your-username/gridcraft.git
 cd gridcraft
 open index.html
 ```
-
----
-
-## 📐 What You Can Contribute
-
-* New grid utilities or features
-* UI improvements
-* Bug fixes
-* Performance optimizations
-* Better documentation
 
 ---
 
@@ -105,15 +108,17 @@ If it fits the project, you’re welcome to implement it!
 
 ---
 
-## ⚠️ Before Submitting PR
 
-* Make sure your code runs without errors
-* Test your changes properly
-* Keep PRs focused (one feature/fix at a time)
 
 ---
 
 ## 📝 Pull Request Template
+
+### Before Submitting PR
+
+* Make sure your code runs without errors
+* Test your changes properly
+* Keep PRs focused (one feature/fix at a time)
 
 Use this template for the description of every Pull Request. Copy it into the PR body and fill out each section. Sections that don't apply can be marked `N/A` rather than removed -- it makes review faster when the structure is consistent across PRs.
 
