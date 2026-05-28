@@ -6,15 +6,15 @@ This project is all about building and experimenting with grid-based layouts and
 ---
 
 ## Table of contents
-[How to Contribute](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-how-to-contribute)
-[Branch Naming](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#branch-naming)
-[Setup](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-what-you-can-contribute)
-[Coding Guidelines](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-coding-guidelines)
-[Reporting Issues](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-reporting-issues)
-[Commenting on an Issue](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#%EF%B8%8F-commenting-on-an-issue)
-[Feature Requests](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-feature-requests)
-[Pull Request Description](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-pull-request-template)
-[Final Note](http://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-final-note)
+- [How to Contribute](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-how-to-contribute)  
+- [Branch Naming](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#branch-naming)  
+- [Setup](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#%EF%B8%8F-setup)  
+- [Coding Guidelines](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-coding-guidelines)  
+- [Reporting Issues](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-reporting-issues)  
+- [Commenting on an Issue](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#%EF%B8%8F-commenting-on-an-issue)  
+- [Feature Requests](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-feature-requests)  
+- [Pull Request Description](https://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-pull-request-template)  
+- [Final Note](http://github.com/Rohan-Shridhar/gridcraft?tab=contributing-ov-file#-final-note)  
 
 ---
 
