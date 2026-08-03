@@ -1,4 +1,4 @@
-const Menu = ({ downloadImage, onImport }) => {
+function Menu({ downloadImage, onImport }){
     const openLink = (url) => window.open(url, "_blank");
 
     return (
@@ -29,3 +29,5 @@ const Menu = ({ downloadImage, onImport }) => {
         </div>
     );
 };
+
+export default Menu;

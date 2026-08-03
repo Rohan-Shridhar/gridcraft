@@ -1,5 +1,6 @@
-const Grid = ({ cells, gridSize, gridGap, showGrid, isFill, paintCell, backgroundColor }) => {
-    const [isMouseDown, setIsMouseDown] = React.useState(false);
+import {useState} from 'react';
+function Grid({ cells, gridSize, gridGap, showGrid, isFill, paintCell, backgroundColor }) {
+    const [isMouseDown, setIsMouseDown] = useState(false);
     return (
         <div
             className="grid-cont"
@@ -29,3 +30,5 @@ const Grid = ({ cells, gridSize, gridGap, showGrid, isFill, paintCell, backgroun
         </div>
     );
 }
+
+export default Grid;

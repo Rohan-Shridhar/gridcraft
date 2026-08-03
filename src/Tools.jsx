@@ -1,4 +1,4 @@
-const Tools = ({
+function Tools({
     undo,
     redo,
     canUndo,
@@ -15,7 +15,7 @@ const Tools = ({
     clearAll,
     showToast,
     isPreview = false,
-}) => {
+}){
     const previewTitle = isPreview ? "Disabled in preview mode" : null;
 
     const getReadableTextColor = (hexColor) => {
@@ -139,7 +139,7 @@ const Tools = ({
                 disabled={isPreview}
                 title={previewTitle ?? "Paint brush (A)"}
             >
-                <i class="fa-solid fa-brush"></i>
+                <i className="fa-solid fa-brush"></i>
             </button>
 
             <button
@@ -152,7 +152,7 @@ const Tools = ({
                 disabled={isPreview}
                 title={previewTitle ?? "Fill transparent cells with selected color"}
             >
-                <i class="fa-brands fa-flipboard"></i>
+                <i className="fa-brands fa-flipboard"></i>
 
             </button>
 
@@ -192,3 +192,5 @@ const Tools = ({
         </div>
     );
 };
+
+export default Tools;
