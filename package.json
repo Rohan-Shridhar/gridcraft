@@ -1,6 +1,6 @@
 {
   "name": "gridcraft",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)\r ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)",
   "main": "index.js",
   "scripts": {
