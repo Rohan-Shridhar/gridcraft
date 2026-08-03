@@ -36,7 +36,7 @@ Shortcuts work while the drawing grid is visible:
 
 ## Live Demo 🚀
 
-Experience GridCraft here: **[GridCraft Live](https://rohan-shridhar.github.io/gridcraft/)**
+Experience GridCraft here: **[GridCraft Live](https://gridcraft-by-me.vercel.app/)**
 
 ## User Manual
 
@@ -61,7 +61,7 @@ gridcraft/
 ├── LICENSE                 # License file
 └── README.md               # Documentation
 ````
-![Project Structure](./src/images/project-structure.png)
+![Project Structure](./public/structure.png)
 ## Technical Implementation 🔧
 
 - **React 18 (CDN)** - Loaded via unpkg, no build step required
