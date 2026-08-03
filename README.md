@@ -2,7 +2,7 @@
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)
 
-A React-powered pixel art tool that lets you paint on a 15x15 grid with the full RGB color spectrum.
+A React-powered pixel art tool that lets you paint on a customizable grid (16×16, 32×32, 64×64, or 128×128) with the full RGB color spectrum.
 
 ## Why GridCraft? 🎯
 
@@ -10,7 +10,7 @@ Built with React, GridCraft demonstrates how modern component-based architecture
 
 ## Features ✨
 
-- **14x14 Drawing Grid** - A perfectly sized canvas for pixel art and simple designs
+- **Multiple Grid Sizes** - Draw on a 16×16, 32×32, 64×64, or 128×128 canvas depending on your project
 - **Full RGB Color Support** - Choose any color using an intuitive RGB color picker
 - **Export as PNG** - Download your creations to save and share
 - **Right-Click to Draw** - Intuitive drawing mechanism using right mouse button
@@ -68,7 +68,7 @@ gridcraft/
 - **In-Browser JSX Transpilation** - Babel Standalone converts JSX syntax to JavaScript at runtime
 - **Component Architecture** - Modular design with seven specialized components:
   - `App.jsx` - Root component managing core state and download logic
-  - `Grid.jsx` - Renders 14x14 grid and handles cell painting
+  - `Grid.jsx` - Renders the drawing grid (16×16 up to 128×128) and handles cell painting
   - `Tools.jsx` - Drawing tools (color picker, eraser, undo/redo, clear)
   - `Menu.jsx` - Download button and high-level controls
   - `Header.jsx` & `Footer.jsx` - Layout components
