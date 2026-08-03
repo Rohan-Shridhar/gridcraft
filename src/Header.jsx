@@ -1,4 +1,4 @@
-const Header = ({ isDarkTheme, toggleTheme }) => {
+function Header({ isDarkTheme, toggleTheme }){
     return (
         <div className="header-cont">
             <h1>GRID CRAFT</h1>
@@ -8,7 +8,7 @@ const Header = ({ isDarkTheme, toggleTheme }) => {
                 title="Toggle theme"
                 style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 1000 }}
             >
-                {isDarkTheme ? <i class="fa-regular fa-sun"></i> : <i class="fa-regular fa-moon"></i>}
+                {isDarkTheme ? <i className="fa-regular fa-sun"></i> : <i className="fa-regular fa-moon"></i>}
             </button>
             <div className="lines">
                 <div className="line"></div>
@@ -21,3 +21,5 @@ const Header = ({ isDarkTheme, toggleTheme }) => {
         </div>
     );
 }
+
+export default Header;

@@ -1,4 +1,9 @@
-const { useState, useRef, useCallback } = React;
+import { useState, useRef, useCallback, useEffect } from 'react';
+import Header from './Header.jsx'
+import Menu from './Menu.jsx'
+import Grid from './Grid.jsx'
+import Tools from './Tools.jsx'
+import Footer from './Footer.jsx'
 
 const GRID_SIZES = [16, 32, 64, 128];
 const DEFAULT_GRID_SIZE = 15;
@@ -15,7 +20,7 @@ const getGridGap = (gridSize, showGrid) => {
   return 2;
 };
 
-const App = () => {
+function App(){
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
   const [cells, setCells] = useState(
     Array(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE).fill(EMPTY_CELL)
@@ -85,7 +90,7 @@ const App = () => {
     }
   }, [history, future, showGrid]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     document.addEventListener('keydown', handleKeyPress);
 
     return () => {
@@ -93,7 +98,7 @@ const App = () => {
     };
   }, [handleKeyPress]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleBeforeUnload = (e) => {
       e.preventDefault();
       e.returnValue = "";
@@ -379,7 +384,7 @@ const App = () => {
           })}
           title="Toggle grid lines"
         >
-          <i class="fa-solid fa-eye"></i>
+          <i className="fa-solid fa-eye"></i>
         </button>
       </div>
 
@@ -406,3 +411,5 @@ const App = () => {
     </>
   );
 };
+
+export default App;
