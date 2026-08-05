@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import Header from './Header.jsx'
-import Menu from './Menu.jsx'
-import Grid from './Grid.jsx'
-import Tools from './Tools.jsx'
-import Footer from './Footer.jsx'
+import html2canvas from 'html2canvas';
+import Header from './Header.jsx';
+import Menu from './Menu.jsx';
+import Grid from './Grid.jsx';
+import Tools from './Tools.jsx';
+import Footer from './Footer.jsx';
 
 const GRID_SIZES = [16, 32, 64, 128];
 const DEFAULT_GRID_SIZE = 15;
@@ -27,12 +28,14 @@ function App(){
   );
   const [history, setHistory] = useState([]);
   const [future, setFuture] = useState([]);
+
   const [selectedColor, setSelectedColor] = useState("#e63946");
   const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR);
   const [isEraser, setIsEraser] = useState(false);
   const [isFill, setIsFill] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [toast, setToast] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 768 || window.innerHeight < 768);
 
   //dual theme; light and dark
@@ -255,21 +258,31 @@ function App(){
   };
 
   const downloadImage = async () => {
-    const grid = document.getElementById("pixel-grid");
+    if (isExporting) return;
 
+    const grid = document.getElementById("pixel-grid");
+    if (!grid) return;
+
+    setIsExporting(true);
     grid.classList.add("no-border", "no-gap");
 
-    const canvas = await html2canvas(grid, {
-      backgroundColor: null,
-      scale: 8,
-    });
+    try {
+      const canvas = await html2canvas(grid, {
+        backgroundColor: null,
+        scale: 8,
+      });
 
-    grid.classList.remove("no-border", "no-gap");
-
-    const link = document.createElement("a");
-    link.download = "gridcraft.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+      const link = document.createElement("a");
+      link.download = "gridcraft.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (error) {
+      console.error("Failed to export image", error);
+      showToast("Export failed");
+    } finally {
+      grid.classList.remove("no-border", "no-gap");
+      setIsExporting(false);
+    }
   };
 
   const importImage = (e) => {
@@ -339,7 +352,11 @@ function App(){
     <>
       <Header isDarkTheme={isDarkTheme} toggleTheme={toggleTheme} />
 
-      <Menu downloadImage={downloadImage} onImport={triggerImport} />
+      <Menu
+        downloadImage={downloadImage}
+        onImport={triggerImport}
+        isExporting={isExporting}
+      />
       <input
         type="file"
         accept="image/*"

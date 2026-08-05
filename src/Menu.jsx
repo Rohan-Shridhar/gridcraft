@@ -1,10 +1,16 @@
-function Menu({ downloadImage, onImport }){
+function Menu({ downloadImage, onImport, isExporting = false }){
     const openLink = (url) => window.open(url, "_blank");
 
     return (
         <div className="menu-cont">
-            <button className="menu-btn" onClick={downloadImage} title="Export">
-                <i className="fa-solid fa-upload"></i>
+            <button
+                className={`menu-btn${isExporting ? " menu-btn--disabled" : ""}`}
+                onClick={downloadImage}
+                disabled={isExporting}
+                aria-busy={isExporting}
+                title={isExporting ? "Exporting…" : "Export"}
+            >
+                <i className={`fa-solid ${isExporting ? "fa-spinner fa-spin" : "fa-upload"}`}></i>
             </button>
 
             <button className="menu-btn" onClick={onImport} title="Import">

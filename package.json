@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/Rohan-Shridhar/gridcraft#readme",
   "dependencies": {
+    "html2canvas": "^1.4.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

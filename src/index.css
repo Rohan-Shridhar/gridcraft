@@ -121,9 +121,14 @@ header {
     background-color 0.2s ease,
     color 0.2s ease;
 }
-.menu-btn:hover {
+.menu-btn:hover:not(:disabled) {
   background-color: var(--menu-text-color);
   color: var(--menu-bg-color);
+}
+.menu-btn:disabled,
+.menu-btn--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ── Grid Size Selector ─────────────────────────── */
