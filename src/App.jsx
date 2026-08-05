@@ -204,10 +204,12 @@ function App(){
     (index) => {
       if (!showGrid) return;
 
+      const targetColor = cells[index];
+      const newColor = isEraser ? EMPTY_CELL : selectedColor;
+
       if (isFill) {
-        const targetColor = cells[index];
-        const fillColor = selectedColor;
-        const newCells = floodFill(cells, index, targetColor, fillColor);
+        if (targetColor === newColor) return;
+        const newCells = floodFill(cells, index, targetColor, newColor);
         if (newCells === cells) return;
 
         setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
@@ -216,8 +218,10 @@ function App(){
         return;
       }
 
+      if (targetColor === newColor) return;
+
       const newCells = [...cells];
-      newCells[index] = isEraser ? EMPTY_CELL : selectedColor;
+      newCells[index] = newColor;
 
       setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
       setFuture([]);
