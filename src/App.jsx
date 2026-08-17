@@ -5,6 +5,7 @@ import Menu from './Menu.jsx';
 import Grid from './Grid.jsx';
 import Tools from './Tools.jsx';
 import Footer from './Footer.jsx';
+import ErrorPage from './ErrorPage.jsx';
 
 const GRID_SIZES = [16, 32, 64, 128];
 const DEFAULT_GRID_SIZE = 15;
@@ -351,6 +352,12 @@ function App(){
     if (gridSize === size) return `Already on ${size}×${size}`;
     return `Switch to ${size}×${size}`;
   };
+
+  const path = window.location.pathname;
+
+  if (path !== "/") {
+    return <ErrorPage />;
+  }
 
   return (
     <>
