@@ -53,6 +53,7 @@ body {
   background-position: center;
   background-repeat: no-repeat;
   color: var(--text-color);
+  font-family: cursive;
 }
 #root {
   display: flex;
@@ -71,14 +72,14 @@ header {
   color: var(--header-text-color);
 }
 .jersey-10-regular {
-  font-family: "Jersey 10", sans-serif;
+  font-family: cursive;
   font-weight: 400;
   font-style: normal;
   font-size: var(--header-title-size);
 }
 
 .header-cont {
-  font-family: "Jersey 10", sans-serif;
+  font-family: cursive;
   text-align: center;
 }
 .header-title-wrap {
@@ -93,7 +94,7 @@ header {
   position: absolute;
   right: 0;
   top: 100%;
-  font-family: fantasy;
+  font-family: cursive;
   font-size: var(--header-subtitle-size);
   line-height: 1;
   white-space: nowrap;
