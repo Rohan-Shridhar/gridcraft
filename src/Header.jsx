@@ -1,7 +1,10 @@
 function Header({ isDarkTheme, toggleTheme }){
     return (
         <div className="header-cont">
-            <h1>GRID CRAFT</h1>
+            <div className="header-title-wrap">
+                <h1>GRID CRAFT</h1>
+                <span className="header-byline">by rohan</span>
+            </div>
             <button
                 onClick={toggleTheme}
                 className="menu-btn"

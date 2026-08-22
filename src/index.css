@@ -81,8 +81,22 @@ header {
   font-family: "Jersey 10", sans-serif;
   text-align: center;
 }
+.header-title-wrap {
+  position: relative;
+  display: inline-block;
+}
 .header-cont h1 {
+  margin: 0;
   font-size: var(--header-title-size);
+}
+.header-byline {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  font-family: fantasy;
+  font-size: var(--header-subtitle-size);
+  line-height: 1;
+  white-space: nowrap;
 }
 .lines {
   text-align: center;
