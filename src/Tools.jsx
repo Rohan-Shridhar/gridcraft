@@ -17,6 +17,15 @@ function Tools({
     isPreview = false,
 }){
     const previewTitle = isPreview ? "Disabled in preview mode" : null;
+    const previewToastMsg = "Can't edit while preview";
+
+    const blockIfPreview = () => {
+        if (isPreview) {
+            showToast(previewToastMsg);
+            return true;
+        }
+        return false;
+    };
 
     const getReadableTextColor = (hexColor) => {
         const normalized = hexColor.replace("#", "");
@@ -29,7 +38,7 @@ function Tools({
     };
 
     const handleSelectColor = (value) => {
-        if (isPreview) return;
+        if (blockIfPreview()) return;
         setSelectedColor(value);
         setIsEraser(false);
         setIsFill(false);
@@ -37,13 +46,13 @@ function Tools({
     };
 
     const handleBackgroundColor = (value) => {
-        if (isPreview) return;
+        if (blockIfPreview()) return;
         setBackgroundColor(value);
         showToast("Background color updated", "success");
     };
 
     const handleToggleEraser = () => {
-        if (isPreview) return;
+        if (blockIfPreview()) return;
         setIsEraser((prev) => {
             const next = !prev;
             if (next) {
@@ -55,7 +64,7 @@ function Tools({
     };
 
     const handleToggleFill = () => {
-        if (isPreview) return;
+        if (blockIfPreview()) return;
         setIsFill((prev) => {
             const next = !prev;
             if (next) {
@@ -67,7 +76,7 @@ function Tools({
     };
 
     const handleBrush = () => {
-        if (isPreview) return;
+        if (blockIfPreview()) return;
         setIsEraser(false);
         setIsFill(false);
         showToast("Paint brush tool selected", "success");
@@ -76,26 +85,28 @@ function Tools({
     return (
         <div className="tools-cont">
             <button
-                className={`tool-btn${!canUndo || isPreview ? " tool-btn--disabled" : ""}`}
+                className={`tool-btn${(!canUndo && !isPreview) || isPreview ? " tool-btn--disabled" : ""}`}
                 onClick={() => {
-                    if (!canUndo || isPreview) return;
+                    if (blockIfPreview()) return;
+                    if (!canUndo) return;
                     undo();
                     showToast("Undo", "success");
                 }}
-                disabled={!canUndo || isPreview}
+                disabled={!canUndo && !isPreview}
                 title={previewTitle ?? "Undo (Ctrl+Z)"}
             >
                 <i className="fa-solid fa-rotate-left"></i>
             </button>
 
             <button
-                className={`tool-btn${!canRedo || isPreview ? " tool-btn--disabled" : ""}`}
+                className={`tool-btn${(!canRedo && !isPreview) || isPreview ? " tool-btn--disabled" : ""}`}
                 onClick={() => {
-                    if (!canRedo || isPreview) return;
+                    if (blockIfPreview()) return;
+                    if (!canRedo) return;
                     redo();
                     showToast("Redo", "success");
                 }}
-                disabled={!canRedo || isPreview}
+                disabled={!canRedo && !isPreview}
                 title={previewTitle ?? "Redo (Ctrl+Y)"}
             >
                 <i className="fa-solid fa-rotate-right"></i>
@@ -103,15 +114,7 @@ function Tools({
 
             <button
                 className={`tool-btn${isEraser ? ' tool-btn--active' : ''}${isPreview ? ' tool-btn--disabled' : ''}`}
-                onClick={() => {
-                    const next = !isEraser;
-                    setIsEraser(next);
-                    if (next) {
-                        setIsFill(false);
-                        showToast("Eraser selected", "success");
-                    }
-                }}
-                disabled={isPreview}
+                onClick={handleToggleEraser}
                 title={previewTitle ?? "Eraser (E)"}
             >
                 <i className="fa-solid fa-eraser"></i>
@@ -119,15 +122,7 @@ function Tools({
 
             <button
                 className={`tool-btn${isFill ? ' tool-btn--active' : ''}${isPreview ? ' tool-btn--disabled' : ''}`}
-                onClick={() => {
-                    const next = !isFill;
-                    setIsFill(next);
-                    if (next) {
-                        setIsEraser(false);
-                        showToast("Fill tool selected", "success");
-                    }
-                }}
-                disabled={isPreview}
+                onClick={handleToggleFill}
                 title={previewTitle ?? "Fill (B)"}
             >
                 <i className="fa-solid fa-fill-drip"></i>
@@ -136,7 +131,6 @@ function Tools({
             <button
                 className={`tool-btn${!isEraser && !isFill && !isPreview ? " tool-btn--active" : ""}${isPreview ? " tool-btn--disabled" : ""}`}
                 onClick={handleBrush}
-                disabled={isPreview}
                 title={previewTitle ?? "Paint brush (A)"}
             >
                 <i className="fa-solid fa-brush"></i>
@@ -145,11 +139,10 @@ function Tools({
             <button
                 className={`tool-btn tool-btn--fill-bg${isPreview ? " tool-btn--disabled" : ""}`}
                 onClick={() => {
-                    if (isPreview) return;
+                    if (blockIfPreview()) return;
                     fillBackground();
                     showToast("Background filled", "success");
                 }}
-                disabled={isPreview}
                 title={previewTitle ?? "Fill transparent cells with selected color"}
             >
                 <i className="fa-brands fa-flipboard"></i>
@@ -159,12 +152,11 @@ function Tools({
             <button
                 className={`tool-btn${isPreview ? " tool-btn--disabled" : ""}`}
                 onClick={() => {
-                    if (isPreview) return;
+                    if (blockIfPreview()) return;
                     if (!window.confirm("Clear the entire canvas?")) return;
                     clearAll();
                     showToast("Canvas cleared", "success");
                 }}
-                disabled={isPreview}
                 title={previewTitle ?? "Clear All (C)"}
             >
                 <i className="fa-solid fa-trash-can"></i>
@@ -179,9 +171,13 @@ function Tools({
                     type="color"
                     className="color-input"
                     value={selectedColor}
-                    disabled={isPreview}
+                    onClick={(e) => {
+                        if (blockIfPreview()) {
+                            e.preventDefault();
+                        }
+                    }}
                     onChange={e => {
-                        if (isPreview) return;
+                        if (blockIfPreview()) return;
                         setSelectedColor(e.target.value);
                         setIsEraser(false);
                         setIsFill(false);

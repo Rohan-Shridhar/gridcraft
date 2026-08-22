@@ -292,7 +292,6 @@ body.light-theme .grid-size-btn {
 .color-picker-label--disabled {
   opacity: 0.35;
   cursor: not-allowed;
-  pointer-events: none;
 }
 
 .toast {

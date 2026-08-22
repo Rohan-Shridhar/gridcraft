@@ -52,8 +52,23 @@ function App(){
   const fileInputRef = useRef(null);
 
   const handleKeyPress = useCallback((event) => {
-    if (!showGrid) return;
     const eventKey = event.key.toLowerCase();
+    const previewToastMsg = "Can't edit while preview";
+
+    if (!showGrid) {
+      const isToolShortcut =
+        eventKey === "e" ||
+        eventKey === "b" ||
+        eventKey === "a" ||
+        eventKey === "c" ||
+        (eventKey === "z" && event.ctrlKey) ||
+        (eventKey === "y" && event.ctrlKey);
+
+      if (isToolShortcut) {
+        showToast(previewToastMsg);
+      }
+      return;
+    }
 
     if (eventKey === "z" && event.ctrlKey && history.length) {
       undo()
