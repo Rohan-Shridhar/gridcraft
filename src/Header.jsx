@@ -13,13 +13,8 @@ function Header({ isDarkTheme, toggleTheme }){
             >
                 {isDarkTheme ? <i className="fa-regular fa-sun"></i> : <i className="fa-regular fa-moon"></i>}
             </button>
-            <div className="lines">
-                <div className="line"></div>
-                <div className="line"></div>
-                <div className="line"></div>
-                <div className="line"></div>
-                <div className="line"></div>
-            </div>
+            <br/>
+            <img src={isDarkTheme ? "/cat-white.svg" : "/cat-black.svg"} alt="cat logo" className="cat-logo" style={{ height: "70vh", marginTop: "1rem" }} />
             <p><i>Draw your imagination</i></p>
         </div>
     );
