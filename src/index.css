@@ -360,24 +360,30 @@ body.light-theme .footer-cont {
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  width: 100vw;
+  width: 100%;
   padding: 1.25rem 1.5rem 0.75rem;
   box-sizing: border-box;
   background-color: var(--footer-bg-color);
   color: var(--footer-text-color);
+  text-align: center;
 }
 
 .contributors-title {
   margin: 0;
+  width: 100%;
   font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-align: center;
   color: var(--footer-text-color);
 }
 
 .contributors-link {
-  display: inline-flex;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
   padding: 0.35rem;
   border-radius: 8px;
   transition: transform 0.2s ease, opacity 0.2s ease;
@@ -392,6 +398,7 @@ body.light-theme .footer-cont {
   display: block;
   max-width: min(100%, 420px);
   height: auto;
+  margin: 0 auto;
   border-radius: 6px;
 }
 
