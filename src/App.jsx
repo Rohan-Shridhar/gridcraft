@@ -5,6 +5,7 @@ import Menu from './Menu.jsx';
 import Grid from './Grid.jsx';
 import Tools from './Tools.jsx';
 import Footer from './Footer.jsx';
+import Contributors from './Contributors.jsx';
 import ErrorPage from './ErrorPage.jsx';
 
 const GRID_SIZES = [16, 32, 64, 128];
@@ -450,6 +451,7 @@ function App(){
         isPreview={isPreview}
       />
 
+      <Contributors />
       <Footer />
     </>
   );

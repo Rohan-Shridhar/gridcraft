@@ -353,6 +353,48 @@ body.light-theme .footer-cont {
   font-size: 1.05em;
 }
 
+/* ── Contributors ───────────────────────────────── */
+.contributors-cont {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100vw;
+  padding: 1.25rem 1.5rem 0.75rem;
+  box-sizing: border-box;
+  background-color: var(--footer-bg-color);
+  color: var(--footer-text-color);
+}
+
+.contributors-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--footer-text-color);
+}
+
+.contributors-link {
+  display: inline-flex;
+  padding: 0.35rem;
+  border-radius: 8px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.contributors-link:hover {
+  transform: translateY(-2px);
+  opacity: 0.9;
+}
+
+.contributors-link img {
+  display: block;
+  max-width: min(100%, 420px);
+  height: auto;
+  border-radius: 6px;
+}
+
 .toast {
   position: fixed;
   bottom: 20px;
