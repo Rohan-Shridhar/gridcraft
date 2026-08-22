@@ -54,6 +54,7 @@ body {
   background-repeat: no-repeat;
   color: var(--text-color);
   font-family: cursive;
+  cursor: url('/cursors/cursor.png'), auto;
 }
 #root {
   display: flex;
@@ -116,7 +117,7 @@ header {
   border: 1px solid var(--menu-text-color);
   border-radius: 6px;
   font-size: 1rem;
-  cursor: pointer;
+  cursor: url('/cursors/pointer.png'), pointer;
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
@@ -152,7 +153,7 @@ header {
   border: 1px solid var(--text-color);
   border-radius: 6px;
   font-size: 0.85rem;
-  cursor: pointer;
+  cursor: url('/cursors/pointer.png'), pointer;
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
@@ -247,7 +248,7 @@ body.light-theme .footer-cont {
   border: 1px solid var(--tools-text-color);
   border-radius: 6px;
   font-size: 0.95rem;
-  cursor: pointer;
+  cursor: url('/cursors/pointer.png'), pointer;
   transition:
     background-color 0.2s ease,
     color 0.2s ease,
@@ -286,7 +287,7 @@ body.light-theme .footer-cont {
   border: 1px solid var(--tools-text-color);
   border-radius: 6px;
   font-size: 0.95rem;
-  cursor: pointer;
+  cursor: url('/cursors/pointer.png'), pointer;
   color: var(--tools-text-color);
   transition: background-color 0.2s ease;
 }
