@@ -399,6 +399,7 @@ function App(){
         gridSize={gridSize}
         showGrid={showGrid}
         isFill={isFill}
+        isEraser={isEraser}
         paintCell={paintCell}
         gridGap={getGridGap(gridSize, showGrid)}
         backgroundColor={backgroundColor}

@@ -1,5 +1,5 @@
 import {useState} from 'react';
-function Grid({ cells, gridSize, gridGap, showGrid, isFill, paintCell, backgroundColor }) {
+function Grid({ cells, gridSize, gridGap, showGrid, isFill, isEraser, paintCell, backgroundColor }) {
     const [isMouseDown, setIsMouseDown] = useState(false);
     return (
         <div
@@ -20,7 +20,7 @@ function Grid({ cells, gridSize, gridGap, showGrid, isFill, paintCell, backgroun
                         backgroundColor: color || 'transparent',
                         border: showGrid ? undefined : 'none',
                         borderRadius: showGrid ? undefined : '0',
-                        cursor: !showGrid ? 'not-allowed' : (isFill ? 'cell' : 'crosshair'),
+                        cursor: !showGrid ? 'not-allowed' : (isEraser ? 'url(/cursors/eraser.png), auto' : (isFill ? 'url(/cursors/bucket.png), auto' : 'url(/cursors/paintbrush.png), auto')),
                     }}
                     onMouseDown={() => { if (showGrid) { paintCell(i); setIsMouseDown(true); } }}
                     onMouseEnter={() => showGrid && isMouseDown && !isFill && paintCell(i)}
