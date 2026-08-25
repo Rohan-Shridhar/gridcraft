@@ -56,14 +56,29 @@ function App(){
     const eventKey = event.key.toLowerCase();
     const previewToastMsg = "Can't edit while preview";
 
+    // Undo/redo navigate history rather than edit the canvas, so they stay
+    // available in preview mode — checked before the preview gate below.
+    if (eventKey === "z" && event.ctrlKey) {
+      if (history.length) {
+        undo();
+        showToast("Undo", "success");
+      }
+      return;
+    }
+    if (eventKey === "y" && event.ctrlKey) {
+      if (future.length) {
+        redo();
+        showToast("Redo", "success");
+      }
+      return;
+    }
+
     if (!showGrid) {
       const isToolShortcut =
         eventKey === "e" ||
         eventKey === "b" ||
         eventKey === "a" ||
-        eventKey === "c" ||
-        (eventKey === "z" && event.ctrlKey) ||
-        (eventKey === "y" && event.ctrlKey);
+        eventKey === "c";
 
       if (isToolShortcut) {
         showToast(previewToastMsg);
@@ -71,15 +86,7 @@ function App(){
       return;
     }
 
-    if (eventKey === "z" && event.ctrlKey && history.length) {
-      undo()
-      showToast("Undo", "success")
-    }
-    else if (eventKey === "y" && event.ctrlKey && future.length) {
-      redo()
-      showToast("Redo", "success")
-    }
-    else if (eventKey === "e") {
+    if (eventKey === "e") {
       setIsEraser((prev) => {
         const newValue = !prev;
         if (newValue) {
