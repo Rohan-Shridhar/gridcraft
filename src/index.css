@@ -270,12 +270,12 @@ body.light-theme .footer-cont {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background-color: #16a34a;
-  border-color: #16a34a;
+  background-color: black;
+  border-color: white;
 }
 .tool-btn--fill-bg:hover:not(:disabled) {
-  background-color: #15803d;
-  border-color: #15803d;
+  background-color: white;
+  border-color: white;
 }
 
 /* Color picker */
