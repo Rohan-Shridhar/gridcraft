@@ -84,30 +84,31 @@ function Tools({
 
     return (
         <div className="tools-cont">
+            {/* Undo/redo navigate history rather than edit the canvas, so — unlike
+                every other tool below — they stay enabled in preview mode and are
+                gated only on canUndo/canRedo. */}
             <button
-                className={`tool-btn${(!canUndo && !isPreview) || isPreview ? " tool-btn--disabled" : ""}`}
+                className={`tool-btn${!canUndo ? " tool-btn--disabled" : ""}`}
                 onClick={() => {
-                    if (blockIfPreview()) return;
                     if (!canUndo) return;
                     undo();
                     showToast("Undo", "success");
                 }}
-                disabled={!canUndo && !isPreview}
-                title={previewTitle ?? "Undo (Ctrl+Z)"}
+                disabled={!canUndo}
+                title={canUndo ? "Undo (Ctrl+Z)" : "Nothing to undo"}
             >
                 <i className="fa-solid fa-rotate-left"></i>
             </button>
 
             <button
-                className={`tool-btn${(!canRedo && !isPreview) || isPreview ? " tool-btn--disabled" : ""}`}
+                className={`tool-btn${!canRedo ? " tool-btn--disabled" : ""}`}
                 onClick={() => {
-                    if (blockIfPreview()) return;
                     if (!canRedo) return;
                     redo();
                     showToast("Redo", "success");
                 }}
-                disabled={!canRedo && !isPreview}
-                title={previewTitle ?? "Redo (Ctrl+Y)"}
+                disabled={!canRedo}
+                title={canRedo ? "Redo (Ctrl+Y)" : "Nothing to redo"}
             >
                 <i className="fa-solid fa-rotate-right"></i>
             </button>
