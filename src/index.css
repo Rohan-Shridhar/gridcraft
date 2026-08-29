@@ -19,6 +19,12 @@
   --footer-link-hover: #61dafb;
   --grid-board-size: min(calc(100vw - 2rem), 580px);
 }
+/* OTFs fonts */
+@font-face {
+  font-family: 'Minecraft';
+  src: url("fonts/Minecraft.otf") format("opentype");
+}
+
 /* light theme */
 body.light-theme {
   --bg-color: #f5f5f0;
