@@ -2,7 +2,7 @@ function Header({ isDarkTheme, toggleTheme }){
     return (
         <div className="header-cont">
             <div className="header-title-wrap">
-                <h1 className="jersey-10-regular">GRID CRAFT</h1>
+                <h1 className="jersey-10-regular" style={{ fontFamily: '"Jersey 10", cursive' }}>GRID CRAFT</h1>
                 <span className="header-byline">by rohan</span>
             </div>
             <button
