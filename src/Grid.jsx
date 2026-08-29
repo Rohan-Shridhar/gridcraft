@@ -35,12 +35,32 @@ function Grid({
       style={{
         "--grid-box-count": gridSize,
         "--grid-gap": `${gridGap}px`,
+        position: "relative",
       }}
       onMouseLeave={() => {
         setIsMouseDown(false);
         setHoveredCell(null);
       }}
     >
+      <span
+        aria-label={`Canvas dimensions: ${gridSize} by ${gridSize}`}
+        style={{
+          position: "absolute",
+          right: "2rem",
+          bottom: "0.35rem",
+          zIndex: 2,
+          padding: "0.15rem 0.45rem",
+          borderRadius: "4px",
+          background: "var(--grid-bg-color)",
+          color: "var(--grid-text-color)",
+          fontSize: "0.75rem",
+          opacity: 0.85,
+          pointerEvents: "none",
+        }}
+      >
+        Canvas: {gridSize}×{gridSize}
+      </span>
+
       <div className="column-coordinates" aria-hidden="true">
         {coordinates.map((coordinate) => (
           <span
