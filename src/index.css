@@ -174,6 +174,80 @@ header {
 }
 
 /* ── Grid ───────────────────────────────────────── */
+.grid-coordinate-layout {
+  display: grid;
+  grid-template-columns: var(--grid-board-size) 1.75rem;
+  grid-template-rows: 1.5rem var(--grid-board-size);
+  column-gap: 0.25rem;
+}
+
+.column-coordinates {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--grid-box-count), minmax(0, 1fr));
+  gap: var(--grid-gap, 2px);
+  align-items: end;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+}
+
+.row-coordinates {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(var(--grid-box-count), minmax(0, 1fr));
+  gap: var(--grid-gap, 2px);
+  align-items: center;
+  padding: 1.5rem 0;
+  box-sizing: border-box;
+}
+
+.coordinate-label {
+  color: var(--grid-text-color);
+  font-size: 0.65rem;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.coordinate-label--visible {
+  opacity: 0.65;
+}
+
+.coordinate-label--active {
+  color: #61dafb;
+  opacity: 1;
+  position: relative;
+  z-index: 1;
+  transform: scale(1.15);
+}
+
+.grid-coordinate-layout .grid-cont {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.grid-coordinate-layout--preview {
+  grid-template-columns: var(--grid-board-size);
+  grid-template-rows: var(--grid-board-size);
+  column-gap: 0;
+}
+
+.grid-coordinate-layout--preview .column-coordinates,
+.grid-coordinate-layout--preview .row-coordinates {
+  display: none;
+}
+
+.grid-coordinate-layout--preview .grid-cont {
+  grid-row: 1;
+}
 .grid-cont {
   display: grid;
   grid-template-columns: repeat(var(--grid-box-count), minmax(0, 1fr));
@@ -596,6 +670,14 @@ body.light-theme .contributor-card-avatar {
 @media (max-width: 640px) {
   .grid-cont {
     padding: 0.75rem;
+  }
+
+  .column-coordinates {
+    padding-inline: 0.75rem;
+  }
+
+  .row-coordinates {
+    padding-block: 0.75rem;
   }
 }
 
