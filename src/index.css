@@ -8,7 +8,7 @@
   --menu-bg-color: #1a1a1a;
   --menu-text-color: #e5e5e5;
   --grid-box-size: clamp(12px, 3vh, 32px);
-  --grid-box-count: 15;
+  --grid-box-count: 16;
   --grid-bg-color: #1a1a1a;
   --grid-text-color: #e5e5e5;
   --tools-bg-color: #1a1a1a;

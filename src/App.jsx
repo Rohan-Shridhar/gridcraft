@@ -9,7 +9,7 @@ import Contributors from './Contributors.jsx';
 import ErrorPage from './ErrorPage.jsx';
 
 const GRID_SIZES = [16, 32, 64, 128];
-const DEFAULT_GRID_SIZE = 15;
+const DEFAULT_GRID_SIZE = 16;
 const MAX_HISTORY = 15;
 const DEFAULT_BACKGROUND_COLOR = "transparent";
 const EMPTY_CELL = null;
@@ -414,7 +414,7 @@ function App(){
 
       <div className="grid-size-selector">
         <span className="grid-size-label">Grid:</span>
-        {GRID_SIZES.filter(size => isSmallScreen ? size <= 32 : true).map((size) => (
+        {GRID_SIZES.map((size) => (
           <button
             key={size}
             className={`grid-size-btn${gridSize === size ? " grid-size-btn--active" : ""
