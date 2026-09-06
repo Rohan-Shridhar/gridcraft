@@ -96,11 +96,12 @@ function Menu({ downloadImage, onImport, isExporting = false }){
                             border: "1px solid var(--menu-text-color)",
                             borderRadius: "8px",
                             padding: "1.25rem",
+                            fontFamily: '"Minecraft", "Courier New", monospace',
                         }}
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <h2 id="shortcut-help-title" style={{ marginTop: 0 }}>Keyboard shortcuts</h2>
-                        <ul style={{ lineHeight: 1.9, paddingLeft: "1.25rem" }}>
+                        <h2 id="shortcut-help-title" style={{ marginTop: 0, fontFamily: '"Minecraft", "Courier New", monospace' }}>Keyboard shortcuts</h2>
+                        <ul style={{ lineHeight: 1.9, paddingLeft: "1.25rem", fontFamily: '"Minecraft", "Courier New", monospace' }}>
                             <li><strong>Ctrl + Z</strong> — Undo</li>
                             <li><strong>Ctrl + Y</strong> — Redo</li>
                             <li><strong>A</strong> — Paint brush</li>
@@ -108,7 +109,7 @@ function Menu({ downloadImage, onImport, isExporting = false }){
                             <li><strong>B</strong> — Fill tool</li>
                             <li><strong>C</strong> — Clear canvas</li>
                         </ul>
-                        <button className="menu-btn" onClick={() => setShowShortcuts(false)}>Close</button>
+                        <button className="menu-btn" style={{ fontFamily: '"Minecraft", "Courier New", monospace' }} onClick={() => setShowShortcuts(false)}>Close</button>
                     </div>
                 </div>
             )}
