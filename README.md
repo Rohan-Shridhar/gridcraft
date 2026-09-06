@@ -45,23 +45,40 @@ Need step-by-step usage instructions? Read the [GridCraft Manual](Manual.md).
 
 ## Repository Structure 📁
 ```txt
-gridcraft/
-├── src/                    # Source files (transpiled in-browser by Babel)
-│   ├──images/              # Images used for background, icon etc..   
-│   ├── App.jsx             # Root component - state management & download logic
-│   ├── Footer.jsx          # Footer component with links/info
-│   ├── Grid.jsx            # Grid rendering and cell logic
-│   ├── Header.jsx          # Header component
-│   ├── main.jsx            # Entry point (creates root, renders App)
-│   ├── Menu.jsx            # Menu component
-│   └── Tools.jsx           # Drawing tools component (pen, eraser, clear)
-├── .gitattributes          # Git configuration
-├── index.html              # Main HTML - loads React, Babel, html2canvas, components
-├── index.css               # Global styles and grid layout
-├── LICENSE                 # License file
-└── README.md               # Documentation
-````
+rohan-shridhar-gridcraft/
+├── README.md                               # Project overview and usage documentation
+├── CODE_OF_CONDUCT.md                      # Community code of conduct
+├── CONTRIBUTING.md                          # Contribution guidelines
+├── google53f3f4f7aefc7ea4.html             # Verification file for Google indexing
+├── index.html                              # Main HTML entry point for the app
+├── LICENSE                                 # MIT license details
+├── Manual.md                               # Step-by-step user guide
+├── package.json                            # Project scripts and dependencies
+├── vercel.json                             # Vercel deployment configuration
+├── vite.config.js                          # Vite configuration for local dev/build
+├── public/                                 # Static public assets
+│   └── fonts/                              # Custom font files
+│       └── Minecraft.otf                  # Game-like font used in the UI
+├── src/                                    # Application source code
+│   ├── App.jsx                             # Main app state management and UI composition
+│   ├── Contributors.jsx                    # Contributors section component
+│   ├── ErrorPage.jsx                       # Error page fallback component
+│   ├── Footer.jsx                          # Footer content and links
+│   ├── Grid.jsx                            # Pixel grid rendering and drawing logic
+│   ├── Header.jsx                          # Header/navigation component
+│   ├── index.css                           # Global styles and layout
+│   ├── main.jsx                            # React app entry point
+│   ├── Menu.jsx                            # Toolbar/menu controls
+│   ├── toastMessages.js                    # Toast notifications for user feedback
+│   └── Tools.jsx                           # Drawing tools and controls
+└── .github/                                # GitHub project metadata
+    └── ISSUE_TEMPLATE/                     # Issue templates for bug reports and features
+        ├── bug_report.md                   # Bug report issue template
+        └── feature_request.md              # Feature request issue template
+```
+
 ![Project Structure](./public/structure.png)
+
 ## Technical Implementation 🔧
 
 - **React 18 (CDN)** - Loaded via unpkg, no build step required
