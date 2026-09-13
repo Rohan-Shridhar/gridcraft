@@ -107,7 +107,8 @@ function Menu({ downloadImage, onImport, isExporting = false }){
                             <li><strong>A</strong> — Paint brush</li>
                             <li><strong>E</strong> — Eraser</li>
                             <li><strong>B</strong> — Fill tool</li>
-                            <li><strong>C</strong> — Clear canvas</li>
+                            <li><strong>C</strong> — Fill background cells</li>
+                            <li><strong>D</strong> — Clear canvas</li>
                         </ul>
                         <button className="menu-btn" style={{ fontFamily: '"Minecraft", "Courier New", monospace' }} onClick={() => setShowShortcuts(false)}>Close</button>
                     </div>
