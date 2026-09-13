@@ -144,7 +144,7 @@ function Tools({
                     fillBackground();
                     showToast("Background filled", "success");
                 }}
-                title={previewTitle ?? "Fill transparent cells with selected color"}
+                title={previewTitle ?? "Fill transparent cells (C)"}
             >
                 <i className="fa-brands fa-flipboard"></i>
 
@@ -158,7 +158,7 @@ function Tools({
                     clearAll();
                     showToast("Canvas cleared", "success");
                 }}
-                title={previewTitle ?? "Clear All (C)"}
+                title={previewTitle ?? "Clear All (D)"}
             >
                 <i className="fa-solid fa-trash-can"></i>
             </button>

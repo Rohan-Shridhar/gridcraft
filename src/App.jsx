@@ -78,7 +78,8 @@ function App(){
         eventKey === "e" ||
         eventKey === "b" ||
         eventKey === "a" ||
-        eventKey === "c";
+        eventKey === "c" ||
+        eventKey === "d";
 
       if (isToolShortcut) {
         showToast(previewToastMsg);
@@ -111,6 +112,9 @@ function App(){
       setIsFill(false);
       showToast("Paint brush tool selected", "success");
     } else if (eventKey === "c") {
+      fillBackground();
+      showToast("Background cells filled", "success");
+    } else if (eventKey === "d") {
       if (!window.confirm("Clear the entire canvas?")) return;
       clearAll();
       showToast("Canvas cleared", "success");
