@@ -28,10 +28,11 @@ Shortcuts work while the drawing grid is visible:
 | --- | --- |
 | Undo | `Ctrl + Z` |
 | Redo | `Ctrl + Y` |
+| Paint brush | `A` |
+| Fill enclosed cells | `B` |
+| Fill transparent cells|`C`|
+| Clear canvas | `D` |
 | Eraser | `E` |
-| Bucket / Fill tool | `B` |
-| Color picker / Paint brush | `A` |
-| Clear canvas | `C` |
 
 
 ## Live Demo 🚀
