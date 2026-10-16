@@ -322,7 +322,7 @@ function App(){
     e.target.value = "";
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
+    if (!file.type.startsWith("image/") && !file.name.toLowerCase().endsWith(".svg")) {
       showToast("Invalid image file");
       return;
     }
@@ -397,7 +397,7 @@ function App(){
       />
       <input
         type="file"
-        accept="image/*"
+        accept="image/*,.svg,image/svg+xml"
         ref={fileInputRef}
         style={{ display: "none" }}
         onChange={importImage}
