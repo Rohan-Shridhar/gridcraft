@@ -1,101 +1,81 @@
 # GridCraft Manual
 
-This manual explains the basic workflow for creating a canvas in GridCraft.
-The red rectangles in the screenshots mark the tool or area used in each step.
+GridCraft is a browser-based pixel art editor. Draw on a square grid, import an
+image to convert it into pixels, and export your finished artwork as a PNG.
 
-## 1. Open GridCraft
+## Open GridCraft
 
-Open the live app:
+Use the live app at [gridcraft-by-me.vercel.app](https://gridcraft-by-me.vercel.app/).
 
-https://rohan-shridhar.github.io/gridcraft/
+To run it locally, install the project dependencies with `npm install`, then run
+`npm run dev` and open the local address shown in the terminal.
 
-You can also run it locally by opening `index.html` in a browser.
+## Draw on the canvas
 
-## 2. Use the Drawing Canvas
+Click a cell to color it, or click and drag to paint several cells. The canvas
+starts at 16×16. Choose a color with the color picker in the tools bar, then
+draw with the paint brush.
 
-The canvas is the square grid in the center of the page. Click or drag across
-cells to paint pixels with the selected color.
+## Choose a grid size
 
-![Drawing canvas highlighted](src/images/manual/manual-canvas.png)
+Use the grid buttons below the canvas to choose a size:
 
-## 3. Choose a Color
-
-Use the color picker in the bottom toolbar to choose the paint color. After
-selecting a new color, click or drag on the canvas to draw with it.
-
-![Color picker highlighted](src/images/manual/manual-color-picker.png)
-
-## 4. Fill an Area
-
-Use the fill tool to paint connected cells of the same color in one action.
-
-1. Select a color with the color picker.
-2. Click the fill tool.
-3. Click a cell on the canvas.
-
-![Fill tool highlighted](src/images/manual/manual-fill-tool.png)
-
-## 5. Adjust the Canvas Grid
-
-Use the grid size buttons below the canvas to switch between available canvas
-sizes. Changing the grid size clears the current drawing, so export your work
-first if you want to keep it.
-
-Available sizes:
-
-| Size | Best for |
+| Size | Suitable for |
 | --- | --- |
-| 16x16 | Simple icons and small pixel art |
-| 32x32 | More detailed icons |
-| 64x64 | Detailed pixel art |
-| 128x128 | Large drawings |
+| 16×16 | Simple icons and small pixel art |
+| 32×32 | More detailed icons |
+| 64×64 | Detailed pixel art |
+| 128×128 | Large, detailed drawings |
 
-The eye button toggles preview mode. Preview hides grid lines and disables
-drawing tools so you can inspect the artwork cleanly.
+Changing the grid size asks for confirmation and clears the current drawing.
+Grid lines are shown on the 16×16 grid; the larger grids open without grid lines.
+Use the eye button below the canvas to toggle grid lines and preview the artwork.
+In preview mode, drawing tools and grid-size controls are disabled. Undo and redo
+remain available.
 
-## 6. Edit Your Drawing
+## Use the drawing tools
 
-Use the toolbar actions while the grid is visible:
-
-| Tool | Use |
+| Tool | What it does |
 | --- | --- |
-| Undo | Revert the last drawing action |
-| Redo | Restore an undone action |
-| Eraser | Paint cells back to the default canvas color |
-| Fill | Fill connected cells with the selected color |
+| Paint brush | Paint cells with the selected color |
+| Eraser | Make painted cells transparent |
+| Fill | Fill connected cells that have the same color as the clicked cell |
+| Fill transparent cells | Fill every transparent cell with the selected color |
+| Undo / Redo | Step backward or forward through recent drawing changes |
+| Clear | Clear the canvas after confirmation |
 | Color picker | Choose the active paint color |
-| Clear | Reset the whole canvas |
 
-Keyboard shortcuts:
+GridCraft keeps up to 15 recent canvas changes for undo and redo.
+
+### Keyboard shortcuts
 
 | Action | Shortcut |
 | --- | --- |
 | Undo | `Ctrl + Z` |
 | Redo | `Ctrl + Y` |
+| Paint brush | `A` |
 | Eraser | `E` |
 | Fill tool | `B` |
-| Color picker / paint brush | `A` |
-| Clear canvas | `C` |
+| Fill transparent cells | `C` |
+| Clear canvas | `D` |
 
-## 7. Export the Canvas
+Clearing the canvas with the shortcut also asks for confirmation.
 
-Click the export button at the top of the app to download your canvas as a PNG
-image.
+## Import an image
 
-![Export button highlighted](src/images/manual/manual-export.png)
+Select the import button in the top menu and choose an image file. GridCraft
+resizes it to the current grid dimensions and converts its pixels into canvas
+cells. Transparent image pixels remain transparent. If the image has more than
+80 distinct colors, GridCraft asks whether to continue importing it.
 
-## 8. Import an Image
+## Export your artwork
 
-Click the import button beside the export button to load an image into the
-current grid. GridCraft converts the image into pixel cells using the current
-canvas size.
+Select the export button in the top menu to download the current canvas as a
+PNG. The export removes grid lines and spacing, and preserves transparency.
 
-## Quick Workflow
+## Other controls
 
-1. Open GridCraft.
-2. Choose a grid size.
-3. Pick a color.
-4. Draw on the canvas.
-5. Use fill, eraser, undo, or redo as needed.
-6. Preview the result with the eye button.
-7. Export the final canvas as a PNG.
+- Use the theme button in the upper-right corner to switch between light and
+  dark themes.
+- Select the keyboard button in the top menu to view shortcuts.
+- Select the book button in the top menu to open this manual.
