@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 function Menu({ downloadImage, onImport, isExporting = false }){
-    const [showShortcuts, setShowShortcuts] = useState(false);
+    const [showShortcuts, setShowShortcuts] = useState(true);
     const openLink = (url) => window.open(url, "_blank");
 
     const exportWithFilename = async () => {
