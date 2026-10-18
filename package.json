@@ -4,7 +4,7 @@
   "description": "![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)\r ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)",
   "main": "index.js",
   "scripts": {
-    "test": "node --test src/utils/snapSvg.test.mjs",
+    "test": "node --test src/utils/*.test.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

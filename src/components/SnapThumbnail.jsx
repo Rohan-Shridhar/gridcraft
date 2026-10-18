@@ -12,6 +12,8 @@ export default function SnapThumbnail({
   onMove,
   onUpdate,
   onStartFromSelected,
+  onExportSvg,
+  onExportPng,
   dropPosition,
   onKeyDown,
 }) {
@@ -183,6 +185,14 @@ export default function SnapThumbnail({
               </span>
             </div>
             <div className="snap-card-actions" aria-label={`Actions for ${snap.title}`}>
+              <button type="button" onClick={onExportSvg} title="Export this snap as SVG">
+                <i className="fa-regular fa-image" aria-hidden="true" />
+                <span className="visually-hidden">Export SVG</span>
+              </button>
+              <button type="button" onClick={onExportPng} title="Export this snap as PNG">
+                <i className="fa-regular fa-file-image" aria-hidden="true" />
+                <span className="visually-hidden">Export PNG</span>
+              </button>
               <button type="button" onClick={onDuplicate} title="Duplicate snap">
                 <i className="fa-regular fa-copy" aria-hidden="true" />
                 <span className="visually-hidden">Duplicate</span>

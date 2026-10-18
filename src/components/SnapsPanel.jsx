@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import SnapThumbnail from "./SnapThumbnail.jsx";
+import {
+  exportSnapPng,
+  exportSnapSvg,
+  exportSnapsJson,
+  exportSnapsWebm,
+  MAX_SNAP_IMPORT_BYTES,
+  validateSnapExport,
+} from "../utils/snapExport.mjs";
 
 export default function SnapsPanel({
   snaps,
   selectedSnapId,
   isPlaying,
   storageError,
+  storageRecoveryRequired,
   createSnap,
   selectSnap,
   renameSnap,
@@ -18,9 +27,15 @@ export default function SnapsPanel({
   reorderSnap,
   startPresentation,
   stopPresentation,
+  importSnaps,
+  replaceUnrecognizedStorage,
+  showToast,
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [dropTarget, setDropTarget] = useState(null);
+  const [frameDurationSeconds, setFrameDurationSeconds] = useState(1.5);
+  const [isExportingAnimation, setIsExportingAnimation] = useState(false);
+  const importInputRef = useRef(null);
   const listRef = useRef(null);
   const dragSourceRef = useRef(null);
   const dropTargetRef = useRef(null);
@@ -130,6 +145,66 @@ export default function SnapsPanel({
     clearSnaps();
   };
 
+  const handleImportFile = async (event) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    if (file.size > MAX_SNAP_IMPORT_BYTES) {
+      showToast("Import file is too large (maximum 25 MB)");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(await file.text());
+      const result = validateSnapExport(parsed);
+      if (!result.valid) {
+        showToast(result.error);
+        return;
+      }
+      importSnaps(result.snaps);
+    } catch (error) {
+      console.error("Failed to read snapshot import", error);
+      showToast("Could not read this snaps file");
+    }
+  };
+
+  const handleAnimationExport = async () => {
+    const included = snaps.filter((snap) => snap.includedInPresentation !== false);
+    if (!included.length) {
+      showToast("Include at least one snap to export an animation");
+      return;
+    }
+    setIsExportingAnimation(true);
+    try {
+      await exportSnapsWebm(included, frameDurationSeconds * 1000);
+      showToast("WebM animation exported", "success");
+    } catch (error) {
+      showToast(error.message || "Animation export failed");
+    } finally {
+      setIsExportingAnimation(false);
+    }
+  };
+
+  const handleExportAll = () => {
+    try {
+      exportSnapsJson(snaps);
+      showToast("All snaps exported as JSON", "success");
+    } catch (error) {
+      showToast(error.message || "JSON export failed");
+    }
+  };
+
+  const handleReplaceStoredData = () => {
+    if (
+      window.confirm(
+        "Replace the unreadable saved data with the snaps currently recovered in this session? Export a backup first if needed."
+      )
+    ) {
+      replaceUnrecognizedStorage();
+    }
+  };
+
   return (
     <aside
       className={`snaps-panel${isCollapsed ? " snaps-panel--collapsed" : ""}`}
@@ -168,6 +243,14 @@ export default function SnapsPanel({
               {storageError}
             </p>
           )}
+          {storageRecoveryRequired && (
+            <div className="snaps-storage-recovery" role="alert">
+              <span>Saved data could not be fully recovered. Export recovered snaps before replacing it.</span>
+              <button type="button" onClick={handleReplaceStoredData}>
+                Replace unreadable data
+              </button>
+            </div>
+          )}
 
           {snaps.length === 0 ? (
             <div className="snaps-empty-state">
@@ -196,6 +279,22 @@ export default function SnapsPanel({
                   onMove={(direction) => moveSnap(snap.id, direction)}
                   onUpdate={updateSnap}
                   onStartFromSelected={startPresentation}
+                  onExportSvg={() => {
+                    try {
+                      exportSnapSvg(snap);
+                      showToast("SVG exported", "success");
+                    } catch (error) {
+                      showToast(error.message || "SVG export failed");
+                    }
+                  }}
+                  onExportPng={async () => {
+                    try {
+                      await exportSnapPng(snap);
+                      showToast("PNG exported", "success");
+                    } catch (error) {
+                      showToast(error.message || "PNG export failed");
+                    }
+                  }}
                   dropPosition={dropTarget?.id === snap.id ? dropTarget.position : null}
                   onKeyDown={(event) => handleCardKeyDown(event, snap, index)}
                 />
@@ -243,6 +342,62 @@ export default function SnapsPanel({
               className="snap-clear-button"
             >
               <i className="fa-solid fa-trash-can" aria-hidden="true" /> Clear
+            </button>
+          </div>
+          <div className="snaps-file-toolbar" aria-label="Snapshot import and export">
+            <button
+              type="button"
+              onClick={handleExportAll}
+              disabled={snaps.length === 0}
+              title="Download all snaps and slide metadata as JSON"
+            >
+              <i className="fa-solid fa-file-export" aria-hidden="true" /> Export All
+            </button>
+            <button
+              type="button"
+              onClick={() => importInputRef.current?.click()}
+              title="Import a GridCraft snaps JSON file (maximum 25 MB)"
+            >
+              <i className="fa-solid fa-file-import" aria-hidden="true" /> Import
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleImportFile}
+              hidden
+              aria-label="Choose a GridCraft snaps JSON file"
+            />
+          </div>
+          <div className="snaps-animation-export">
+            <label>
+              Frame duration
+              <span>
+                <input
+                  type="number"
+                  min="0.5"
+                  max="10"
+                  step="0.5"
+                  value={frameDurationSeconds}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    if (Number.isFinite(value)) {
+                      setFrameDurationSeconds(Math.max(0.5, Math.min(10, value)));
+                    }
+                  }}
+                  aria-label="Animation frame duration in seconds"
+                />
+                sec
+              </span>
+            </label>
+            <button
+              type="button"
+              onClick={handleAnimationExport}
+              disabled={isExportingAnimation || snaps.length === 0}
+              title="Export included snaps as a WebM animation"
+            >
+              <i className="fa-solid fa-film" aria-hidden="true" />
+              {isExportingAnimation ? "Rendering…" : "Export WebM"}
             </button>
           </div>
         </>

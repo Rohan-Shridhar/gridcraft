@@ -436,7 +436,7 @@ function App(){
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
       <div className="editor-workspace">
-        <SnapsPanel {...snaps} />
+        <SnapsPanel {...snaps} showToast={showToast} />
         <main className="canvas-workspace" aria-label="Canvas editor">
           <Grid
             cells={cells}

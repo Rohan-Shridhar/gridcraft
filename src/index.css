@@ -550,6 +550,26 @@ header {
   line-height: 1.35;
 }
 
+.snaps-storage-recovery {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 0.35rem;
+  color: #fbbf24;
+  font-family: Arial, sans-serif;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.snaps-storage-recovery button {
+  min-height: 1.8rem;
+  border: 1px solid color-mix(in srgb, #fbbf24 55%, transparent);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
 .snaps-bottom-toolbar {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -587,6 +607,82 @@ header {
 .snaps-bottom-toolbar .snap-toolbar-duplicate-label {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.snaps-file-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 0 0 auto;
+  gap: 0.35rem;
+}
+
+.snaps-file-toolbar button,
+.snaps-animation-export button {
+  display: flex;
+  min-width: 0;
+  min-height: 1.85rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--menu-text-color) 28%, transparent);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--menu-text-color);
+  font: inherit;
+  font-size: 0.62rem;
+  cursor: pointer;
+}
+
+.snaps-file-toolbar button:hover:not(:disabled),
+.snaps-animation-export button:hover:not(:disabled) {
+  border-color: var(--footer-link-hover);
+  background: color-mix(in srgb, var(--footer-link-hover) 13%, transparent);
+}
+
+.snaps-file-toolbar button:disabled,
+.snaps-animation-export button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.snaps-animation-export {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.snaps-animation-export label,
+.snaps-animation-export label span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.snaps-animation-export label {
+  min-width: 0;
+  font-family: Arial, sans-serif;
+  font-size: 0.65rem;
+}
+
+.snaps-animation-export label span {
+  color: var(--footer-text-color);
+}
+
+.snaps-animation-export input {
+  width: 2.8rem;
+  padding: 0.2rem;
+  border: 1px solid color-mix(in srgb, var(--menu-text-color) 20%, transparent);
+  border-radius: 4px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font: 0.68rem Arial, sans-serif;
+}
+
+.snaps-animation-export button {
+  flex: 0 0 auto;
 }
 
 .snap-presentation-status {
@@ -1038,7 +1134,8 @@ header {
 }
 
 .snaps-panel button:focus-visible,
-.snaps-panel input:focus-visible {
+.snaps-panel input:focus-visible,
+.snaps-panel textarea:focus-visible {
   outline: 2px solid var(--footer-link-hover);
   outline-offset: 2px;
 }

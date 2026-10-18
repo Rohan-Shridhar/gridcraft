@@ -4,6 +4,7 @@ const STORAGE_KEY = "gridcraft.snaps";
 const SCHEMA_VERSION = 2;
 const LEGACY_SCHEMA_VERSION = 1;
 const DEFAULT_SLIDE_DURATION_MS = 1500;
+const MAX_SNAP_COUNT = 100;
 const GRID_SIZES = [16, 32, 64, 128];
 const HEX_COLOR = /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i;
 
@@ -12,6 +13,7 @@ function isValidSnap(snap) {
     snap &&
     typeof snap.id === "string" &&
     snap.id.length > 0 &&
+    snap.id.length <= 128 &&
     Number.isInteger(snap.sequence) &&
     snap.sequence > 0 &&
     typeof snap.title === "string" &&
@@ -40,7 +42,13 @@ function isValidSnap(snap) {
 
 function normalizeSnap(snap) {
   return {
-    ...snap,
+    id: snap.id,
+    createdAt: snap.createdAt,
+    sequence: snap.sequence,
+    title: snap.title,
+    cells: [...snap.cells],
+    gridSize: snap.gridSize,
+    backgroundColor: snap.backgroundColor,
     caption: snap.caption ?? "",
     notes: snap.notes ?? "",
     includedInPresentation: snap.includedInPresentation ?? true,
@@ -51,7 +59,7 @@ function normalizeSnap(snap) {
 function loadSnaps() {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved === null) return { snaps: [], notice: null };
+    if (saved === null) return { snaps: [], notice: null, canPersist: true };
 
     const data = JSON.parse(saved);
     if (
@@ -62,6 +70,7 @@ function loadSnaps() {
       return {
         snaps: [],
         notice: "Saved snaps were invalid or from an unsupported version.",
+        canPersist: false,
       };
     }
 
@@ -78,12 +87,16 @@ function loadSnaps() {
         snaps.length !== data.snaps.length
           ? "Some invalid saved snaps were skipped."
           : null,
+      canPersist:
+        snaps.length === data.snaps.length &&
+        data.snaps.length <= MAX_SNAP_COUNT,
     };
   } catch (error) {
     console.error("Failed to load saved snaps", error);
     return {
       snaps: [],
       notice: "Saved snaps could not be read and were not loaded.",
+      canPersist: false,
     };
   }
 }
@@ -103,6 +116,10 @@ export default function useSnaps({
   showToast,
 }) {
   const [initialData] = useState(loadSnaps);
+  const [canPersist, setCanPersist] = useState(initialData.canPersist);
+  const [storageRecoveryRequired, setStorageRecoveryRequired] = useState(
+    !initialData.canPersist
+  );
   const [snaps, setSnaps] = useState(initialData.snaps);
   const [selectedSnapId, setSelectedSnapId] = useState(
     initialData.snaps[0]?.id ?? null
@@ -116,6 +133,7 @@ export default function useSnaps({
   }, [initialData.notice, showToast]);
 
   useEffect(() => {
+    if (!canPersist) return;
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
@@ -124,9 +142,11 @@ export default function useSnaps({
       setStorageError(null);
     } catch (error) {
       console.error("Failed to save snaps", error);
-      setStorageError("Snaps could not be saved to this browser.");
+      setStorageError(
+        "Snaps could not be saved to this browser. Your existing saved snaps were kept; export a backup before closing."
+      );
     }
-  }, [snaps]);
+  }, [snaps, canPersist]);
 
   const createSnap = useCallback(() => {
     const sequence =
@@ -228,6 +248,49 @@ export default function useSnaps({
     showToast("All snaps cleared", "success");
   }, [showToast]);
 
+  const importSnaps = useCallback(
+    (importedSnaps) => {
+      if (snaps.length + importedSnaps.length > MAX_SNAP_COUNT) {
+        showToast(`A maximum of ${MAX_SNAP_COUNT} snaps can be stored`);
+        return false;
+      }
+
+      const existingIds = new Set(snaps.map((snap) => snap.id));
+      const startSequence = snaps.reduce(
+        (highest, snap) => Math.max(highest, snap.sequence),
+        0
+      );
+      const imported = importedSnaps.map((snap, index) => {
+        let id = snap.id;
+        while (existingIds.has(id)) id = createId();
+        existingIds.add(id);
+        return {
+          ...normalizeSnap(snap),
+          id,
+          sequence: startSequence + index + 1,
+          cells: [...snap.cells],
+        };
+      });
+
+      setCanPersist(true);
+      setStorageRecoveryRequired(false);
+      setSnaps((current) => [...current, ...imported]);
+      if (imported[0]) setSelectedSnapId(imported[0].id);
+      showToast(
+        `${imported.length} snap${imported.length === 1 ? "" : "s"} imported`,
+        "success"
+      );
+      return true;
+    },
+    [snaps, showToast]
+  );
+
+  const replaceUnrecognizedStorage = useCallback(() => {
+    setCanPersist(true);
+    setStorageRecoveryRequired(false);
+    showToast("Recovered snaps will replace the unreadable saved data", "success");
+  }, [showToast]);
+
   const moveSnap = useCallback(
     (id, direction) => {
       const index = snaps.findIndex((snap) => snap.id === id);
@@ -314,6 +377,9 @@ export default function useSnaps({
     isPlaying,
     presentationStartSnapId,
     storageError,
+    storageRecoveryRequired,
+    importSnaps,
+    replaceUnrecognizedStorage,
     createSnap,
     selectSnap,
     renameSnap,
