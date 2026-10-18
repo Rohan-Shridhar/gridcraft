@@ -17,6 +17,8 @@ test("creates an empty transparent snapshot without pixel rectangles", () => {
 
   assert.equal(svgData.viewBox, "0 0 16 16");
   assert.equal(svgData.backgroundFill, null);
+  assert.equal(svgData.pixels.length, 16 * 16);
+  assert.equal(svgData.pixels.every((pixel) => pixel === null), true);
   assert.deepEqual(svgData.rectangles, []);
 });
 
@@ -29,6 +31,11 @@ test("preserves transparent cells and draws only saved non-transparent colors", 
   const svgData = createSnapSvgData(createSnap(16, cells, "#ffffff"));
 
   assert.equal(svgData.backgroundFill, "#ffffff");
+  assert.deepEqual(svgData.pixels.slice(0, 2), [
+    { x: 0, y: 0, fill: "#e63946", index: 0 },
+    { x: 1, y: 0, fill: "#e63946", index: 1 },
+  ]);
+  assert.equal(svgData.pixels[2], null);
   assert.deepEqual(svgData.rectangles, [
     { x: 0, y: 0, width: 2, height: 1, fill: "#e63946" },
     { x: 0, y: 1, width: 1, height: 1, fill: "#e63946" },

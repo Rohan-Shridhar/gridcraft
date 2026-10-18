@@ -526,6 +526,421 @@ header {
   clip-path: inset(50%);
 }
 
+.presentation-overlay {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(97, 218, 251, 0.055), transparent 55%),
+    var(--bg-color);
+  color: var(--text-color);
+  font-family: "Minecraft", "Courier New", monospace;
+}
+
+.presentation-header {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto minmax(74px, 1fr);
+  align-items: center;
+  gap: 1.25rem;
+  min-height: 4.5rem;
+  padding: 0.75rem clamp(1rem, 3vw, 2.5rem);
+  border-bottom: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent);
+  background: color-mix(in srgb, var(--menu-bg-color) 84%, transparent);
+}
+
+.presentation-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.presentation-brand > span:last-child > span {
+  color: var(--footer-text-color);
+}
+
+.presentation-brand-mark {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid var(--footer-link-hover);
+  border-radius: 5px;
+  color: var(--footer-link-hover);
+  font-size: 0.7rem;
+}
+
+.presentation-settings {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.presentation-settings > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--footer-text-color);
+  font-family: Arial, sans-serif;
+  font-size: 0.68rem;
+}
+
+.presentation-settings select,
+.presentation-input-wrap {
+  height: 2rem;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--text-color) 24%, transparent);
+  border-radius: 5px;
+  background: var(--menu-bg-color);
+  color: var(--text-color);
+  font: 0.75rem Arial, sans-serif;
+}
+
+.presentation-settings select {
+  min-width: 7.5rem;
+  padding: 0.25rem 0.45rem;
+}
+
+.presentation-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0 0.45rem;
+}
+
+.presentation-input-wrap input {
+  width: 2.6rem;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
+}
+
+.presentation-loop-setting {
+  flex-direction: row !important;
+  align-items: center;
+  align-self: end;
+  gap: 0.4rem !important;
+  min-height: 2rem;
+  color: var(--text-color) !important;
+  font-size: 0.75rem !important;
+  cursor: pointer;
+}
+
+.presentation-loop-setting input {
+  accent-color: var(--footer-link-hover);
+}
+
+.presentation-exit-button,
+.presentation-transport button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--text-color) 24%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--menu-bg-color) 82%, transparent);
+  color: var(--text-color);
+  font: 0.75rem "Minecraft", "Courier New", monospace;
+  cursor: url("/cursors/pointer.png"), pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.presentation-exit-button {
+  justify-self: end;
+}
+
+.presentation-exit-button:hover,
+.presentation-transport button:hover:not(:disabled) {
+  border-color: var(--footer-link-hover);
+  background: color-mix(in srgb, var(--footer-link-hover) 12%, var(--menu-bg-color));
+}
+
+.presentation-stage {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.presentation-canvas {
+  display: grid;
+  width: min(76vw, 68vh, 760px);
+  height: min(76vw, 68vh, 760px);
+  min-width: 0;
+  min-height: 0;
+  place-items: stretch;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--text-color) 18%, transparent);
+  border-radius: 8px;
+  background-color: #ddd;
+  background-image:
+    linear-gradient(45deg, #aaa 25%, transparent 25%),
+    linear-gradient(-45deg, #aaa 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #aaa 75%),
+    linear-gradient(-45deg, transparent 75%, #aaa 75%);
+  background-position: 0 0, 0 16px, 16px -16px, -16px 0;
+  background-size: 32px 32px;
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.32);
+}
+
+.presentation-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  shape-rendering: crispEdges;
+}
+
+.presentation-art--fade {
+  animation: presentation-fade-in 350ms ease-out both;
+}
+
+.presentation-art--wipe {
+  animation: presentation-wipe-in 450ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.presentation-pixel {
+  opacity: 0;
+  animation-name: presentation-pixel-appear;
+  animation-timing-function: steps(1, end);
+  animation-fill-mode: both;
+}
+
+.presentation-slide-caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.65rem;
+  max-width: min(80vw, 760px);
+}
+
+.presentation-slide-caption h1 {
+  max-width: 65vw;
+  margin: 0;
+  overflow: hidden;
+  font-size: clamp(0.95rem, 2vw, 1.25rem);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.presentation-slide-caption > span {
+  flex: 0 0 auto;
+  color: var(--footer-text-color);
+  font-family: Arial, sans-serif;
+  font-size: 0.76rem;
+}
+
+.presentation-invalid-snap {
+  align-self: center;
+  justify-self: center;
+  color: var(--footer-text-color);
+  font-family: Arial, sans-serif;
+}
+
+.presentation-controls {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto minmax(150px, 1fr);
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem clamp(1rem, 3vw, 2.5rem) 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent);
+  background: color-mix(in srgb, var(--menu-bg-color) 84%, transparent);
+}
+
+.presentation-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.presentation-progress-track {
+  height: 4px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text-color) 18%, transparent);
+}
+
+.presentation-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--footer-link-hover);
+}
+
+.presentation-slide-count {
+  min-width: 2.5rem;
+  color: var(--footer-text-color);
+  font-family: Arial, sans-serif;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.presentation-transport {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.presentation-transport button {
+  width: 2.65rem;
+  height: 2.65rem;
+  padding: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.presentation-transport .presentation-play-button {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-color: var(--footer-link-hover);
+  background: var(--footer-link-hover);
+  color: var(--menu-bg-color);
+  font-size: 1rem;
+}
+
+.presentation-transport button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.presentation-shortcuts {
+  margin: 0;
+  color: var(--footer-text-color);
+  font-family: Arial, sans-serif;
+  font-size: 0.68rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.presentation-shortcuts span {
+  margin: 0 0.25rem;
+  opacity: 0.5;
+}
+
+.presentation-overlay button:focus-visible,
+.presentation-overlay select:focus-visible,
+.presentation-overlay input:focus-visible {
+  outline: 2px solid var(--footer-link-hover);
+  outline-offset: 3px;
+}
+
+@keyframes presentation-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes presentation-wipe-in {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0); }
+}
+
+@keyframes presentation-pixel-appear {
+  to { opacity: 1; }
+}
+
+@media (max-width: 760px) {
+  .presentation-header {
+    grid-template-columns: 1fr auto;
+    gap: 0.75rem;
+  }
+
+  .presentation-settings {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .presentation-exit-button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .presentation-canvas {
+    width: min(88vw, 58vh, 680px);
+    height: min(88vw, 58vh, 680px);
+  }
+
+  .presentation-controls {
+    grid-template-columns: 1fr auto;
+    gap: 0.65rem;
+  }
+
+  .presentation-progress {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .presentation-transport {
+    grid-column: 1;
+    justify-self: center;
+  }
+
+  .presentation-shortcuts {
+    grid-column: 2;
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .presentation-brand {
+    font-size: 0.64rem;
+  }
+
+  .presentation-stage {
+    gap: 0.65rem;
+    padding: 0.5rem;
+  }
+
+  .presentation-canvas {
+    width: min(92vw, 55vh);
+    height: min(92vw, 55vh);
+  }
+
+  .presentation-shortcuts {
+    max-width: 7.5rem;
+    white-space: normal;
+  }
+
+  .presentation-shortcuts span {
+    margin: 0 0.1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presentation-overlay *,
+  .presentation-overlay *::before,
+  .presentation-overlay *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .presentation-pixel {
+    opacity: 1;
+    animation: none;
+  }
+}
+
 .snaps-panel button:focus-visible,
 .snaps-panel input:focus-visible {
   outline: 2px solid var(--footer-link-hover);

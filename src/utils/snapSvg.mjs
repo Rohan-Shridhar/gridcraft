@@ -72,6 +72,16 @@ export function createSnapSvgData(snap) {
     gridSize,
     backgroundColor,
     backgroundFill: isAcceptedColor(backgroundColor) ? backgroundColor : null,
+    pixels: snap.cells.map((fill, index) =>
+      fill === null
+        ? null
+        : {
+            x: index % gridSize,
+            y: Math.floor(index / gridSize),
+            fill,
+            index,
+          }
+    ),
     rectangles,
   };
 }

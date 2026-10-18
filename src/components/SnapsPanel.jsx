@@ -203,9 +203,9 @@ export default function SnapsPanel({
             <button
               type="button"
               onClick={isPlaying ? stopPresentation : startPresentation}
-              disabled={!isPlaying && snaps.length < 2}
+              disabled={!isPlaying && snaps.length === 0}
               aria-pressed={isPlaying}
-              title={snaps.length < 2 ? "Add at least two snaps to present" : "Present snaps"}
+              title={snaps.length === 0 ? "Add a snap to present" : "Present snaps"}
               className="snap-present-button"
             >
               <i
@@ -231,11 +231,6 @@ export default function SnapsPanel({
               <i className="fa-solid fa-trash-can" aria-hidden="true" /> Clear
             </button>
           </div>
-          {isPlaying && (
-            <p className="snap-presentation-status" aria-live="polite">
-              Playing · 2 sec per snap
-            </p>
-          )}
         </>
       )}
     </aside>

@@ -239,37 +239,19 @@ export default function useSnaps({
   );
 
   const startPresentation = useCallback(() => {
-    if (snaps.length < 2) {
-      showToast("Add at least two snaps to start a presentation");
+    if (snaps.length === 0) {
+      showToast("Add a snap before starting a presentation");
       return;
     }
-    if (selectedSnap) applySnapshot(selectedSnap);
     setIsPlaying(true);
-    showToast("Presentation started", "success");
-  }, [snaps.length, selectedSnap, applySnapshot, showToast]);
+  }, [snaps.length, showToast]);
 
   const stopPresentation = useCallback(() => {
     setIsPlaying(false);
-    showToast("Presentation stopped", "success");
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
-    if (!isPlaying || snaps.length < 2) return undefined;
-
-    const intervalId = window.setInterval(() => {
-      setSelectedSnapId((currentId) => {
-        const index = snaps.findIndex((snap) => snap.id === currentId);
-        const nextSnap = snaps[(index + 1 + snaps.length) % snaps.length];
-        applySnapshot(nextSnap);
-        return nextSnap.id;
-      });
-    }, 2000);
-
-    return () => window.clearInterval(intervalId);
-  }, [isPlaying, snaps, applySnapshot]);
-
-  useEffect(() => {
-    if (isPlaying && snaps.length < 2) setIsPlaying(false);
+    if (isPlaying && snaps.length === 0) setIsPlaying(false);
   }, [isPlaying, snaps.length]);
 
   return {

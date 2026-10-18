@@ -8,6 +8,7 @@ import Footer from './Footer.jsx';
 import Contributors from './Contributors.jsx';
 import ErrorPage from './ErrorPage.jsx';
 import SnapsPanel from './components/SnapsPanel.jsx';
+import PresentationMode from './components/PresentationMode.jsx';
 import useSnaps from './hooks/useSnaps.js';
 
 const GRID_SIZES = [16, 32, 64, 128];
@@ -55,6 +56,8 @@ function App(){
   const fileInputRef = useRef(null);
 
   const handleKeyPress = useCallback((event) => {
+    if (document.querySelector(".presentation-overlay")) return;
+
     if (
       event.target instanceof HTMLElement &&
       (event.target.isContentEditable ||
@@ -497,6 +500,13 @@ function App(){
 
       <Contributors />
       <Footer />
+      {snaps.isPlaying && (
+        <PresentationMode
+          snaps={snaps.snaps}
+          startingSnapId={snaps.selectedSnapId}
+          onExit={snaps.stopPresentation}
+        />
+      )}
     </>
   );
 };
