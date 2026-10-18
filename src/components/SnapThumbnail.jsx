@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { snapPixelsToSvgMarkup } from "../utils/snapSvg.js";
+import { createSnapSvgData } from "../utils/snapSvg.mjs";
 
 export default function SnapThumbnail({
   snap,
@@ -13,7 +13,7 @@ export default function SnapThumbnail({
   dropPosition,
   onKeyDown,
 }) {
-  const svgContents = snapPixelsToSvgMarkup(snap);
+  const svgData = createSnapSvgData(snap);
   const [titleDraft, setTitleDraft] = useState(snap.title);
 
   useEffect(() => {
@@ -39,11 +39,32 @@ export default function SnapThumbnail({
       >
         <svg
           className="snap-thumbnail-image"
-          viewBox="0 0 128 128"
+          viewBox={svgData?.viewBox ?? "0 0 1 1"}
+          preserveAspectRatio="xMidYMid meet"
+          shapeRendering="crispEdges"
           role="img"
           aria-label={`${snap.title} canvas thumbnail`}
-          dangerouslySetInnerHTML={{ __html: svgContents }}
-        />
+        >
+          {svgData?.backgroundFill && (
+            <rect
+              x="0"
+              y="0"
+              width={svgData.gridSize}
+              height={svgData.gridSize}
+              fill={svgData.backgroundFill}
+            />
+          )}
+          {svgData?.rectangles.map((rectangle) => (
+            <rect
+              key={`${rectangle.x}-${rectangle.y}-${rectangle.width}-${rectangle.height}-${rectangle.fill}`}
+              x={rectangle.x}
+              y={rectangle.y}
+              width={rectangle.width}
+              height={rectangle.height}
+              fill={rectangle.fill}
+            />
+          ))}
+        </svg>
       </button>
       <div className="snap-card-content">
         <div className="snap-card-meta">
