@@ -1170,8 +1170,15 @@ header {
   .snaps-panel {
     position: static;
     width: 100%;
-    height: min(390px, 46vh);
-    min-height: 250px;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .snaps-list {
+    flex: 0 1 auto;
+    min-height: 8rem;
+    max-height: min(420px, 38vh);
   }
 
   .snaps-panel--collapsed {

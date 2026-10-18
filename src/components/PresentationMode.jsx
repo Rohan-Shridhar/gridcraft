@@ -109,8 +109,9 @@ export default function PresentationMode({
       }
 
       if (nextIndex !== index) {
-        setCurrentSnapId(snaps[nextIndex].id);
+        timerStartRef.current = null;
         elapsedRef.current = 0;
+        setCurrentSnapId(snaps[nextIndex].id);
         setProgress(0);
       }
     },
@@ -271,6 +272,8 @@ export default function PresentationMode({
                 onChange={(event) => {
                   const seconds = Number(event.target.value);
                   if (Number.isFinite(seconds)) {
+                    timerStartRef.current = null;
+                    elapsedRef.current = 0;
                     onUpdateSnap(currentSnap.id, {
                       durationMs: Math.max(
                         500,
