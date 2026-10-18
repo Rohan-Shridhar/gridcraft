@@ -73,6 +73,31 @@ cells. Transparent image pixels remain transparent. If the image has more than
 Select the export button in the top menu to download the current canvas as a
 PNG. The export removes grid lines and spacing, and preserves transparency.
 
+## Save and present snapshots
+
+Use **+ New Snap** in the Snaps panel to capture the current canvas. Snapshots
+include the pixel colors, transparency, grid size, background, and slide
+metadata. They are saved in this browser and restored when GridCraft is reopened.
+The storage is local to the browser; clearing site data or switching browsers
+does not transfer snapshots.
+
+Select a snap to rename it, add an optional caption or notes, set its presentation
+duration, or include it in or exclude it from the presentation. Reorder slides
+with drag and drop or the move buttons. **Present** plays included slides in
+their listed order.
+
+Use a selected snap's image buttons to download it as SVG or PNG. **Export All**
+downloads the full storyboard and metadata as a JSON backup; **Import** appends
+snapshots from a GridCraft JSON export. Imports are validated, limited to 25 MB
+and 100 snapshots, and do not run imported content. If saved data cannot be
+recovered, export the recovered snaps before choosing to replace the unreadable
+browser data.
+
+Set **Frame duration** and choose **Export WebM** to create an animation from
+the included slides. WebM export uses the browser's built-in media recorder and
+is limited to 40 slides and two minutes per export. WebM support depends on the
+browser.
+
 ## Other controls
 
 - Use the theme button in the upper-right corner to switch between light and
