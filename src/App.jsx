@@ -7,6 +7,8 @@ import Tools from './Tools.jsx';
 import Footer from './Footer.jsx';
 import Contributors from './Contributors.jsx';
 import ErrorPage from './ErrorPage.jsx';
+import SnapsPanel from './components/SnapsPanel.jsx';
+import useSnaps from './hooks/useSnaps.js';
 
 const GRID_SIZES = [16, 32, 64, 128];
 const DEFAULT_GRID_SIZE = 16;
@@ -164,7 +166,7 @@ function App(){
 
   const toastTimeoutRef = useRef(null);
 
-  const showToast = (msg, type = "error") => {
+  const showToast = useCallback((msg, type = "error") => {
     setToast({ msg, type });
 
     if (toastTimeoutRef.current) {
@@ -174,7 +176,24 @@ function App(){
     toastTimeoutRef.current = setTimeout(() => {
       setToast(null);
     }, 3000);
-  };
+  }, []);
+
+  const applySnapshot = useCallback((snap) => {
+    setGridSize(snap.gridSize);
+    setCells([...snap.cells]);
+    setBackgroundColor(snap.backgroundColor);
+    setHistory([]);
+    setFuture([]);
+    setShowGrid(snap.gridSize < 32);
+  }, []);
+
+  const snaps = useSnaps({
+    cells,
+    gridSize,
+    backgroundColor,
+    applySnapshot,
+    showToast,
+  });
 
   const changeGridSize = (newSize) => {
     if (newSize === gridSize) return;
@@ -395,6 +414,7 @@ function App(){
         onImport={triggerImport}
         isExporting={isExporting}
       />
+      <SnapsPanel {...snaps} showToast={showToast} />
       <input
         type="file"
         accept="image/*,.svg,image/svg+xml"
