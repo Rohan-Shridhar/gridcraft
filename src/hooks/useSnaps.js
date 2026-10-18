@@ -182,6 +182,13 @@ export default function useSnaps({
     [snaps, selectedSnapId, showToast]
   );
 
+  const clearSnaps = useCallback(() => {
+    setSnaps([]);
+    setSelectedSnapId(null);
+    setIsPlaying(false);
+    showToast("All snaps cleared", "success");
+  }, [showToast]);
+
   const moveSnap = useCallback(
     (id, direction) => {
       const index = snaps.findIndex((snap) => snap.id === id);
@@ -193,6 +200,23 @@ export default function useSnaps({
         reordered[nextIndex],
         reordered[index],
       ];
+      setSnaps(reordered);
+    },
+    [snaps]
+  );
+
+  const reorderSnap = useCallback(
+    (id, targetId, position = "before") => {
+      if (id === targetId) return;
+      const sourceIndex = snaps.findIndex((snap) => snap.id === id);
+      const targetIndex = snaps.findIndex((snap) => snap.id === targetId);
+      if (sourceIndex < 0 || targetIndex < 0) return;
+
+      const reordered = [...snaps];
+      const [snap] = reordered.splice(sourceIndex, 1);
+      let insertionIndex = targetIndex + (position === "after" ? 1 : 0);
+      if (sourceIndex < insertionIndex) insertionIndex -= 1;
+      reordered.splice(insertionIndex, 0, snap);
       setSnaps(reordered);
     },
     [snaps]
@@ -259,7 +283,9 @@ export default function useSnaps({
     renameSnap,
     duplicateSnap,
     deleteSnap,
+    clearSnaps,
     moveSnap,
+    reorderSnap,
     restoreSnap,
     startPresentation,
     stopPresentation,

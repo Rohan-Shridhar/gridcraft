@@ -139,34 +139,51 @@ header {
 }
 
 /* ── Snaps ──────────────────────────────────────── */
+.editor-workspace {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+  width: min(100% - 2rem, 1480px);
+  margin: 0 auto;
+}
+
+.canvas-workspace {
+  --grid-board-size: min(calc(100vw - 340px), 580px);
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+}
+
+.canvas-workspace .grid-size-selector,
+.canvas-workspace .tools-cont {
+  width: 100%;
+}
+
 .snaps-panel {
-  position: fixed;
-  z-index: 1200;
+  position: sticky;
   top: 1rem;
-  bottom: 1rem;
-  left: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.65rem;
   width: 264px;
-  max-height: calc(100vh - 2rem);
-  padding: 0.9rem;
+  height: min(700px, max(380px, calc(100vh - 2rem)));
+  padding: 0.75rem;
   box-sizing: border-box;
   overflow: hidden;
-  border: 1px solid var(--menu-text-color);
-  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--menu-text-color) 24%, transparent);
+  border-radius: 9px;
   background: var(--menu-bg-color);
   color: var(--menu-text-color);
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.16);
   font-family: "Minecraft", "Courier New", monospace;
 }
 
 .snaps-panel--collapsed {
-  top: 50%;
-  bottom: auto;
-  width: auto;
-  padding: 0.45rem;
-  transform: translateY(-50%);
+  width: 2.75rem;
+  height: auto;
+  min-height: 0;
 }
 
 .snaps-panel-header {
@@ -174,23 +191,22 @@ header {
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  min-height: 1.9rem;
+  min-height: 1.75rem;
+  padding: 0 0.1rem;
 }
 
 .snaps-panel-header h2 {
   margin: 0;
-  font-size: 1rem;
-  letter-spacing: 0.12em;
+  font-size: 0.88rem;
+  letter-spacing: 0.16em;
 }
 
 .snaps-collapse-button,
-.snap-rename-form button,
-.snap-actions button,
-.snap-order-actions button,
-.snap-presentation button {
-  min-height: 2rem;
-  border: 1px solid var(--menu-text-color);
-  border-radius: 5px;
+.snap-card-actions button,
+.snaps-bottom-toolbar button {
+  min-height: 1.9rem;
+  border: 1px solid color-mix(in srgb, var(--menu-text-color) 28%, transparent);
+  border-radius: 6px;
   background: transparent;
   color: var(--menu-text-color);
   font: inherit;
@@ -198,90 +214,218 @@ header {
 }
 
 .snaps-collapse-button {
-  width: 2rem;
+  width: 1.9rem;
   padding: 0.25rem;
+  line-height: 1;
 }
 
 .snap-create-button {
   flex: 0 0 auto;
-  min-height: 2.6rem;
-  border: 1px solid #61dafb;
+  min-height: 2.35rem;
+  border: 1px solid var(--footer-link-hover);
   border-radius: 6px;
-  background: #61dafb;
-  color: #111;
+  background: var(--footer-link-hover);
+  color: var(--menu-bg-color);
   font: inherit;
-  font-size: 1rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: url("/cursors/pointer.png"), pointer;
-  transition: filter 0.15s ease, transform 0.15s ease;
-}
-
-.snap-create-button span {
-  font-size: 1.35rem;
-  vertical-align: -0.08em;
+  transition: filter 0.15s ease;
 }
 
 .snap-create-button:hover {
   filter: brightness(1.12);
-  transform: translateY(-1px);
 }
 
 .snaps-list {
-  display: grid;
-  flex: 1 1 auto;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: start;
-  gap: 0.55rem;
-  min-height: 3rem;
-  overflow-y: auto;
-  padding: 0.15rem;
-}
-
-.snap-thumbnail {
   display: flex;
-  min-width: 0;
+  flex: 1 1 auto;
   flex-direction: column;
-  align-items: stretch;
-  gap: 0.35rem;
-  padding: 0.35rem;
-  border: 1px solid rgba(128, 128, 128, 0.55);
-  border-radius: 6px;
-  background: transparent;
+  gap: 0.5rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.2rem 0.25rem 0.2rem 0.15rem;
+  scrollbar-color: color-mix(in srgb, var(--menu-text-color) 35%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.snap-card {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--menu-text-color) 17%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--menu-text-color) 3%, transparent);
   color: var(--menu-text-color);
-  font: inherit;
-  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.snap-card:hover {
+  border-color: color-mix(in srgb, var(--menu-text-color) 42%, transparent);
+  background: color-mix(in srgb, var(--menu-text-color) 6%, transparent);
+}
+
+.snap-card--selected {
+  border-color: var(--footer-link-hover);
+  background: color-mix(in srgb, var(--footer-link-hover) 9%, var(--menu-bg-color));
+  box-shadow: inset 2px 0 var(--footer-link-hover);
+}
+
+.snap-card--drop-before::before,
+.snap-card--drop-after::after {
+  position: absolute;
+  z-index: 1;
+  right: 0.25rem;
+  left: 0.25rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--footer-link-hover);
+  content: "";
+  pointer-events: none;
+}
+
+.snap-card--drop-before::before {
+  top: -4px;
+}
+
+.snap-card--drop-after::after {
+  bottom: -4px;
+}
+
+.snap-select-button {
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--menu-text-color) 16%, transparent);
+  border-radius: 5px;
+  background: transparent;
   cursor: url("/cursors/pointer.png"), pointer;
-}
-
-.snap-thumbnail:hover {
-  border-color: #61dafb;
-}
-
-.snap-thumbnail--selected {
-  border-color: #61dafb;
-  box-shadow: 0 0 0 1px #61dafb;
 }
 
 .snap-thumbnail-image {
   display: block;
   width: 100%;
+  height: 100%;
   aspect-ratio: 1;
-  border-radius: 3px;
-  background-color: #858585;
+  image-rendering: pixelated;
+  background-color: #ddd;
   background-image:
     linear-gradient(45deg, #aaa 25%, transparent 25%),
     linear-gradient(-45deg, #aaa 25%, transparent 25%),
     linear-gradient(45deg, transparent 75%, #aaa 75%),
     linear-gradient(-45deg, transparent 75%, #aaa 75%);
-  background-position: 0 0, 0 5px, 5px -5px, -5px 0;
-  background-size: 10px 10px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  background-size: 12px 12px;
 }
 
-.snap-thumbnail-title {
+.snap-card-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-self: stretch;
+  justify-content: center;
+  gap: 0.28rem;
+}
+
+.snap-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--footer-text-color);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+}
+
+.snap-card-meta-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.snap-drag-handle {
+  color: var(--footer-text-color);
+  cursor: grab;
+  font-size: 0.62rem;
+}
+
+.snap-card:active .snap-drag-handle {
+  cursor: grabbing;
+}
+
+.snap-play-indicator {
+  display: inline-grid;
+  width: 1.05rem;
+  height: 1.05rem;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--footer-link-hover) 18%, transparent);
+  color: var(--footer-link-hover);
+  font-size: 0.48rem;
+}
+
+.snap-card-title {
+  width: 100%;
+  min-width: 0;
+  padding: 0.28rem 0.35rem;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--menu-text-color);
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.snap-card-title:hover,
+.snap-card-title:focus {
+  border-color: color-mix(in srgb, var(--menu-text-color) 25%, transparent);
+  background: var(--bg-color);
+}
+
+.snap-card-canvas-meta {
   overflow: hidden;
-  font-size: 0.7rem;
+  color: var(--footer-text-color);
+  font-family: Arial, sans-serif;
+  font-size: 0.63rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.snap-card-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.1rem;
+}
+
+.snap-card-actions button {
+  display: inline-grid;
+  flex: 0 0 1.65rem;
+  min-height: 1.55rem;
+  padding: 0.1rem;
+  place-items: center;
+  font-size: 0.63rem;
+}
+
+.snap-card-actions button:hover:not(:disabled),
+.snaps-bottom-toolbar button:hover:not(:disabled),
+.snaps-collapse-button:hover {
+  border-color: var(--footer-link-hover);
+  background: color-mix(in srgb, var(--footer-link-hover) 13%, transparent);
+}
+
+.snap-card-actions .snap-delete-button {
+  margin-left: auto;
+  border-color: color-mix(in srgb, #f87171 40%, transparent);
+  color: #f87171;
 }
 
 .snaps-empty-state {
@@ -291,24 +435,32 @@ header {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   color: var(--footer-text-color);
   text-align: center;
 }
 
 .snaps-empty-state p {
+  max-width: 14rem;
   margin: 0;
   color: var(--menu-text-color);
+  font-size: 0.78rem;
 }
 
 .snaps-empty-state > span:last-child {
   font-family: Arial, sans-serif;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   line-height: 1.4;
 }
 
 .snaps-empty-icon {
-  font-size: 1.5rem;
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--menu-text-color) 16%, transparent);
+  border-radius: 8px;
+  font-size: 1rem;
 }
 
 .snaps-storage-error {
@@ -316,160 +468,119 @@ header {
   margin: 0;
   color: #f87171;
   font-family: Arial, sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   line-height: 1.35;
 }
 
-.snap-details {
-  flex: 0 1 auto;
-  overflow-y: auto;
-  padding-top: 0.65rem;
-  border-top: 1px solid rgba(128, 128, 128, 0.45);
-}
-
-.snap-rename-form label {
-  display: block;
-  margin-bottom: 0.3rem;
-  font-size: 0.72rem;
-}
-
-.snap-rename-form > div {
+.snaps-bottom-toolbar {
   display: flex;
+  flex: 0 0 auto;
   gap: 0.35rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid color-mix(in srgb, var(--menu-text-color) 16%, transparent);
 }
 
-.snap-rename-form input {
+.snaps-bottom-toolbar button {
+  display: flex;
   min-width: 0;
   flex: 1;
-  padding: 0.4rem;
-  border: 1px solid rgba(128, 128, 128, 0.7);
-  border-radius: 5px;
-  background: var(--bg-color);
-  color: var(--text-color);
-  font: inherit;
-  font-size: 0.75rem;
-}
-
-.snap-rename-form button {
-  width: 2.15rem;
-}
-
-.snap-metadata,
-.snap-background {
-  margin: 0.5rem 0;
-  font-family: Arial, sans-serif;
-  font-size: 0.75rem;
-  color: var(--footer-text-color);
-}
-
-.snap-background {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.snap-background span {
-  width: 1rem;
-  height: 1rem;
-  border: 1px solid rgba(128, 128, 128, 0.7);
-  border-radius: 3px;
-  background-image: linear-gradient(45deg, #888 25%, transparent 25%),
-    linear-gradient(-45deg, #888 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #888 75%),
-    linear-gradient(-45deg, transparent 75%, #888 75%);
-  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
-  background-size: 8px 8px;
-}
-
-.snap-actions,
-.snap-order-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.snap-actions button,
-.snap-order-actions button {
-  display: inline-flex;
-  flex: 1 1 auto;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
-  padding: 0.3rem 0.4rem;
-  font-size: 0.65rem;
+  gap: 0.28rem;
+  padding: 0.25rem 0.2rem;
+  font-size: 0.62rem;
+  white-space: nowrap;
 }
 
-.snap-order-actions {
-  margin-top: 0.35rem;
+.snaps-bottom-toolbar .snap-present-button {
+  border-color: color-mix(in srgb, var(--footer-link-hover) 60%, transparent);
+  color: var(--footer-link-hover);
 }
 
-.snap-actions button:hover:not(:disabled),
-.snap-order-actions button:hover:not(:disabled),
-.snap-presentation button:hover:not(:disabled),
-.snaps-collapse-button:hover {
-  background: var(--menu-text-color);
-  color: var(--menu-bg-color);
-}
-
-.snap-actions .snap-delete-button {
-  border-color: #f87171;
+.snaps-bottom-toolbar .snap-clear-button {
   color: #f87171;
 }
 
-.snap-order-actions button:disabled,
-.snap-presentation button:disabled {
+.snaps-bottom-toolbar button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.snap-presentation {
+.snap-presentation-status {
   flex: 0 0 auto;
-}
-
-.snap-presentation button {
-  width: 100%;
-  padding: 0.45rem;
-  border-color: #61dafb;
-  font-size: 0.75rem;
-}
-
-.snap-presentation p {
-  margin: 0.35rem 0 0;
+  margin: -0.35rem 0 0;
   color: var(--footer-text-color);
   font-family: Arial, sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   text-align: center;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
 .snaps-panel button:focus-visible,
-.snap-rename-form input:focus-visible {
-  outline: 2px solid #61dafb;
+.snaps-panel input:focus-visible {
+  outline: 2px solid var(--footer-link-hover);
   outline-offset: 2px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .editor-workspace {
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.75rem;
+    width: calc(100% - 1.25rem);
+  }
+
+  .canvas-workspace {
+    --grid-board-size: min(calc(100vw - 310px), 580px);
+  }
+
   .snaps-panel {
-    top: auto;
-    right: 0.5rem;
-    bottom: 0.5rem;
-    left: 0.5rem;
-    width: auto;
-    max-height: min(48vh, 420px);
-    padding: 0.65rem;
+    width: 232px;
+    padding: 0.6rem;
   }
 
   .snaps-panel--collapsed {
-    top: auto;
-    right: 0.75rem;
-    bottom: 0.75rem;
-    left: auto;
-    width: auto;
-    max-height: none;
-    transform: none;
+    width: 2.75rem;
+  }
+}
+
+@media (max-width: 680px) {
+  .editor-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
   }
 
-  .snaps-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .snaps-panel {
+    position: static;
+    width: 100%;
+    height: min(390px, 46vh);
+    min-height: 250px;
+  }
+
+  .snaps-panel--collapsed {
+    width: fit-content;
+    height: auto;
+    min-height: 0;
+  }
+
+  .canvas-workspace {
+    --grid-board-size: min(calc(100vw - 2rem), 580px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snap-card,
+  .snap-create-button {
+    transition: none;
   }
 }
 

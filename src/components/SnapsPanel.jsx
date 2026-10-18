@@ -1,16 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SnapThumbnail from "./SnapThumbnail.jsx";
-
-function formatDate(date) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(date));
-}
 
 export default function SnapsPanel({
   snaps,
-  selectedSnap,
   selectedSnapId,
   isPlaying,
   storageError,
@@ -19,36 +11,121 @@ export default function SnapsPanel({
   renameSnap,
   duplicateSnap,
   deleteSnap,
+  clearSnaps,
   moveSnap,
-  restoreSnap,
+  reorderSnap,
   startPresentation,
   stopPresentation,
-  showToast,
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [titleDraft, setTitleDraft] = useState("");
+  const [dropTarget, setDropTarget] = useState(null);
+  const listRef = useRef(null);
+  const dragSourceRef = useRef(null);
+  const dropTargetRef = useRef(null);
+  const reorderSnapRef = useRef(reorderSnap);
+  reorderSnapRef.current = reorderSnap;
 
   useEffect(() => {
-    setTitleDraft(selectedSnap?.title ?? "");
-  }, [selectedSnapId, selectedSnap?.title]);
+    const list = listRef.current;
+    if (!list) return undefined;
 
-  const handleRename = (event) => {
+    const getCard = (event) => {
+      if (!(event.target instanceof Element)) return null;
+      const card = event.target.closest(".snap-card");
+      return card && list.contains(card) ? card : null;
+    };
+
+    const handleDragStart = (event) => {
+      const card = getCard(event);
+      const id = card?.dataset.snapId;
+      if (!id) return;
+      dragSourceRef.current = id;
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", id);
+    };
+
+    const handleDragOver = (event) => {
+      const card = getCard(event);
+      const id = card?.dataset.snapId;
+      if (!id) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      const bounds = card.getBoundingClientRect();
+      const position =
+        event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+      const target = { id, position };
+      dropTargetRef.current = target;
+      setDropTarget(target);
+    };
+
+    const handleDrop = (event) => {
+      const card = getCard(event);
+      const targetId = card?.dataset.snapId;
+      if (!targetId) return;
+      event.preventDefault();
+      const sourceId = event.dataTransfer.getData("text/plain");
+      const bounds = card.getBoundingClientRect();
+      const position =
+        event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+      if (sourceId) reorderSnapRef.current(sourceId, targetId, position);
+      dragSourceRef.current = null;
+      dropTargetRef.current = null;
+      setDropTarget(null);
+    };
+
+    const handleDragEnd = (event) => {
+      const target = dropTargetRef.current;
+      if (
+        target &&
+        dragSourceRef.current &&
+        event.dataTransfer.dropEffect === "move"
+      ) {
+        reorderSnapRef.current(
+          dragSourceRef.current,
+          target.id,
+          target.position
+        );
+      }
+      dragSourceRef.current = null;
+      dropTargetRef.current = null;
+      setDropTarget(null);
+    };
+
+    list.addEventListener("dragstart", handleDragStart);
+    list.addEventListener("dragover", handleDragOver);
+    list.addEventListener("drop", handleDrop);
+    list.addEventListener("dragend", handleDragEnd);
+
+    return () => {
+      list.removeEventListener("dragstart", handleDragStart);
+      list.removeEventListener("dragover", handleDragOver);
+      list.removeEventListener("drop", handleDrop);
+      list.removeEventListener("dragend", handleDragEnd);
+    };
+  }, [snaps.length]);
+
+  const handleCardKeyDown = (event, snap, index) => {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     event.preventDefault();
-    if (!selectedSnap) return;
-    const title = titleDraft.trim();
-    if (!title) {
-      setTitleDraft(selectedSnap.title);
-      showToast("Snap title cannot be empty");
+    const direction = event.key === "ArrowUp" ? -1 : 1;
+    if (event.shiftKey) {
+      moveSnap(snap.id, direction);
       return;
     }
-    renameSnap(selectedSnap.id, title);
-    setTitleDraft(title.slice(0, 80));
-    showToast("Snap renamed", "success");
+
+    const nextIndex = Math.max(0, Math.min(snaps.length - 1, index + direction));
+    const nextSnap = snaps[nextIndex];
+    if (!nextSnap) return;
+    selectSnap(nextSnap.id);
+    listRef.current
+      ?.querySelectorAll(".snap-select-button")
+      [nextIndex]?.focus();
   };
 
-  const handleSelect = (snap) => {
-    selectSnap(snap.id);
-    setTitleDraft(snap.title);
+  const handleClear = () => {
+    if (snaps.length === 0) return;
+    if (!window.confirm("Clear all saved snaps? This cannot be undone.")) return;
+    clearSnaps();
   };
 
   return (
@@ -57,7 +134,7 @@ export default function SnapsPanel({
       aria-label="Snaps"
     >
       <div className="snaps-panel-header">
-        {!isCollapsed && <h2>SNAPS</h2>}
+        <h2>SNAPS</h2>
         <button
           type="button"
           className="snaps-collapse-button"
@@ -79,9 +156,9 @@ export default function SnapsPanel({
             type="button"
             className="snap-create-button"
             onClick={createSnap}
-            title="Capture the current canvas as a new snap"
+            title="Capture the current canvas"
           >
-            <span aria-hidden="true">+</span> Snap
+            + New Snap
           </button>
 
           {storageError && (
@@ -95,132 +172,69 @@ export default function SnapsPanel({
               <span className="snaps-empty-icon" aria-hidden="true">
                 <i className="fa-regular fa-images" />
               </span>
-              <p>No snaps yet</p>
-              <span>Capture your canvas to save a moment.</span>
+              <p>Your story starts with a snap.</p>
+              <span>Capture your canvas to begin a presentation.</span>
             </div>
           ) : (
-            <div className="snaps-list" aria-label="Saved snaps">
-              {snaps.map((snap) => (
+            <div
+              className="snaps-list"
+              aria-label="Saved snaps. Use up and down arrows to navigate, shift plus arrows to reorder."
+              ref={listRef}
+            >
+              {snaps.map((snap, index) => (
                 <SnapThumbnail
                   key={snap.id}
                   snap={snap}
                   selected={snap.id === selectedSnapId}
-                  onClick={() => handleSelect(snap)}
+                  presentationIncluded={snaps.length > 1}
+                  onSelect={() => selectSnap(snap.id)}
+                  onRename={renameSnap}
+                  onDuplicate={() => duplicateSnap(snap.id)}
+                  onDelete={() => deleteSnap(snap.id)}
+                  onMove={(direction) => moveSnap(snap.id, direction)}
+                  dropPosition={dropTarget?.id === snap.id ? dropTarget.position : null}
+                  onKeyDown={(event) => handleCardKeyDown(event, snap, index)}
                 />
               ))}
             </div>
           )}
 
-          {selectedSnap && (
-            <section className="snap-details" aria-label={`${selectedSnap.title} details`}>
-              <form className="snap-rename-form" onSubmit={handleRename}>
-                <label htmlFor="snap-title">Snap title</label>
-                <div>
-                  <input
-                    id="snap-title"
-                    type="text"
-                    value={titleDraft}
-                    maxLength={80}
-                    onChange={(event) => setTitleDraft(event.target.value)}
-                    aria-label="Selected snap title"
-                  />
-                  <button type="submit" title="Save snap title" aria-label="Save snap title">
-                    <i className="fa-solid fa-check" aria-hidden="true" />
-                  </button>
-                </div>
-              </form>
-              <p className="snap-metadata">
-                {selectedSnap.gridSize}×{selectedSnap.gridSize} ·{" "}
-                {formatDate(selectedSnap.createdAt)}
-              </p>
-              <p className="snap-background">
-                Background
-                <span
-                  aria-label={`Background color ${selectedSnap.backgroundColor}`}
-                  title={selectedSnap.backgroundColor}
-                  style={{
-                    backgroundColor:
-                      selectedSnap.backgroundColor === "transparent"
-                        ? "transparent"
-                        : selectedSnap.backgroundColor,
-                  }}
-                />
-              </p>
-              <div className="snap-actions">
-                <button
-                  type="button"
-                  onClick={() => restoreSnap(selectedSnap)}
-                  title="Load this snap onto the canvas"
-                >
-                  <i className="fa-solid fa-arrow-rotate-left" aria-hidden="true" /> Load
-                </button>
-                <button
-                  type="button"
-                  onClick={() => duplicateSnap(selectedSnap.id)}
-                  title="Duplicate this snap"
-                >
-                  <i className="fa-regular fa-copy" aria-hidden="true" /> Duplicate
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteSnap(selectedSnap.id)}
-                  title="Delete this snap"
-                  className="snap-delete-button"
-                >
-                  <i className="fa-solid fa-trash-can" aria-hidden="true" /> Delete
-                </button>
-              </div>
-              <div className="snap-order-actions" aria-label="Reorder selected snap">
-                <button
-                  type="button"
-                  onClick={() => moveSnap(selectedSnap.id, -1)}
-                  disabled={snaps.findIndex((snap) => snap.id === selectedSnap.id) === 0}
-                  title="Move snap earlier"
-                >
-                  <i className="fa-solid fa-arrow-up" aria-hidden="true" /> Move earlier
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveSnap(selectedSnap.id, 1)}
-                  disabled={
-                    snaps.findIndex((snap) => snap.id === selectedSnap.id) ===
-                    snaps.length - 1
-                  }
-                  title="Move snap later"
-                >
-                  <i className="fa-solid fa-arrow-down" aria-hidden="true" /> Move later
-                </button>
-              </div>
-            </section>
-          )}
-
-          {snaps.length > 0 && (
-            <div className="snap-presentation">
-              <button
-                type="button"
-                onClick={isPlaying ? stopPresentation : startPresentation}
-                disabled={!isPlaying && snaps.length < 2}
-                title={
-                  snaps.length < 2
-                    ? "Save at least two snaps to present"
-                    : isPlaying
-                      ? "Stop presentation"
-                      : "Play snaps as a presentation"
-                }
-                aria-pressed={isPlaying}
-              >
-                <i
-                  className={`fa-solid ${isPlaying ? "fa-stop" : "fa-play"}`}
-                  aria-hidden="true"
-                />
-                {isPlaying ? " Stop presentation" : " Play presentation"}
-              </button>
-              {isPlaying && (
-                <p aria-live="polite">
-                  Playing {selectedSnap?.title ?? "snap"} · 2 sec per snap
-                </p>
-              )}
-            </div>
+          <div className="snaps-bottom-toolbar">
+            <button
+              type="button"
+              onClick={isPlaying ? stopPresentation : startPresentation}
+              disabled={!isPlaying && snaps.length < 2}
+              aria-pressed={isPlaying}
+              title={snaps.length < 2 ? "Add at least two snaps to present" : "Present snaps"}
+              className="snap-present-button"
+            >
+              <i
+                className={`fa-solid ${isPlaying ? "fa-stop" : "fa-play"}`}
+                aria-hidden="true"
+              />
+              {isPlaying ? "Stop" : "Present"}
+            </button>
+            <button
+              type="button"
+              onClick={createSnap}
+              title="Add a snap of the current canvas"
+            >
+              <i className="fa-solid fa-plus" aria-hidden="true" /> Add Snap
+            </button>
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={snaps.length === 0}
+              title="Clear all snaps"
+              className="snap-clear-button"
+            >
+              <i className="fa-solid fa-trash-can" aria-hidden="true" /> Clear
+            </button>
+          </div>
+          {isPlaying && (
+            <p className="snap-presentation-status" aria-live="polite">
+              Playing · 2 sec per snap
+            </p>
           )}
         </>
       )}

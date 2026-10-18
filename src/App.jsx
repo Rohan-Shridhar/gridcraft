@@ -55,6 +55,14 @@ function App(){
   const fileInputRef = useRef(null);
 
   const handleKeyPress = useCallback((event) => {
+    if (
+      event.target instanceof HTMLElement &&
+      (event.target.isContentEditable ||
+        event.target.matches("input, textarea, select"))
+    ) {
+      return;
+    }
+
     const eventKey = event.key.toLowerCase();
     const previewToastMsg = "Can't edit while preview";
 
@@ -414,7 +422,6 @@ function App(){
         onImport={triggerImport}
         isExporting={isExporting}
       />
-      <SnapsPanel {...snaps} showToast={showToast} />
       <input
         type="file"
         accept="image/*,.svg,image/svg+xml"
@@ -425,63 +432,68 @@ function App(){
 
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
-      <Grid
-        cells={cells}
-        gridSize={gridSize}
-        showGrid={showGrid}
-        isFill={isFill}
-        isEraser={isEraser}
-        paintCell={paintCell}
-        gridGap={getGridGap(gridSize, showGrid)}
-        backgroundColor={backgroundColor}
-      />
+      <div className="editor-workspace">
+        <SnapsPanel {...snaps} />
+        <main className="canvas-workspace" aria-label="Canvas editor">
+          <Grid
+            cells={cells}
+            gridSize={gridSize}
+            showGrid={showGrid}
+            isFill={isFill}
+            isEraser={isEraser}
+            paintCell={paintCell}
+            gridGap={getGridGap(gridSize, showGrid)}
+            backgroundColor={backgroundColor}
+          />
 
-      <div className="grid-size-selector">
-        <span className="grid-size-label">Grid:</span>
-        {GRID_SIZES.map((size) => (
-          <button
-            key={size}
-            className={`grid-size-btn${gridSize === size ? " grid-size-btn--active" : ""
-              }${isPreview ? " grid-size-btn--disabled" : ""}`}
-            onClick={() => changeGridSize(size)}
-            disabled={isPreview || gridSize === size}
-            aria-pressed={gridSize === size}
-            title={getGridSizeTitle(size)}
-          >
-            {size}×{size}
-          </button>
-        ))}
-        <button
-          className={`grid-size-btn${!showGrid ? " grid-size-btn--active" : ""}`}
-          onClick={() => setShowGrid((s) => {
-            const next = !s;
-            showToast(next ? "Preview disabled" : "Preview enabled", next ? "success" : "error");
-            return next;
-          })}
-          title="Toggle grid lines"
-        >
-          <i className="fa-solid fa-eye"></i>
-        </button>
+          <div className="grid-size-selector">
+            <span className="grid-size-label">Grid:</span>
+            {GRID_SIZES.map((size) => (
+              <button
+                key={size}
+                className={`grid-size-btn${gridSize === size ? " grid-size-btn--active" : ""
+                  }${isPreview ? " grid-size-btn--disabled" : ""}`}
+                onClick={() => changeGridSize(size)}
+                disabled={isPreview || gridSize === size}
+                aria-pressed={gridSize === size}
+                title={getGridSizeTitle(size)}
+              >
+                {size}×{size}
+              </button>
+            ))}
+            <button
+              className={`grid-size-btn${!showGrid ? " grid-size-btn--active" : ""}`}
+              onClick={() => setShowGrid((s) => {
+                const next = !s;
+                showToast(next ? "Preview disabled" : "Preview enabled", next ? "success" : "error");
+                return next;
+              })}
+              title="Toggle grid lines"
+            >
+              <i className="fa-solid fa-eye"></i>
+            </button>
+          </div>
+
+          <Tools
+            undo={undo}
+            redo={redo}
+            canUndo={history.length > 0}
+            canRedo={future.length > 0}
+            selectedColor={selectedColor}
+            setSelectedColor={setSelectedColor}
+            isEraser={isEraser}
+            setIsEraser={setIsEraser}
+            isFill={isFill}
+            setIsFill={setIsFill}
+            backgroundColor={backgroundColor}
+            setBackgroundColor={setBackgroundColor}
+            fillBackground={fillBackground}
+            clearAll={clearAll}
+            showToast={showToast}
+            isPreview={isPreview}
+          />
+        </main>
       </div>
-
-      <Tools
-        undo={undo}
-        redo={redo}
-        canUndo={history.length > 0}
-        canRedo={future.length > 0}
-        selectedColor={selectedColor}
-        setSelectedColor={setSelectedColor}
-        isEraser={isEraser}
-        setIsEraser={setIsEraser}
-        isFill={isFill}
-        setIsFill={setIsFill}
-        backgroundColor={backgroundColor}
-        setBackgroundColor={setBackgroundColor}
-        fillBackground={fillBackground}
-        clearAll={clearAll}
-        showToast={showToast}
-        isPreview={isPreview}
-      />
 
       <Contributors />
       <Footer />
