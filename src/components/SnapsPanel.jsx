@@ -10,9 +10,11 @@ export default function SnapsPanel({
   selectSnap,
   renameSnap,
   duplicateSnap,
+  duplicateLastSnap,
   deleteSnap,
   clearSnaps,
   moveSnap,
+  updateSnap,
   reorderSnap,
   startPresentation,
   stopPresentation,
@@ -186,12 +188,14 @@ export default function SnapsPanel({
                   key={snap.id}
                   snap={snap}
                   selected={snap.id === selectedSnapId}
-                  presentationIncluded={snaps.length > 1}
+                  presentationIncluded={snap.includedInPresentation !== false}
                   onSelect={() => selectSnap(snap.id)}
                   onRename={renameSnap}
                   onDuplicate={() => duplicateSnap(snap.id)}
                   onDelete={() => deleteSnap(snap.id)}
                   onMove={(direction) => moveSnap(snap.id, direction)}
+                  onUpdate={updateSnap}
+                  onStartFromSelected={startPresentation}
                   dropPosition={dropTarget?.id === snap.id ? dropTarget.position : null}
                   onKeyDown={(event) => handleCardKeyDown(event, snap, index)}
                 />
@@ -220,6 +224,16 @@ export default function SnapsPanel({
               title="Add a snap of the current canvas"
             >
               <i className="fa-solid fa-plus" aria-hidden="true" /> Add Snap
+            </button>
+            <button
+              type="button"
+              onClick={duplicateLastSnap}
+              disabled={snaps.length === 0}
+              title="Duplicate Last Snap"
+              aria-label="Duplicate Last Snap"
+            >
+              <i className="fa-regular fa-copy" aria-hidden="true" />
+              <span className="snap-toolbar-duplicate-label">Duplicate Last Snap</span>
             </button>
             <button
               type="button"

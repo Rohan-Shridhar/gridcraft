@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "gridcraft.snaps";
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
+const LEGACY_SCHEMA_VERSION = 1;
+const DEFAULT_SLIDE_DURATION_MS = 1500;
 const GRID_SIZES = [16, 32, 64, 128];
 const HEX_COLOR = /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i;
 
@@ -22,10 +24,28 @@ function isValidSnap(snap) {
     snap.cells.every(
       (color) => color === null || (typeof color === "string" && HEX_COLOR.test(color))
     ) &&
+    (snap.caption === undefined || typeof snap.caption === "string") &&
+    (snap.notes === undefined || typeof snap.notes === "string") &&
+    (snap.includedInPresentation === undefined ||
+      typeof snap.includedInPresentation === "boolean") &&
+    (snap.durationMs === undefined ||
+      (Number.isFinite(snap.durationMs) &&
+        snap.durationMs >= 500 &&
+        snap.durationMs <= 10000)) &&
     (snap.backgroundColor === "transparent" ||
       (typeof snap.backgroundColor === "string" &&
         HEX_COLOR.test(snap.backgroundColor)))
   );
+}
+
+function normalizeSnap(snap) {
+  return {
+    ...snap,
+    caption: snap.caption ?? "",
+    notes: snap.notes ?? "",
+    includedInPresentation: snap.includedInPresentation ?? true,
+    durationMs: snap.durationMs ?? DEFAULT_SLIDE_DURATION_MS,
+  };
 }
 
 function loadSnaps() {
@@ -36,7 +56,7 @@ function loadSnaps() {
     const data = JSON.parse(saved);
     if (
       !data ||
-      data.version !== SCHEMA_VERSION ||
+      ![LEGACY_SCHEMA_VERSION, SCHEMA_VERSION].includes(data.version) ||
       !Array.isArray(data.snaps)
     ) {
       return {
@@ -50,7 +70,7 @@ function loadSnaps() {
       if (!isValidSnap(snap) || seenIds.has(snap.id)) return false;
       seenIds.add(snap.id);
       return true;
-    });
+    }).map(normalizeSnap);
 
     return {
       snaps,
@@ -88,6 +108,7 @@ export default function useSnaps({
     initialData.snaps[0]?.id ?? null
   );
   const [isPlaying, setIsPlaying] = useState(false);
+  const [presentationStartSnapId, setPresentationStartSnapId] = useState(null);
   const [storageError, setStorageError] = useState(null);
 
   useEffect(() => {
@@ -118,6 +139,10 @@ export default function useSnaps({
       cells: cells.map((color) => color ?? null),
       gridSize,
       backgroundColor,
+      caption: "",
+      notes: "",
+      includedInPresentation: true,
+      durationMs: DEFAULT_SLIDE_DURATION_MS,
     };
 
     setSnaps((current) => [...current, snap]);
@@ -166,6 +191,20 @@ export default function useSnaps({
     },
     [snaps, showToast]
   );
+
+  const duplicateLastSnap = useCallback(() => {
+    if (snaps.length === 0) {
+      showToast("Capture a snap before duplicating the last slide");
+      return;
+    }
+    duplicateSnap(snaps[snaps.length - 1].id);
+  }, [snaps, duplicateSnap, showToast]);
+
+  const updateSnap = useCallback((id, updates) => {
+    setSnaps((current) =>
+      current.map((snap) => (snap.id === id ? { ...snap, ...updates } : snap))
+    );
+  }, []);
 
   const deleteSnap = useCallback(
     (id) => {
@@ -239,32 +278,49 @@ export default function useSnaps({
   );
 
   const startPresentation = useCallback(() => {
-    if (snaps.length === 0) {
-      showToast("Add a snap before starting a presentation");
+    const includedSnaps = snaps.filter(
+      (snap) => snap.includedInPresentation !== false
+    );
+    if (includedSnaps.length === 0) {
+      showToast("Include at least one snap in the presentation");
       return;
     }
+    const startSnap =
+      includedSnaps.find((snap) => snap.id === selectedSnapId) ??
+      includedSnaps[0];
+    setPresentationStartSnapId(startSnap.id);
     setIsPlaying(true);
-  }, [snaps.length, showToast]);
+  }, [snaps, selectedSnapId, showToast]);
 
   const stopPresentation = useCallback(() => {
     setIsPlaying(false);
+    setPresentationStartSnapId(null);
   }, []);
 
   useEffect(() => {
     if (isPlaying && snaps.length === 0) setIsPlaying(false);
   }, [isPlaying, snaps.length]);
 
+  const presentationSnaps = useMemo(
+    () => snaps.filter((snap) => snap.includedInPresentation !== false),
+    [snaps]
+  );
+
   return {
     snaps,
+    presentationSnaps,
     selectedSnap,
     selectedSnapId,
     isPlaying,
+    presentationStartSnapId,
     storageError,
     createSnap,
     selectSnap,
     renameSnap,
     duplicateSnap,
+    duplicateLastSnap,
     deleteSnap,
+    updateSnap,
     clearSnaps,
     moveSnap,
     reorderSnap,

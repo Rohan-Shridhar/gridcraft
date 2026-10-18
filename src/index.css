@@ -400,6 +400,84 @@ header {
   white-space: nowrap;
 }
 
+.snap-storyboard-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.snap-include-field,
+.snap-duration-field,
+.snap-caption-field,
+.snap-notes-field {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--footer-text-color);
+  font-family: Arial, sans-serif;
+  font-size: 0.65rem;
+}
+
+.snap-include-field input {
+  margin: 0;
+  accent-color: var(--footer-link-hover);
+}
+
+.snap-start-selected {
+  align-self: flex-start;
+  padding: 0.28rem 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--footer-link-hover) 45%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--footer-link-hover) 10%, transparent);
+  color: var(--footer-link-hover);
+  font: 0.63rem "Minecraft", "Courier New", monospace;
+  cursor: url("/cursors/pointer.png"), pointer;
+}
+
+.snap-duration-field {
+  justify-content: space-between;
+}
+
+.snap-duration-field > span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.snap-duration-field input {
+  width: 2.8rem;
+  padding: 0.2rem;
+  border: 1px solid color-mix(in srgb, var(--menu-text-color) 20%, transparent);
+  border-radius: 4px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font: 0.68rem Arial, sans-serif;
+}
+
+.snap-caption-field,
+.snap-notes-field {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.snap-caption-field input,
+.snap-notes-field textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--menu-text-color) 20%, transparent);
+  border-radius: 4px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font: 0.68rem Arial, sans-serif;
+}
+
+.snap-notes-field textarea {
+  resize: vertical;
+}
+
 .snap-card-actions {
   display: flex;
   gap: 0.25rem;
@@ -473,7 +551,8 @@ header {
 }
 
 .snaps-bottom-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   flex: 0 0 auto;
   gap: 0.35rem;
   padding-top: 0.6rem;
@@ -483,7 +562,6 @@ header {
 .snaps-bottom-toolbar button {
   display: flex;
   min-width: 0;
-  flex: 1;
   align-items: center;
   justify-content: center;
   gap: 0.28rem;
@@ -504,6 +582,11 @@ header {
 .snaps-bottom-toolbar button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.snaps-bottom-toolbar .snap-toolbar-duplicate-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .snap-presentation-status {
@@ -742,6 +825,19 @@ header {
   color: var(--footer-text-color);
   font-family: Arial, sans-serif;
   font-size: 0.76rem;
+}
+
+.presentation-speaker-notes {
+  max-width: min(75vw, 680px);
+  max-height: 12vh;
+  margin: -0.4rem 0 0;
+  overflow-y: auto;
+  color: var(--footer-text-color);
+  font-family: Arial, sans-serif;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-align: center;
+  white-space: pre-wrap;
 }
 
 .presentation-invalid-snap {

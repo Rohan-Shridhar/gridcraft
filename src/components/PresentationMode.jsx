@@ -75,6 +75,7 @@ const PresentationArtwork = memo(function PresentationArtwork({
 export default function PresentationMode({
   snaps,
   startingSnapId,
+  onUpdateSnap,
   onExit,
 }) {
   const [currentSnapId, setCurrentSnapId] = useState(
@@ -82,15 +83,17 @@ export default function PresentationMode({
       snaps.find((snap) => snap.id === startingSnapId)?.id ?? snaps[0]?.id ?? null
   );
   const [isPlaying, setIsPlaying] = useState(true);
-  const [durationMs, setDurationMs] = useState(DEFAULT_DURATION_MS);
   const [transition, setTransition] = useState("fade");
   const [isLooping, setIsLooping] = useState(false);
   const [progress, setProgress] = useState(0);
   const exitButtonRef = useRef(null);
   const previousIndexRef = useRef(0);
+  const elapsedRef = useRef(0);
+  const timerStartRef = useRef(null);
 
   const currentIndex = snaps.findIndex((snap) => snap.id === currentSnapId);
   const currentSnap = currentIndex >= 0 ? snaps[currentIndex] : null;
+  const durationMs = currentSnap?.durationMs ?? DEFAULT_DURATION_MS;
 
   const changeSlide = useCallback(
     (direction) => {
@@ -107,6 +110,7 @@ export default function PresentationMode({
 
       if (nextIndex !== index) {
         setCurrentSnapId(snaps[nextIndex].id);
+        elapsedRef.current = 0;
         setProgress(0);
       }
     },
@@ -125,6 +129,7 @@ export default function PresentationMode({
 
     const fallbackIndex = Math.min(previousIndexRef.current, snaps.length - 1);
     setCurrentSnapId(snaps[fallbackIndex].id);
+    elapsedRef.current = 0;
     setProgress(0);
   }, [snaps, currentIndex, onExit]);
 
@@ -139,6 +144,15 @@ export default function PresentationMode({
       if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
   }, []);
+
+  const togglePlayback = useCallback(() => {
+    if (!isPlaying && progress >= 100) {
+      setCurrentSnapId(snaps[0]?.id ?? null);
+      elapsedRef.current = 0;
+      setProgress(0);
+    }
+    setIsPlaying((playing) => !playing);
+  }, [isPlaying, progress, snaps]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -158,13 +172,18 @@ export default function PresentationMode({
         return;
       }
 
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onExit();
+        return;
+      }
+
       if (
         event.target instanceof HTMLElement &&
         (event.target.isContentEditable ||
           event.target.matches("input, textarea, select"))
       ) {
-        if (event.key === "Escape") exitButtonRef.current?.focus();
-        else return;
+        return;
       }
 
       if (event.key === "ArrowLeft") {
@@ -175,42 +194,46 @@ export default function PresentationMode({
         changeSlide(1);
       } else if (event.code === "Space") {
         event.preventDefault();
-        setIsPlaying((playing) => !playing);
-      } else if (event.key === "Escape") {
-        event.preventDefault();
-        onExit();
+        togglePlayback();
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [changeSlide, onExit]);
+  }, [changeSlide, onExit, togglePlayback]);
 
   useEffect(() => {
     if (!isPlaying || !currentSnap || snaps.length === 0) return undefined;
 
-    const startedAt = Date.now();
+    timerStartRef.current = Date.now();
     const progressTimer = window.setInterval(() => {
-      const elapsed = Date.now() - startedAt;
+      const elapsed =
+        elapsedRef.current + Date.now() - timerStartRef.current;
+      if (elapsed >= durationMs) {
+        window.clearInterval(progressTimer);
+        elapsedRef.current = 0;
+        timerStartRef.current = null;
+        if (currentIndex < snaps.length - 1) {
+          setCurrentSnapId(snaps[currentIndex + 1].id);
+          setProgress(0);
+        } else if (isLooping) {
+          setCurrentSnapId(snaps[0].id);
+          setProgress(0);
+        } else {
+          setProgress(100);
+          setIsPlaying(false);
+        }
+        return;
+      }
       setProgress(Math.min(100, (elapsed / durationMs) * 100));
     }, 40);
 
-    const advanceTimer = window.setTimeout(() => {
-      if (currentIndex < snaps.length - 1) {
-        setCurrentSnapId(snaps[currentIndex + 1].id);
-        setProgress(0);
-      } else if (isLooping) {
-        setCurrentSnapId(snaps[0].id);
-        setProgress(0);
-      } else {
-        setProgress(100);
-        setIsPlaying(false);
-      }
-    }, durationMs);
-
     return () => {
       window.clearInterval(progressTimer);
-      window.clearTimeout(advanceTimer);
+      if (timerStartRef.current !== null) {
+        elapsedRef.current += Date.now() - timerStartRef.current;
+        timerStartRef.current = null;
+      }
     };
   }, [
     isPlaying,
@@ -248,7 +271,12 @@ export default function PresentationMode({
                 onChange={(event) => {
                   const seconds = Number(event.target.value);
                   if (Number.isFinite(seconds)) {
-                    setDurationMs(Math.max(500, Math.min(10000, seconds * 1000)));
+                    onUpdateSnap(currentSnap.id, {
+                      durationMs: Math.max(
+                        500,
+                        Math.min(10000, seconds * 1000)
+                      ),
+                    });
                     setProgress(0);
                   }
                 }}
@@ -287,7 +315,7 @@ export default function PresentationMode({
           title="Exit presentation (Esc)"
         >
           <i className="fa-solid fa-xmark" aria-hidden="true" />
-          <span>Exit</span>
+          <span>Exit Presentation</span>
         </button>
       </header>
 
@@ -300,11 +328,14 @@ export default function PresentationMode({
           />
         </div>
         <div className="presentation-slide-caption" aria-live="polite">
-          <h1>{currentSnap.title}</h1>
+          <h1>{currentSnap.caption || currentSnap.title}</h1>
           <span>
             {currentSnap.gridSize}×{currentSnap.gridSize}
           </span>
         </div>
+        {currentSnap.notes && (
+          <p className="presentation-speaker-notes">{currentSnap.notes}</p>
+        )}
       </main>
 
       <footer className="presentation-controls">
@@ -333,24 +364,34 @@ export default function PresentationMode({
           >
             <i className="fa-solid fa-backward-step" aria-hidden="true" />
           </button>
-          <button
-            type="button"
-            className="presentation-play-button"
-            onClick={() => {
-              if (!isPlaying && progress >= 100) {
+          {progress >= 100 && !isPlaying ? (
+            <button
+              type="button"
+              className="presentation-play-button"
+              onClick={() => {
                 setCurrentSnapId(snaps[0].id);
                 setProgress(0);
-              }
-              setIsPlaying((playing) => !playing);
-            }}
-            title={isPlaying ? "Pause (Space)" : "Play (Space)"}
-            aria-label={isPlaying ? "Pause presentation" : "Play presentation"}
-          >
-            <i
-              className={`fa-solid ${isPlaying ? "fa-pause" : "fa-play"}`}
-              aria-hidden="true"
-            />
-          </button>
+                setIsPlaying(true);
+              }}
+              title="Replay presentation"
+              aria-label="Replay presentation"
+            >
+              <i className="fa-solid fa-rotate-left" aria-hidden="true" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="presentation-play-button"
+              onClick={togglePlayback}
+              title={isPlaying ? "Pause (Space)" : "Play (Space)"}
+              aria-label={isPlaying ? "Pause presentation" : "Play presentation"}
+            >
+              <i
+                className={`fa-solid ${isPlaying ? "fa-pause" : "fa-play"}`}
+                aria-hidden="true"
+              />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => changeSlide(1)}

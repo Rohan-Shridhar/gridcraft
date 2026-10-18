@@ -10,6 +10,8 @@ export default function SnapThumbnail({
   onDuplicate,
   onDelete,
   onMove,
+  onUpdate,
+  onStartFromSelected,
   dropPosition,
   onKeyDown,
 }) {
@@ -103,11 +105,83 @@ export default function SnapThumbnail({
           aria-label={`Rename ${snap.title}`}
           title="Edit snap title"
         />
+        <label className="snap-include-field">
+          <input
+            type="checkbox"
+            checked={snap.includedInPresentation !== false}
+            onChange={(event) =>
+              onUpdate(snap.id, {
+                includedInPresentation: event.target.checked,
+              })
+            }
+          />
+          Include in presentation
+        </label>
         {selected && (
           <>
-            <span className="snap-card-canvas-meta">
-              {snap.gridSize}×{snap.gridSize} · {snap.backgroundColor}
-            </span>
+            <div className="snap-storyboard-fields">
+              <button
+                type="button"
+                className="snap-start-selected"
+                onClick={onStartFromSelected}
+                title="Start presentation from this slide"
+              >
+                <i className="fa-solid fa-play" aria-hidden="true" />
+                Start from Selected
+              </button>
+              <label className="snap-duration-field">
+                Slide duration
+                <span>
+                  <input
+                    type="number"
+                    min="0.5"
+                    max="10"
+                    step="0.5"
+                    value={(snap.durationMs ?? 1500) / 1000}
+                    onChange={(event) => {
+                      const seconds = Number(event.target.value);
+                      if (Number.isFinite(seconds)) {
+                        onUpdate(snap.id, {
+                          durationMs: Math.max(
+                            500,
+                            Math.min(10000, seconds * 1000)
+                          ),
+                        });
+                      }
+                    }}
+                    aria-label={`Slide duration for ${snap.title} in seconds`}
+                  />
+                  sec
+                </span>
+              </label>
+              <label className="snap-caption-field">
+                Slide caption
+                <input
+                  type="text"
+                  maxLength={120}
+                  value={snap.caption ?? ""}
+                  placeholder="Optional caption"
+                  onChange={(event) =>
+                    onUpdate(snap.id, { caption: event.target.value })
+                  }
+                />
+              </label>
+              <label className="snap-notes-field">
+                Notes
+                <textarea
+                  rows="2"
+                  maxLength={1000}
+                  value={snap.notes ?? ""}
+                  placeholder="Optional presenter notes"
+                  onChange={(event) =>
+                    onUpdate(snap.id, { notes: event.target.value })
+                  }
+                />
+              </label>
+              <span className="snap-card-canvas-meta">
+                {snap.gridSize}×{snap.gridSize} · {snap.backgroundColor}
+              </span>
+            </div>
             <div className="snap-card-actions" aria-label={`Actions for ${snap.title}`}>
               <button type="button" onClick={onDuplicate} title="Duplicate snap">
                 <i className="fa-regular fa-copy" aria-hidden="true" />

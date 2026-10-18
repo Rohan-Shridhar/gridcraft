@@ -502,8 +502,9 @@ function App(){
       <Footer />
       {snaps.isPlaying && (
         <PresentationMode
-          snaps={snaps.snaps}
-          startingSnapId={snaps.selectedSnapId}
+          snaps={snaps.presentationSnaps}
+          startingSnapId={snaps.presentationStartSnapId}
+          onUpdateSnap={snaps.updateSnap}
           onExit={snaps.stopPresentation}
         />
       )}
