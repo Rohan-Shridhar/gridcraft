@@ -1361,6 +1361,13 @@ body.light-theme .grid-size-btn {
   background-color: #f5f5f0;
 }
 
+body.light-theme .grid-size-btn:hover:not(:disabled),
+body.light-theme .grid-size-btn--active {
+  background-color: #000;
+  color: #fff;
+  border-color: #000;
+}
+
 body.light-theme .footer-cont {
   border-top-color: rgba(0, 0, 0, 0.08);
 }
@@ -1407,16 +1414,34 @@ body.light-theme .footer-cont {
   opacity: 0.35;
   cursor: not-allowed;
 }
-.tool-btn--fill-bg {
+.tools-cont .tool-btn--fill-bg {
   display: flex;
   align-items: center;
   gap: 0.4rem;
   background-color: black;
   border-color: white;
 }
-.tool-btn--fill-bg:hover:not(:disabled) {
+.tools-cont .tool-btn--fill-bg:hover:not(:disabled) {
   background-color: white;
   border-color: white;
+}
+
+body.light-theme .tools-cont .tool-btn--active {
+  background-color: #000;
+  color: #fff;
+  border-color: #000;
+}
+
+body.light-theme .tools-cont .tool-btn--fill-bg {
+  background-color: transparent;
+  color: #000;
+  border-color: var(--tools-text-color);
+}
+
+body.light-theme .tools-cont .tool-btn--fill-bg:hover:not(:disabled) {
+  background-color: #000;
+  color: #fff;
+  border-color: #000;
 }
 
 /* Color picker */
