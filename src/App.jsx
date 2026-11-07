@@ -435,9 +435,13 @@ function App(){
 
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
-      <div className="editor-workspace">
-        <SnapsPanel {...snaps} showToast={showToast} />
-        <main className="canvas-workspace" aria-label="Canvas editor">
+      <section className="editor-section" id="editor">
+        <div className="section-heading">
+          <h2>Pixel editor</h2>
+        </div>
+        <div className="editor-workspace">
+          <SnapsPanel {...snaps} showToast={showToast} />
+          <main className="canvas-workspace" aria-label="Canvas editor">
           <Grid
             cells={cells}
             gridSize={gridSize}
@@ -495,10 +499,11 @@ function App(){
             showToast={showToast}
             isPreview={isPreview}
           />
-        </main>
-      </div>
+          </main>
+        </div>
+      </section>
 
-      <Contributors />
+      <div id="community"><Contributors /></div>
       <Footer />
       {snaps.isPlaying && (
         <PresentationMode
