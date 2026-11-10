@@ -130,6 +130,33 @@ Create issues with Markdown bodies, view and safely rendered comments, add a
 comment, edit title/body, and close or reopen an issue. **Open on GitHub**
 provides access to additional GitHub-native actions and permissions.
 
+## Review and contribute with pull requests
+
+Open an album's **Pull Requests** tab to browse open, closed, or all pull
+requests. Select one to inspect its GitHub status and mergeability, author,
+branches, commits, changed files, conversation, and reviews. Add a conversation
+comment or submit a comment, approval, or change-request review when GitHub
+allows it. **Open on GitHub** links to the original pull request.
+
+Choose **New pull request** to compare branches in the album or a listed fork.
+The album's default branch (normally `master`) is selected as the base. A merge
+is available only when GitHub reports the request as mergeable and your account
+has repository write permission. GridCraft asks for confirmation before sending
+the merge request to GitHub; conflicts and permission failures are shown rather
+than treated as a successful merge.
+
+## Fork an album and contribute upstream
+
+Select **Fork album** on an accessible repository to ask GitHub to create a
+native fork in your account. GridCraft shows progress while GitHub provisions
+the fork and then opens it. The fork page identifies its upstream repository.
+Branches, artwork, and Stories in your fork are ordinary GitHub data and remain
+subject to GitHub permissions and organization policies.
+
+On a fork, choose **Pull Requests** → **Contribute upstream** to propose a
+branch from the fork to the upstream album. GitHub creates the pull request;
+GridCraft does not copy files to simulate a fork or merge changes automatically.
+
 ## Other controls
 
 - Use the theme button in the upper-right corner to switch between light and

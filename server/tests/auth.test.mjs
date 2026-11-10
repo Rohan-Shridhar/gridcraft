@@ -13,7 +13,7 @@ describe("Backend Health and Authentication API Integration Tests", () => {
     const res = await request(app).get("/api/v1/health");
     assert.equal(res.status, 200);
     assert.equal(res.body.status, "ok");
-    assert.equal(res.body.version, "3.9.0");
+    assert.equal(res.body.version, "3.11.0");
     assert.equal(res.body.githubApp, "gridcraft-auth");
   });
 

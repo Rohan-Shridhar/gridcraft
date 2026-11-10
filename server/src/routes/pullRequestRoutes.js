@@ -10,6 +10,7 @@ export function createPullRequestRoutes(controller = defaultController) {
   router.get("/:number", controller.getPull);
   router.patch("/:number", controller.updatePull);
   router.post("/:number/reviews", controller.submitReview);
+  router.post("/:number/comments", controller.commentOnPull);
   router.put("/:number/merge", controller.mergePull);
   return router;
 }

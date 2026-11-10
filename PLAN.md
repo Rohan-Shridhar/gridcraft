@@ -2,7 +2,7 @@
 
 ## Product and Engineering Roadmap
 
-**Current release:** `v3.9.0`\
+**Current release:** `v3.11.0`\
 **Roadmap target:** `v4.0.0`\
 **Product direction:** A GitHub-inspired platform for creating,
 organizing, versioning, sharing, and collaborating on pixel art.\
@@ -23,11 +23,11 @@ Before changing code:
 1.  Inspect the complete repository, current branch, Git status, package
     files, components, hooks, utilities, tests, styles, and
     documentation.
-2.  Confirm the current application version is `3.3.0`. The product
-    owner identifies the current release as v3.3.0. If `package.json` or
-    another version file disagrees, report the mismatch and make the
-    project version consistent with `3.3.0` before starting the roadmap.
-    Do not silently assume an older package version is correct.
+2.  Confirm the application version matches the current release shown
+    above across package metadata and server configuration. If versions
+    disagree, inspect the release history and report the mismatch before
+    changing metadata; never reset a newer completed release to an older
+    baseline.
 3.  Map the existing editor's state and behavior. Preserve working
     functionality unless this plan explicitly replaces it.
 4.  Identify the current Snap feature implementation, including
@@ -713,7 +713,8 @@ Use Semantic Versioning: `MAJOR.MINOR.PATCH` (`x.y.z`).
     security fixes, documentation corrections, and internal changes that
     do not add a significant feature.
 
-Rules: 1. Start from `3.3.0`. 2. Each roadmap phase below is a minor
+Rules: 1. Continue from the current release shown at the top; older
+roadmap versions are historical milestones. 2. Each roadmap phase below is a minor
 release unless stated otherwise. 3. Increment patch versions during work
 only for standalone patch releases; do not invent patch releases for
 unfinished phases. 4. Do not increment the major version until the

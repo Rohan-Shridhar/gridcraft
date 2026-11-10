@@ -11,6 +11,7 @@ function mapRepo(repo) {
     isPrivate: repo.private,
     defaultBranch: repo.default_branch,
     htmlUrl: repo.html_url,
+    permissions: repo.permissions || {},
     fork: !!repo.fork,
     parent: repo.parent
       ? { fullName: repo.parent.full_name, owner: repo.parent.owner?.login, name: repo.parent.name }
@@ -18,6 +19,7 @@ function mapRepo(repo) {
     source: repo.source
       ? { fullName: repo.source.full_name, owner: repo.source.owner?.login, name: repo.source.name }
       : null,
+    createdAt: repo.created_at,
     updatedAt: repo.updated_at,
   };
 }

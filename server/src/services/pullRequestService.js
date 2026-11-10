@@ -5,9 +5,9 @@ import { assertSafeBranchName } from "../validators/branchValidator.js";
 const CreatePullSchema = z.object({
   title: z.string().min(1).max(256),
   body: z.string().max(65536).optional().default(""),
-  head: z.string().min(1),
-  base: z.string().min(1).optional().default("master"),
-  headRepo: z.string().optional(),
+  head: z.string().min(1).max(255),
+  base: z.string().min(1).max(255).optional().default("master"),
+  headRepo: z.string().max(201).regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/).optional(),
 });
 
 const ReviewSchema = z.object({
@@ -37,6 +37,16 @@ function mapPull(pr) {
     changedFiles: pr.changed_files,
     additions: pr.additions,
     deletions: pr.deletions,
+    maintainerCanModify: pr.maintainer_can_modify,
+    assignees: (pr.assignees || []).map((assignee) => ({
+      login: assignee.login,
+      avatarUrl: assignee.avatar_url,
+    })),
+    labels: (pr.labels || []).map((label) => ({ name: label.name, color: label.color })),
+    requestedReviewers: (pr.requested_reviewers || []).map((reviewer) => ({
+      login: reviewer.login,
+      avatarUrl: reviewer.avatar_url,
+    })),
   };
 }
 
@@ -61,31 +71,41 @@ export class PullRequestService {
       pulls: (data || []).map(mapPull),
       page,
       perPage,
-      link: headers.get("link"),
+      hasNext: /rel="next"/.test(headers.get("link") || ""),
     };
   }
 
-  async getPull(accessToken, owner, repoName, number) {
+  async getPull(accessToken, owner, repoName, number, commentsPage = 1) {
     const { data } = await this.#request(`/repos/${owner}/${repoName}/pulls/${number}`, accessToken);
-    const comments = await this.#request(
-      `/repos/${owner}/${repoName}/issues/${number}/comments?per_page=50`,
-      accessToken
-    );
-    const files = await this.#request(
-      `/repos/${owner}/${repoName}/pulls/${number}/files?per_page=100`,
-      accessToken
-    );
-    const commits = await this.#request(
-      `/repos/${owner}/${repoName}/pulls/${number}/commits?per_page=50`,
-      accessToken
-    );
+    const [comments, reviews, files, commits, repository] = await Promise.all([
+      this.#request(
+        `/repos/${owner}/${repoName}/issues/${number}/comments?per_page=50&page=${commentsPage}`,
+        accessToken
+      ),
+      this.#request(`/repos/${owner}/${repoName}/pulls/${number}/reviews?per_page=100`, accessToken),
+      this.#request(`/repos/${owner}/${repoName}/pulls/${number}/files?per_page=100`, accessToken),
+      this.#request(`/repos/${owner}/${repoName}/pulls/${number}/commits?per_page=100`, accessToken),
+      this.#request(`/repos/${owner}/${repoName}`, accessToken),
+    ]);
     return {
       pull: mapPull(data),
+      commentsPage,
+      commentsHasNext: /rel="next"/.test(comments.headers.get("link") || ""),
       comments: (comments.data || []).map((comment) => ({
         id: comment.id,
         body: comment.body,
         createdAt: comment.created_at,
+        updatedAt: comment.updated_at,
+        htmlUrl: comment.html_url,
         user: { login: comment.user?.login, avatarUrl: comment.user?.avatar_url },
+      })),
+      reviews: (reviews.data || []).map((review) => ({
+        id: review.id,
+        state: review.state,
+        body: review.body || "",
+        submittedAt: review.submitted_at,
+        htmlUrl: review.html_url,
+        user: { login: review.user?.login, avatarUrl: review.user?.avatar_url },
       })),
       files: (files.data || []).map((file) => ({
         filename: file.filename,
@@ -93,6 +113,10 @@ export class PullRequestService {
         additions: file.additions,
         deletions: file.deletions,
         changes: file.changes,
+        patch: file.patch,
+        previousFilename: file.previous_filename,
+        blobUrl: file.blob_url,
+        rawUrl: file.raw_url,
       })),
       commits: (commits.data || []).map((commit) => ({
         sha: commit.sha,
@@ -101,13 +125,20 @@ export class PullRequestService {
         author: commit.commit.author?.name,
         htmlUrl: commit.html_url,
       })),
+      mergeMethods: {
+        merge: Boolean(repository.data?.allow_merge_commit),
+        squash: Boolean(repository.data?.allow_squash_merge),
+        rebase: Boolean(repository.data?.allow_rebase_merge),
+      },
+      permissions: repository.data?.permissions || {},
     };
   }
 
   async createPull(accessToken, owner, repoName, input) {
     const validated = CreatePullSchema.parse(input);
     assertSafeBranchName(validated.base);
-    const head = validated.headRepo ? `${validated.headRepo}:${validated.head}` : validated.head;
+    assertSafeBranchName(validated.head);
+    const head = validated.headRepo ? `${validated.headRepo.split("/")[0]}:${validated.head}` : validated.head;
     const { data } = await this.#request(`/repos/${owner}/${repoName}/pulls`, accessToken, {
       method: "POST",
       body: JSON.stringify({
@@ -148,10 +179,68 @@ export class PullRequestService {
     };
   }
 
+  async commentOnPull(accessToken, owner, repoName, number, body) {
+    if (typeof body !== "string" || !body.trim() || body.length > 65536) {
+      const err = new Error("A comment between 1 and 65,536 characters is required.");
+      err.status = 400;
+      throw err;
+    }
+    const { data } = await this.#request(
+      `/repos/${owner}/${repoName}/issues/${number}/comments`,
+      accessToken,
+      { method: "POST", body: JSON.stringify({ body }) }
+    );
+    return {
+      comment: {
+        id: data.id,
+        body: data.body,
+        createdAt: data.created_at,
+        htmlUrl: data.html_url,
+        user: { login: data.user?.login, avatarUrl: data.user?.avatar_url },
+      },
+    };
+  }
+
   async mergePull(accessToken, owner, repoName, number, input = {}) {
     const mergeMethod = input.mergeMethod || "merge";
     if (!["merge", "squash", "rebase"].includes(mergeMethod)) {
       const err = new Error("Unsupported merge method");
+      err.status = 400;
+      throw err;
+    }
+    const [{ data: pull }, { data: repository }] = await Promise.all([
+      this.#request(`/repos/${owner}/${repoName}/pulls/${number}`, accessToken),
+      this.#request(`/repos/${owner}/${repoName}`, accessToken),
+    ]);
+    if (pull.state !== "open" || pull.merged || pull.merged_at) {
+      const err = new Error("Only open, unmerged pull requests can be merged.");
+      err.status = 409;
+      err.code = "NOT_MERGEABLE";
+      throw err;
+    }
+    if (pull.mergeable !== true) {
+      const err = new Error(
+        pull.mergeable === false
+          ? "GitHub reports this pull request has merge conflicts."
+          : "GitHub has not confirmed that this pull request is mergeable yet. Refresh and try again."
+      );
+      err.status = 409;
+      err.code = "NOT_MERGEABLE";
+      throw err;
+    }
+    if (repository.permissions?.push !== true) {
+      const err = new Error("You need write permission on the target repository to merge this pull request.");
+      err.status = 403;
+      err.code = "FORBIDDEN";
+      throw err;
+    }
+    const methodEnabled = {
+      merge: repository.allow_merge_commit,
+      squash: repository.allow_squash_merge,
+      rebase: repository.allow_rebase_merge,
+    }[mergeMethod];
+    if (methodEnabled !== true) {
+      const err = new Error(`The ${mergeMethod} merge method is disabled for this repository.`);
       err.status = 400;
       throw err;
     }
@@ -174,6 +263,7 @@ export class PullRequestService {
       message: data.message,
     };
   }
+
 }
 
 export const pullRequestService = new PullRequestService();

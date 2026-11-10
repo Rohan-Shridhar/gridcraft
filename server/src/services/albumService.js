@@ -294,6 +294,24 @@ export class AlbumService {
         createdAt: repo.created_at,
         permissions: repo.permissions || {},
         fork: repo.fork,
+        parent: repo.parent
+          ? {
+              fullName: repo.parent.full_name,
+              owner: repo.parent.owner?.login,
+              name: repo.parent.name,
+              htmlUrl: repo.parent.html_url,
+              defaultBranch: repo.parent.default_branch,
+            }
+          : null,
+        source: repo.source
+          ? {
+              fullName: repo.source.full_name,
+              owner: repo.source.owner?.login,
+              name: repo.source.name,
+              htmlUrl: repo.source.html_url,
+              defaultBranch: repo.source.default_branch,
+            }
+          : null,
         topics: repo.topics || [],
       },
       manifest,

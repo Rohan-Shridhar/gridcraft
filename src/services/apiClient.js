@@ -180,8 +180,8 @@ export const apiClient = {
     });
   },
 
-  async listBranches(owner, repo, page = 1) {
-    return request(albumPath(owner, repo, `/branches?page=${page}`));
+  async listBranches(owner, repo, page = 1, perPage = 30) {
+    return request(albumPath(owner, repo, `/branches?page=${page}&per_page=${perPage}`));
   },
 
   async createBranch(owner, repo, payload) {
@@ -247,12 +247,13 @@ export const apiClient = {
     const query = new URLSearchParams({
       state: params.state || "open",
       page: String(params.page || 1),
+      per_page: String(params.perPage || 20),
     });
     return request(albumPath(owner, repo, `/pulls?${query.toString()}`));
   },
 
-  async getPull(owner, repo, number) {
-    return request(albumPath(owner, repo, `/pulls/${number}`));
+  async getPull(owner, repo, number, commentsPage = 1) {
+    return request(albumPath(owner, repo, `/pulls/${number}?page=${commentsPage}`));
   },
 
   async createPull(owner, repo, payload) {
@@ -263,6 +264,13 @@ export const apiClient = {
     return request(albumPath(owner, repo, `/pulls/${number}/reviews`), {
       method: "POST",
       body: payload,
+    });
+  },
+
+  async commentOnPull(owner, repo, number, body) {
+    return request(albumPath(owner, repo, `/pulls/${number}/comments`), {
+      method: "POST",
+      body: { body },
     });
   },
 
@@ -277,8 +285,8 @@ export const apiClient = {
     return request(albumPath(owner, repo, "/forks"), { method: "POST" });
   },
 
-  async listForks(page = 1) {
-    return request(`/api/v1/forks?page=${page}`);
+  async listForks(page = 1, perPage = 30) {
+    return request(`/api/v1/forks?page=${page}&per_page=${perPage}`);
   },
 };
 

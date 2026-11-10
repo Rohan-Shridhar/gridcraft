@@ -5,8 +5,9 @@ import StoriesTab from "./StoriesTab.jsx";
 import BranchesTab from "./BranchesTab.jsx";
 import IssuesTab from "./IssuesTab.jsx";
 import BranchSelector from "./BranchSelector.jsx";
+import PullRequestsTab from "./PullRequestsTab.jsx";
 
-export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [], onStoryDirtyChange, onBranchChange, onBackToDashboard, onOpenEditor, showToast }) {
+export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [], currentUserLogin, onStoryDirtyChange, onBranchChange, onBackToDashboard, onOpenEditor, onSelectAlbum, showToast }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [storyDirty, setStoryDirty] = useState(false);
   const [albumData, setAlbumData] = useState(null);
@@ -19,6 +20,39 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteInputName, setDeleteInputName] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isForking, setIsForking] = useState(false);
+  const [forkError, setForkError] = useState("");
+
+  const forkAlbum = async () => {
+    setIsForking(true);
+    setForkError("");
+    try {
+      const { repo: createdFork } = await apiClient.forkAlbum(owner, repoName);
+      if (!createdFork?.owner || !createdFork?.name) {
+        throw new Error("GitHub accepted the fork request but did not return its repository location.");
+      }
+
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          const forkData = await apiClient.getAlbum(createdFork.owner, createdFork.name);
+          if (forkData.repo?.fork && forkData.repo.parent?.fullName?.toLowerCase() === `${owner}/${repoName}`.toLowerCase()) {
+            showToast?.(`Fork ready: ${createdFork.owner}/${createdFork.name}`, "success");
+            onSelectAlbum?.(createdFork.owner, createdFork.name);
+            return;
+          }
+        } catch (pollError) {
+          if (pollError.status !== 404) throw pollError;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 1500));
+      }
+      throw new Error(`GitHub is still creating ${createdFork.owner}/${createdFork.name}. Refresh the dashboard and open it shortly.`);
+    } catch (forkRequestError) {
+      setForkError(forkRequestError.message || "GitHub could not create this fork.");
+      showToast?.(forkRequestError.message || "GitHub could not create this fork.", "error");
+    } finally {
+      setIsForking(false);
+    }
+  };
 
   const selectTab = (nextTab) => {
     if (nextTab === activeTab) return;
@@ -134,6 +168,12 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
           <span>Open on GitHub</span>
           <i className="fa-solid fa-arrow-up-right-from-square external-small"></i>
         </a>
+        {currentUserLogin && repo.owner?.toLowerCase() !== currentUserLogin.toLowerCase() && !repo.fork && (
+          <button className="btn-secondary album-fork-button" onClick={forkAlbum} disabled={isForking}>
+            <i className={`fa-solid ${isForking ? "fa-spinner fa-spin" : "fa-code-fork"}`}></i>
+            <span>{isForking ? "Creating GitHub fork…" : "Fork album"}</span>
+          </button>
+        )}
       </div>
 
       {/* Album Hero Header */}
@@ -165,6 +205,14 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
         <p className="album-hero-description">
           {manifest?.description || repo.description || "No description provided."}
         </p>
+        {repo.parent && (
+          <p className="upstream-notice">
+            <i className="fa-solid fa-code-fork"></i>
+            Fork of <a href={repo.parent.htmlUrl || `https://github.com/${repo.parent.fullName}`} target="_blank" rel="noreferrer">{repo.parent.fullName}</a>.
+            The fork belongs to your GitHub account and follows GitHub's access and organization policies.
+          </p>
+        )}
+        {forkError && <div className="form-error-banner">{forkError}</div>}
 
         <div className="album-repo-meta">
           <span>
@@ -236,7 +284,6 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
         >
           <i className="fa-solid fa-code-pull-request"></i>
           <span>Pull Requests</span>
-          <span className="tab-pill-roadmap">v3.10.0</span>
         </button>
 
         <button
@@ -270,7 +317,7 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
                   </div>
                   <div className="manifest-row">
                     <span>Created With</span>
-                    <code>{manifest?.createdWith?.name || "GridCraft"} v{manifest?.createdWith?.version || "3.9.0"}</code>
+                    <code>{manifest?.createdWith?.name || "GridCraft"} v{manifest?.createdWith?.version || "3.11.0"}</code>
                   </div>
                   <div className="manifest-row">
                     <span>Default Branch</span>
@@ -352,17 +399,15 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
           <IssuesTab owner={owner} repoName={repoName} showToast={showToast} />
         )}
 
-        {/* TAB 6: PULL REQUESTS (Coming in v3.10.0) */}
+        {/* TAB 6: PULL REQUESTS */}
         {activeTab === "pulls" && (
-          <div className="tab-pane-placeholder">
-            <div className="placeholder-icon">
-              <i className="fa-solid fa-code-pull-request"></i>
-            </div>
-            <h3>Pull Requests Arriving in v3.10.0</h3>
-            <p>
-              In <strong>v3.10.0</strong>, propose and review changes to pixel art albums through real GitHub Pull Requests.
-            </p>
-          </div>
+          <PullRequestsTab
+            owner={owner}
+            repoName={repoName}
+            repo={repo}
+            currentUserLogin={currentUserLogin}
+            showToast={showToast}
+          />
         )}
 
         {/* TAB 7: SETTINGS */}

@@ -2,12 +2,17 @@
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)
 
-**Current release:** `v3.9.0`\
+**Current release:** `v3.11.0`\
 **Platform Direction:** A GitHub-inspired platform for creating, organizing, versioning, sharing, and collaborating on pixel art.
 
 GridCraft is a full-stack, GitHub-native creative platform where an album is a GitHub repository, an artwork is a versioned JSON file, a Story is an animated sequence of artworks, and branches, issues, and pull requests bring Git collaboration to pixel artists.
 
 ---
+
+## What's New in v3.10.0–v3.11.0 ✨
+
+- **GitHub Pull Requests**: Browse and create same-repository or fork-based PRs, inspect commits/files/conversation, submit reviews, and merge only after GitHub confirms mergeability and the user confirms the action.
+- **Fork and Contribute**: Create native GitHub forks, open the resulting fork in GridCraft, see its upstream, edit on fork branches, and propose changes upstream.
 
 ## What's New in v3.7.0–v3.9.0 ✨
 
@@ -29,6 +34,7 @@ GridCraft is a full-stack, GitHub-native creative platform where an album is a G
 - **Album Stories** - Create and play sequences of repository artworks, set timing/looping, and export animated GIFs
 - **Branch collaboration** - Keep alternate artwork versions in real GitHub branches
 - **GitHub Issues** - Track feedback and tasks in the repository
+- **GitHub Pull Requests** - Review GitHub-backed changes and contribute through forks
 - **Export & Import** - Download artwork as PNG or import images/SVGs onto the canvas
 - **Dual Themes** - Dark and light mode toggle
 

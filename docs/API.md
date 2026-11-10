@@ -1,4 +1,4 @@
-# GridCraft Backend API Documentation (v3.9.0)
+# GridCraft Backend API Documentation (v3.11.0)
 
 Base URL: `/api/v1`
 
@@ -13,7 +13,7 @@ Returns the operational health and version of the backend service.
 ```json
 {
   "status": "ok",
-  "version": "3.9.0",
+  "version": "3.11.0",
   "app": "GridCraft",
   "githubApp": "gridcraft-auth",
   "timestamp": "2026-11-10T11:00:00.000Z"
@@ -153,7 +153,7 @@ Creates a new GitHub repository under the authenticated user's account, enforces
     "updatedAt": "2026-11-10T11:00:00.000Z",
     "createdWith": {
       "name": "GridCraft",
-      "version": "3.9.0"
+      "version": "3.11.0"
     }
   }
 }
@@ -359,6 +359,41 @@ is written.
   and/or `state` (`open` or `closed`).
 - `POST /api/v1/albums/:owner/:repo/issues/:number/comments` — add a comment
   with `{ "body": "..." }`.
+
+## Pull Requests
+
+- `GET /api/v1/albums/:owner/:repo/pulls?state=open&page=1&per_page=20` —
+  list GitHub pull requests. `state` may be `open`, `closed`, or `all`;
+  the response includes `hasNext` for pagination.
+- `POST /api/v1/albums/:owner/:repo/pulls` — create a PR with `title`,
+  optional `body`, `head`, optional `base` (defaults to `master`), and optional
+  `headRepo` (`owner/repository`) when the head branch is in a fork. For a
+  fork-to-upstream contribution, address the endpoint to the upstream album.
+- `GET /api/v1/albums/:owner/:repo/pulls/:number?page=1` — return GitHub PR
+  metadata, a paginated conversation page, reviews, commits, changed files,
+  merge methods enabled on the repository, and the authenticated user's
+  repository permissions.
+- `POST /api/v1/albums/:owner/:repo/pulls/:number/comments` — add a conversation
+  comment using `{ "body": "..." }`.
+- `POST /api/v1/albums/:owner/:repo/pulls/:number/reviews` — submit
+  `{ "event": "COMMENT|APPROVE|REQUEST_CHANGES", "body": "..." }`.
+- `PUT /api/v1/albums/:owner/:repo/pulls/:number/merge` — explicitly merge
+  with `{ "mergeMethod": "merge|squash|rebase" }`. The service rechecks GitHub's
+  `mergeable` state, repository write permission, and enabled merge method
+  before requesting the merge. GitHub remains authoritative for conflicts and
+  branch-protection rules.
+
+## Forks
+
+- `POST /api/v1/albums/:owner/:repo/forks` — ask GitHub to create a native
+  fork; responds `202` with the resulting repository, including `parent` and
+  `source` where returned by GitHub. GridCraft waits for the native fork to be
+  readable before navigating to it.
+- `GET /api/v1/forks?page=1&per_page=30` — list forks owned by the current
+  account, including their GitHub parent/source metadata.
+- `GET /api/v1/albums/:owner/:repo` includes `repo.fork`, `repo.parent`,
+  `repo.source`, and `repo.permissions` so the client can show upstream
+  information and respect GitHub's repository access rules.
 
 ---
 

@@ -1,4 +1,4 @@
-# GridCraft Architecture (v3.9.0)
+# GridCraft Architecture (v3.11.0)
 
 ## System Overview
 
@@ -16,7 +16,8 @@ GitHub REST API (`api.github.com`)
        ├── Album Repositories (`/user/repos`, `/repos/{owner}/{repo}`)
        ├── Default Branch `master` Enforcement (`/branches/{branch}/rename`)
        ├── Album Manifests & Tree (`/contents/.gridcraft/album.json`)
-       └── Artworks, Stories, Branches, Issues, PRs
+       ├── Artworks, Stories, Branches, Issues, Pull Requests
+       └── Native Fork and upstream repository relationships
 ```
 
 ## Security & Session Architecture
@@ -43,10 +44,11 @@ GitHub REST API (`api.github.com`)
 - `src/components/AccountMenu.jsx`: Dropdown menu for authenticated users displaying profile info, dashboard toggle, and sign-out.
 - `src/components/DashboardShell.jsx`: Creator dashboard displaying live album repositories, search filter, and creation action.
 - `src/components/CreateAlbumModal.jsx`: Modal for creating an album with live slug validation, public/private toggle, and GitHub initialization.
-- `src/components/AlbumDetail.jsx`: Album repository view with artwork, Story, branch, issue, and settings tabs.
+- `src/components/AlbumDetail.jsx`: Album repository view with artwork, Story, branch, issue, Pull Request, fork, and settings workflows.
 - `src/components/StoriesTab.jsx`: Branch-scoped Story manifests, artwork references, playback, GIF export, and local Snap migration.
 - `src/components/BranchSelector.jsx`, `src/components/BranchesTab.jsx`: Branch selection and GitHub-backed branch operations.
 - `src/components/IssuesTab.jsx`: GitHub Issues search, pagination, editing, comments, and safe Markdown rendering.
+- `src/components/PullRequestsTab.jsx`: GitHub-backed PR listing, fork-aware creation, conversation, reviews, and guarded merges.
 - `src/hooks/useSnaps.js`: Reads existing local Snap data so users can back it up or migrate it; the standalone Snap and presentation UI has been removed.
 - `src/hooks/useAuth.jsx`: Authentication context and hook communicating with `/api/v1/auth/me`.
 - `src/services/apiClient.js`: Credentialed API client for auth and album operations.
@@ -60,7 +62,7 @@ GitHub REST API (`api.github.com`)
 - `server/src/config/env.js`: Environment configuration and validation.
 - `server/src/controllers/authController.js`: Controller handling OAuth initiation, callback, profile lookup, and logout.
 - `server/src/controllers/albumController.js`: Controller handling album CRUD, commits, and tree endpoints.
-- `server/src/services/storyService.js`, `branchService.js`, `issueService.js`: GitHub-backed Story, branch, and issue workflows.
+- `server/src/services/storyService.js`, `branchService.js`, `issueService.js`, `pullRequestService.js`, `forkService.js`: GitHub-backed collaboration workflows; fork relationships and merge state come from GitHub.
 - `server/src/services/githubAuthService.js`: GitHub OAuth exchange and user profile fetch service.
 - `server/src/services/albumService.js`: GitHub repository creation, `master` default branch enforcement, and manifest initialization service.
 - `server/src/validators/albumValidator.js`: Zod schemas for album manifests, creation payloads, and repository name slugification.

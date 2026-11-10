@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.11.0] - 2026-11-11
+
+### Added
+- Added real GitHub repository forking with progress feedback, native parent/source relationship detection, and navigation to the completed fork.
+- Displayed upstream repositories on forked albums and added a fork-to-upstream contribution flow that opens a pull request from selected fork branches.
+- Preserved GitHub's repository visibility, permission, and organization policies; fork and upstream actions surface GitHub errors.
+
+## [3.10.0] - 2026-11-11
+
+### Added
+- Replaced the Pull Requests roadmap placeholder with GitHub-backed listing, pagination, status, author, branches, timestamps, and PR detail views.
+- Added pull request creation from same-repository and fork branches, with the target repository's default branch (normally `master`) preselected.
+- Added PR commits, changed-file listings, conversation/comments, review submission, and open-in-GitHub links.
+- Added mergeability and write-permission checks before offering an explicitly confirmed merge, with GitHub's enabled merge methods and errors.
+
 ## [3.9.0] - 2026-11-10
 
 ### Added

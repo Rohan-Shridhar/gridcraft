@@ -38,7 +38,8 @@ export class PullRequestController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, number } = req.params;
-      const data = await this.service.getPull(token, owner, repo, number);
+      const commentsPage = Math.max(1, parseInt(req.query.page || "1", 10));
+      const data = await this.service.getPull(token, owner, repo, number, commentsPage);
       return res.json(data);
     } catch (err) {
       next(err);
@@ -75,6 +76,18 @@ export class PullRequestController {
       if (!token) return;
       const { owner, repo, number } = req.params;
       const result = await this.service.submitReview(token, owner, repo, number, req.body);
+      return res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  commentOnPull = async (req, res, next) => {
+    try {
+      const token = requireToken(req, res);
+      if (!token) return;
+      const { owner, repo, number } = req.params;
+      const result = await this.service.commentOnPull(token, owner, repo, number, req.body?.body);
       return res.status(201).json(result);
     } catch (err) {
       next(err);

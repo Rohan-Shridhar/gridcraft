@@ -522,10 +522,12 @@ function AppContent({ showToast, toast }) {
             owner={selectedAlbum.owner}
             repoName={selectedAlbum.repo}
             branch={selectedBranch}
+            currentUserLogin={user?.login}
             localSnaps={snaps.snaps}
             onStoryDirtyChange={setStoryDirty}
             onBranchChange={changeSelectedBranch}
             onBackToDashboard={() => navigateTo("dashboard")}
+            onSelectAlbum={(nextOwner, nextRepo) => navigateTo("album-detail", { owner: nextOwner, repo: nextRepo })}
             onOpenEditor={(artworkId) =>
               navigateTo("artwork-editor", selectedAlbum, artworkId, false, selectedBranch)
             }

@@ -21,13 +21,14 @@ For **v3.4.0 (Authentication)**:
   - `Email addresses`: Read-only (optional)
   - `User Profile`: Basic identity is accessible via OAuth `/user`.
 
-For the current release (**v3.9.0**) and upcoming milestones (**v3.10.0 - v4.0.0**):
+For the current release (**v3.11.0**):
 - **Repository permissions**:
   - `Contents`: Read & Write (for artwork JSON files, story manifests, and commits)
   - `Metadata`: Read-only (required for all apps)
   - `Pull requests`: Read & Write (for reviewing and opening PRs)
   - `Issues`: Read & Write (for commenting, creating, and managing issues)
   - `Administration`: Read & Write (for repository creation/default branch initialization)
+  - Forking is controlled by GitHub account and organization policies; there is no separate GitHub App permission for it.
 
 ---
 
