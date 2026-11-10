@@ -1,0 +1,53 @@
+# GridCraft Architecture (v3.4.0)
+
+## System Overview
+
+```
+Browser Client (React 19 + Vite)
+       │
+       │ Same-origin /api/v1 calls (proxied in dev, direct in prod)
+       ▼
+Node.js + Express Backend (`server/`)
+       │
+       │ GitHub OAuth & REST API calls (Bearer User Token)
+       ▼
+GitHub REST API (`api.github.com`)
+       ├── User Profile Identity (`/user`)
+       └── (Future v3.5.0+) Repositories, Artworks, Stories, Branches, Issues, PRs
+```
+
+## Security & Session Architecture
+
+1. **GitHub App User Authorization**:
+   - GridCraft uses a dedicated GitHub App (`gridcraft-auth`).
+   - Authorization flow uses an unpredictable, 32-byte cryptographically generated `state` parameter stored in an HttpOnly, SameSite `gc_oauth_state` cookie to prevent CSRF attacks.
+   - The authorization code exchange occurs entirely server-side between the Express backend and GitHub.
+2. **Encrypted Sessions**:
+   - Access tokens received from GitHub are encrypted using **AES-256-GCM** with a dedicated encryption key before storage.
+   - The session cookie (`gc_session`) contains user profile data and the encrypted token, signed with an HMAC-SHA256 signature to prevent tampering.
+   - The session cookie is configured with `HttpOnly: true`, `SameSite: Lax`, and `Secure: true` in production.
+   - **Zero tokens or secrets are ever exposed to the client-side JavaScript, localStorage, or Git history.**
+3. **Redacted Logging**:
+   - The Express request logger strictly redacts sensitive headers (`Authorization`, `Cookie`, `Set-Cookie`, `X-Hub-Signature-256`) and query parameters (`code`, `state`, `token`).
+
+## Frontend Structure
+
+- `src/App.jsx`: Main application container managing theme, view switching (`editor` vs `dashboard`), canvas shortcuts, and core layout.
+- `src/Header.jsx`: Site navigation, brand, theme toggle, and account menu.
+- `src/components/AccountMenu.jsx`: Dropdown menu for authenticated users displaying profile info, dashboard toggle, and sign-out.
+- `src/components/DashboardShell.jsx`: Creator dashboard shell displaying connection status and upcoming albums placeholder.
+- `src/hooks/useAuth.jsx`: Authentication context and hook communicating with `/api/v1/auth/me`.
+- `src/services/apiClient.js`: Credentialed API client for backend communication.
+- `src/Grid.jsx`, `src/Tools.jsx`, `src/Menu.jsx`: Core pixel canvas drawing components.
+- `src/components/SnapsPanel.jsx`, `src/components/PresentationMode.jsx`: Snaps storyboard system.
+
+## Backend Structure
+
+- `server/src/app.js`: Express application setup with CORS, cookie parsing, logging, and error handling.
+- `server/src/server.js`: Server entry point listening on port 4000.
+- `server/src/config/env.js`: Environment configuration and validation.
+- `server/src/controllers/authController.js`: Controller handling OAuth initiation, callback, profile lookup, and logout.
+- `server/src/services/githubAuthService.js`: GitHub OAuth exchange and user profile fetch service.
+- `server/src/middleware/auth.js`: Session verification and route protection middleware.
+- `server/src/middleware/logger.js`: Sensitive data-redacting request logger.
+- `server/src/utils/crypto.js`: AES-256-GCM token encryption and HMAC session signing utilities.

@@ -2,23 +2,35 @@
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)
 
-A React-powered pixel art tool that lets you paint on a customizable grid (16×16, 32×32, 64×64, or 128×128) with the full RGB color spectrum.
+**Current release:** `v3.4.0`\
+**Platform Direction:** A GitHub-inspired platform for creating, organizing, versioning, sharing, and collaborating on pixel art.
 
-## Why GridCraft? 🎯
+GridCraft is evolving into a full-stack, GitHub-native creative platform where an album is a GitHub repository, an artwork is a versioned JSON file, a Story is an animated sequence of artworks, and branches, issues, and pull requests bring Git collaboration to pixel artists.
 
-Built with React, GridCraft demonstrates how modern component-based architecture can create interactive, stateful applications without complexity. It's a lightweight, accessible alternative to heavy art software that showcases clean React patterns and efficient state management.
+---
 
-## Features ✨
+## What's New in v3.4.0 ✨
 
-- **Multiple Grid Sizes** - Draw on a 16×16, 32×32, 64×64, or 128×128 canvas depending on your project
+- **Full-Stack Backend**: Node.js + Express backend service running on port 4000.
+- **GitHub App Authentication**: Sign in with GitHub using the `gridcraft-auth` GitHub App with CSRF protection and secure session management.
+- **Creator Dashboard Shell**: Welcoming dashboard view displaying your GitHub identity and previewing the upcoming Git-backed albums system (v3.5.0).
+- **Zero Token Leakage**: Access tokens are encrypted at rest with AES-256-GCM and stored only in HttpOnly SameSite cookies; zero secrets reach the client browser or git history.
+- **Preserved Pixel Editor**: All classic drawing tools, 16/32/64/128 grids, undo/redo, PNG export, image import, and Snaps storyboard functionality remain 100% functional.
+
+---
+
+## Features
+
+- **GitHub Authentication** - Sign in seamlessly with GitHub via GitHub App `gridcraft-auth`
+- **Multiple Grid Sizes** - Draw on a 16×16, 32×32, 64×64, or 128×128 canvas
 - **Full RGB Color Support** - Choose any color using an intuitive RGB color picker
-- **Export as PNG** - Download your creations to save and share
-- **Right-Click to Draw** - Intuitive drawing mechanism using right mouse button
-- **Color Selection** - Easily select and switch between different colors
-- **Undo/Redo** - Never lose your work with full undo/redo support
-- **Erase Mode** - Quickly correct mistakes with the eraser tool
-- **Clear Canvas** - Start fresh with a single click
-- **Real-time Updates** - See your changes instantly as you draw
+- **Drawing Tools** - Paint brush, eraser, flood fill, transparent fill, and clear canvas
+- **History & Undo/Redo** - Keep up to 15 history steps
+- **Snaps Storyboard & Presentation** - Save multiple frames, preview slideshows, and export as WebM (evolving to album-owned Stories in v3.7.0)
+- **Export & Import** - Download artwork as PNG or import images/SVGs onto the canvas
+- **Dual Themes** - Dark and light mode toggle
+
+---
 
 ## Keyboard Shortcuts
 
@@ -30,101 +42,60 @@ Shortcuts work while the drawing grid is visible:
 | Redo | `Ctrl + Y` |
 | Paint brush | `A` |
 | Fill enclosed cells | `B` |
-| Fill transparent cells|`C`|
+| Fill transparent cells | `C` |
 | Clear canvas | `D` |
 | Eraser | `E` |
 
+---
 
-## Live Demo 🚀
+## Getting Started
 
-Experience GridCraft here: **[GridCraft Live](https://gridcraft-by-me.vercel.app/)**
+### 1. Install dependencies
 
-## User Manual
-
-Need step-by-step usage instructions? Read the [GridCraft Manual](Manual.md).
-
-
-## Repository Structure 📁
-```txt
-rohan-shridhar-gridcraft/
-├── README.md                               # Project overview and usage documentation
-├── CODE_OF_CONDUCT.md                      # Community code of conduct
-├── CONTRIBUTING.md                          # Contribution guidelines
-├── google53f3f4f7aefc7ea4.html             # Verification file for Google indexing
-├── index.html                              # Main HTML entry point for the app
-├── LICENSE                                 # MIT license details
-├── Manual.md                               # Step-by-step user guide
-├── package.json                            # Project scripts and dependencies
-├── vercel.json                             # Vercel deployment configuration
-├── vite.config.js                          # Vite configuration for local dev/build
-├── public/                                 # Static public assets
-│   └── fonts/                              # Custom font files
-│       └── Minecraft.otf                  # Game-like font used in the UI
-├── src/                                    # Application source code
-│   ├── App.jsx                             # Main app state management and UI composition
-│   ├── Contributors.jsx                    # Contributors section component
-│   ├── ErrorPage.jsx                       # Error page fallback component
-│   ├── Footer.jsx                          # Footer content and links
-│   ├── Grid.jsx                            # Pixel grid rendering and drawing logic
-│   ├── Header.jsx                          # Header/navigation component
-│   ├── index.css                           # Global styles and layout
-│   ├── main.jsx                            # React app entry point
-│   ├── Menu.jsx                            # Toolbar/menu controls
-│   ├── toastMessages.js                    # Toast notifications for user feedback
-│   └── Tools.jsx                           # Drawing tools and controls
-└── .github/                                # GitHub project metadata
-    └── ISSUE_TEMPLATE/                     # Issue templates for bug reports and features
-        ├── bug_report.md                   # Bug report issue template
-        └── feature_request.md              # Feature request issue template
+```bash
+npm install
 ```
 
-![Project Structure](./public/structure.png)
+### 2. Configure environment
 
-## Technical Implementation 🔧
+Copy the example environment configuration:
 
-- **React 18 (CDN)** - Loaded via unpkg, no build step required
-- **In-Browser JSX Transpilation** - Babel Standalone converts JSX syntax to JavaScript at runtime
-- **Component Architecture** - Modular design with seven specialized components:
-  - `App.jsx` - Root component managing core state and download logic
-  - `Grid.jsx` - Renders the drawing grid (16×16 up to 128×128) and handles cell painting
-  - `Tools.jsx` - Drawing tools (color picker, eraser, undo/redo, clear)
-  - `Menu.jsx` - Download button and high-level controls
-  - `Header.jsx` & `Footer.jsx` - Layout components
-  - `main.jsx` - React entry point with `createRoot`
-- **State Management** - React hooks for grid state, color selection, and undo/redo history
-- **PNG Export System** - Multi-step process for high-quality exports:
-  1. Temporarily removes grid borders and gaps for clean output
-  2. Uses **html2canvas** with `scale: 8` for high-resolution captures
-  3. Maintains transparent background with `backgroundColor: null`
-  4. Restores original styling after capture
-  5. Triggers download via dynamically created anchor tag
-- **Undo/Redo System** - History tracking with `past`, `present`, `future` state pattern
-- **Event Handling** - Mouse event listeners for right-click drawing
-- **Props Communication** - Download function passed from App to Menu (`<Menu downloadImage={downloadImage} />`)
+```bash
+cp .env.example .env
+```
 
+Add your `gridcraft-auth` GitHub App credentials (`GITHUB_APP_ID`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_PRIVATE_KEY`).
 
+### 3. Run development servers
 
-## How to Contribute 
+```bash
+npm run dev
+```
 
-Checkout [CONTRIBUTING.md](CONTRIBUTING.md) for instructions.
+This starts:
+- Express backend at `http://localhost:4000`
+- Vite frontend at `http://localhost:5173` (proxies `/api` calls to the backend)
 
-## Contributors
+### 4. Run tests
 
-Thanks to these amazing people who contributed ❤️
+```bash
+npm test            # Run unit tests
+npm run test:server # Run backend integration tests
+```
 
-<a href="https://github.com/rohan-shridhar/gridcraft/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=rohan-shridhar/gridcraft" />
-</a>
+---
 
+## Documentation
 
-## Guidelines
+- [Roadmap & Plan](PLAN.md) — The comprehensive version-by-version roadmap to v4.0.0
+- [Changelog](CHANGELOG.md) — Version-by-version release history
+- [Architecture](docs/ARCHITECTURE.md) — High-level architecture, security, and session design
+- [API Reference](docs/API.md) — Backend endpoints and response models
+- [GitHub App Setup](docs/GITHUB_APP_SETUP.md) — Guide to configuring the `gridcraft-auth` app
+- [User Manual](Manual.md) — Step-by-step editor guide
 
-- Keep pull requests focused on a single feature or fix
-- Test your changes locally before submitting
-- Update documentation if your changes affect usage
-- Be respectful and constructive in discussions
-- If adding a new feature, consider adding a brief explanation of why it's useful
+---
 
-## License 📄
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT
