@@ -2,15 +2,17 @@
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)
 
-**Current release:** `v3.5.0`\
+**Current release:** `v3.6.0`\
 **Platform Direction:** A GitHub-inspired platform for creating, organizing, versioning, sharing, and collaborating on pixel art.
 
 GridCraft is a full-stack, GitHub-native creative platform where an album is a GitHub repository, an artwork is a versioned JSON file, a Story is an animated sequence of artworks, and branches, issues, and pull requests bring Git collaboration to pixel artists.
 
 ---
 
-## What's New in v3.5.0 ✨
+## What's New in v3.6.0 ✨
 
+- **GitHub-Backed Artworks**: Create, edit, rename, and delete artwork JSON files in an album, with thumbnails, explicit saves, commit history, and SHA-based conflict protection.
+- **Preserved Canvas Tools**: Album artworks use the existing editor tools, grid sizes, undo/redo, image import, PNG export, transparency, and background colors.
 - **Albums as Real GitHub Repositories**: Create and manage albums that map 1:1 to GitHub repositories under your account.
 - **`master` Default Branch Enforced**: Every new album is initialized or renamed to verify `master` as its default branch.
 - **Album Structure Initialized**: Automatically sets up `.gridcraft/album.json` manifest, `artworks/`, `stories/`, and `README.md`.

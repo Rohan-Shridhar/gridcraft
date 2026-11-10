@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import apiClient from "../services/apiClient.js";
+import ArtworkThumbnail from "./ArtworkThumbnail.jsx";
 
 /**
  * ArtworksTab — displays the list of artworks in an album and allows creation/deletion.
@@ -168,53 +169,6 @@ function ArtworkCard({ artwork, onOpen, onDelete, isDeleting }) {
         </button>
       </div>
     </div>
-  );
-}
-
-/**
- * Renders a pixel-art thumbnail as an inline SVG.
- */
-function ArtworkThumbnail({ cells, gridSize, backgroundColor }) {
-  if (!cells || !gridSize) return <div className="artwork-thumb-placeholder" />;
-
-  const size = Math.min(gridSize, 64); // cap at 64 for display
-  const cellSize = 2; // px per pixel in SVG
-  const totalPx = size * cellSize;
-
-  // Build only colored rects (skip nulls = transparent)
-  const rects = [];
-  for (let i = 0; i < cells.length && i < gridSize * gridSize; i++) {
-    if (!cells[i]) continue;
-    const col = i % gridSize;
-    const row = Math.floor(i / gridSize);
-    rects.push(
-      <rect
-        key={i}
-        x={col * cellSize}
-        y={row * cellSize}
-        width={cellSize}
-        height={cellSize}
-        fill={cells[i]}
-      />
-    );
-  }
-
-  const bg = backgroundColor && backgroundColor !== "transparent" ? backgroundColor : "transparent";
-
-  return (
-    <svg
-      width={totalPx}
-      height={totalPx}
-      viewBox={`0 0 ${totalPx} ${totalPx}`}
-      xmlns="http://www.w3.org/2000/svg"
-      className="artwork-thumb-svg"
-      style={{ imageRendering: "pixelated" }}
-    >
-      {bg !== "transparent" && (
-        <rect x={0} y={0} width={totalPx} height={totalPx} fill={bg} />
-      )}
-      {rects}
-    </svg>
   );
 }
 

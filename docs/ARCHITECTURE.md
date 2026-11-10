@@ -1,4 +1,4 @@
-# GridCraft Architecture (v3.5.0)
+# GridCraft Architecture (v3.6.0)
 
 ## System Overview
 

@@ -1,8 +1,9 @@
 import { useState } from "react";
 
-function Menu({ downloadImage, onImport, isExporting = false }){
+function Menu({ downloadImage, onImport, isExporting = false, disabled = false }){
     const [showShortcuts, setShowShortcuts] = useState(false);
     const openLink = (url) => window.open(url, "_blank");
+    const exportDisabled = isExporting || disabled;
 
     const exportWithFilename = async () => {
         const requestedName = window.prompt("PNG filename", "gridcraft");
@@ -33,16 +34,16 @@ function Menu({ downloadImage, onImport, isExporting = false }){
         <>
             <div className="menu-cont">
                 <button
-                    className={`menu-btn${isExporting ? " menu-btn--disabled" : ""}`}
+                    className={`menu-btn${exportDisabled ? " menu-btn--disabled" : ""}`}
                     onClick={downloadImage}
-                    disabled={isExporting}
+                    disabled={exportDisabled}
                     aria-busy={isExporting}
                     title={isExporting ? "Exporting…" : "Export"}
                 >
                     <i className={`fa-solid ${isExporting ? "fa-spinner fa-spin" : "fa-upload"}`}></i>
                 </button>
 
-                <button className="menu-btn" onClick={onImport} title="Import">
+                <button className="menu-btn" onClick={onImport} disabled={disabled} title="Import">
                     <i className="fa-solid fa-download"></i>
                 </button>
 

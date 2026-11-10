@@ -73,6 +73,23 @@ cells. Transparent image pixels remain transparent. If the image has more than
 Select the export button in the top menu to download the current canvas as a
 PNG. The export removes grid lines and spacing, and preserves transparency.
 
+## Save artwork to an album
+
+Sign in with GitHub, open the dashboard, and select an album. The **Artworks**
+tab lists that repository's artwork files. Choose **New Artwork** to set its
+name, description, and grid size, then open it to edit on the pixel canvas.
+
+Canvas changes stay local until you select **Save to GitHub**. A save creates a
+versioned commit in the album and updates the artwork's file version. If someone
+else changed that file in the meantime, GridCraft stops the save. Compare the
+remote version, reload it (discarding local edits), or save your local drawing
+under a new artwork name; remote changes are never silently overwritten.
+
+Use **Rename** to move an artwork to a new file name or **Delete** to remove it
+from the album after confirmation. The editor also shows recent commits for the
+artwork. Album artwork retains the same image import, PNG export, drawing tools,
+undo/redo, transparency, and background-color controls as the standalone editor.
+
 ## Save and present snapshots
 
 Use **+ New Snap** in the Snaps panel to capture the current canvas. Snapshots

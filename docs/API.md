@@ -1,4 +1,4 @@
-# GridCraft Backend API Documentation (v3.5.0)
+# GridCraft Backend API Documentation (v3.6.0)
 
 Base URL: `/api/v1`
 
@@ -13,7 +13,7 @@ Returns the operational health and version of the backend service.
 ```json
 {
   "status": "ok",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "app": "GridCraft",
   "githubApp": "gridcraft-auth",
   "timestamp": "2026-11-10T11:00:00.000Z"
@@ -153,7 +153,7 @@ Creates a new GitHub repository under the authenticated user's account, enforces
     "updatedAt": "2026-11-10T11:00:00.000Z",
     "createdWith": {
       "name": "GridCraft",
-      "version": "3.5.0"
+      "version": "3.6.0"
     }
   }
 }
@@ -236,6 +236,74 @@ Returns the recursive git tree for the repository on `master`.
 
 ### `POST /api/v1/albums/:owner/:repo/initialize`
 Initializes an existing repository as a GridCraft album by ensuring `master` branch and creating `.gridcraft/album.json`.
+
+---
+
+## Artworks
+
+All artwork endpoints require an authenticated GitHub session. Files are stored
+as JSON under `artworks/` in the album repository. Supported grid sizes are
+16, 32, 64, and 128; `cells` contains exactly `gridSize * gridSize` hex colors
+or `null` values.
+
+### `GET /api/v1/albums/:owner/:repo/artworks`
+Lists validated artwork files on the selected branch. The optional `branch`
+query parameter defaults to `master`. Each artwork includes its current file
+`sha`, which must be supplied for later writes.
+
+### `POST /api/v1/albums/:owner/:repo/artworks`
+Creates an artwork and an initial GitHub commit.
+
+```json
+{
+  "name": "Golden Apple",
+  "description": "A pixel-art item",
+  "gridSize": 16,
+  "backgroundColor": "transparent"
+}
+```
+
+`backgroundColor` may be `"transparent"` or a hex color. An optional `cells`
+array is used when saving a copy of existing pixel data.
+
+### `GET /api/v1/albums/:owner/:repo/artworks/:artworkId`
+Returns `{ "artwork": { ... }, "sha": "..." }` for an artwork file.
+
+### `PUT /api/v1/albums/:owner/:repo/artworks/:artworkId`
+Saves a complete artwork and commits it. The current file SHA is required;
+GitHub rejects stale SHAs with `409 CONFLICT`.
+
+```json
+{
+  "sha": "current-file-sha",
+  "artwork": {
+    "format": "gridcraft-artwork",
+    "schemaVersion": 1,
+    "id": "golden-apple",
+    "name": "Golden Apple",
+    "description": "A pixel-art item",
+    "gridSize": 16,
+    "width": 16,
+    "height": 16,
+    "backgroundColor": "transparent",
+    "cells": ["#e63946", null],
+    "createdAt": "2026-11-10T11:00:00.000Z"
+  }
+}
+```
+
+The `cells` array in this abbreviated example must contain exactly 256 entries
+for a 16×16 artwork.
+
+### `PATCH /api/v1/albums/:owner/:repo/artworks/:artworkId`
+Renames an artwork and its JSON file. Requires `{ "newName": "...", "sha": "current-file-sha" }`.
+
+### `DELETE /api/v1/albums/:owner/:repo/artworks/:artworkId`
+Deletes an artwork file. Requires `{ "sha": "current-file-sha" }`.
+
+### `GET /api/v1/albums/:owner/:repo/artworks/:artworkId/commits`
+Lists recent commits for the artwork file. Accepts the optional `branch` query
+parameter, defaulting to `master`.
 
 ---
 

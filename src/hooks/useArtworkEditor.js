@@ -14,6 +14,7 @@ import apiClient from "../services/apiClient.js";
 
 const EMPTY_CELL = null;
 const MAX_HISTORY = 15;
+const SUPPORTED_GRID_SIZES = [16, 32, 64, 128];
 
 export default function useArtworkEditor() {
   const [owner, setOwner] = useState(null);
@@ -32,11 +33,12 @@ export default function useArtworkEditor() {
   const [saveState, setSaveState] = useState("saved"); // "unsaved"|"saving"|"saved"|"conflict"|"error"
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  const [remoteArtwork, setRemoteArtwork] = useState(null);
 
   // Tracks the current GitHub file SHA — must be sent on every PUT
   const shaRef = useRef(null);
   // Keeps last good cells in case user wants to discard after conflict
-  const lastSavedCellsRef = useRef(null);
+  const lastSavedArtworkRef = useRef(null);
 
   const loadArtwork = useCallback(async (ownerArg, repoArg, idArg) => {
     setOwner(ownerArg);
@@ -44,16 +46,17 @@ export default function useArtworkEditor() {
     setArtworkId(idArg);
     setIsLoading(true);
     setLoadError(null);
-    setSaveState("saved");
-    setIsDirty(false);
-    setHistory([]);
-    setFuture([]);
 
     try {
       const res = await apiClient.getArtwork(ownerArg, repoArg, idArg);
       const aw = res.artwork;
       shaRef.current = res.sha;
-      lastSavedCellsRef.current = [...aw.cells];
+      lastSavedArtworkRef.current = aw;
+      setSaveState("saved");
+      setIsDirty(false);
+      setHistory([]);
+      setFuture([]);
+      setRemoteArtwork(null);
       setArtworkMeta({
         name: aw.name,
         description: aw.description || "",
@@ -98,6 +101,16 @@ export default function useArtworkEditor() {
       return [...newCells];
     });
   }, []);
+
+  const changeGridSize = useCallback((newSize) => {
+    if (!SUPPORTED_GRID_SIZES.includes(newSize) || newSize === gridSize) return;
+    setHistory([]);
+    setFuture([]);
+    setGridSize(newSize);
+    setCells(Array(newSize * newSize).fill(EMPTY_CELL));
+    setIsDirty(true);
+    setSaveState("unsaved");
+  }, [gridSize]);
 
   const undo = useCallback(() => {
     setHistory((h) => {
@@ -152,16 +165,17 @@ export default function useArtworkEditor() {
         sha: shaRef.current,
         name: artworkMeta.name,
         description: artworkMeta.description,
+        createdAt: artworkMeta.createdAt,
         gridSize,
         backgroundColor,
         cells,
       };
       const res = await apiClient.saveArtwork(owner, repoName, artworkId, payload);
       shaRef.current = res.sha;
-      lastSavedCellsRef.current = [...cells];
+      lastSavedArtworkRef.current = res.artwork;
       setIsDirty(false);
       setSaveState("saved");
-      setArtworkMeta((m) => ({ ...m, updatedAt: new Date().toISOString() }));
+      setArtworkMeta((m) => ({ ...m, updatedAt: res.artwork.updatedAt }));
     } catch (err) {
       if (err.status === 409) {
         setSaveState("conflict");
@@ -178,15 +192,87 @@ export default function useArtworkEditor() {
     await loadArtwork(owner, repoName, artworkId);
   }, [owner, repoName, artworkId, loadArtwork]);
 
-  // Discard local changes, go back to last saved state
+  const inspectRemote = useCallback(async () => {
+    if (!owner || !repoName || !artworkId) return null;
+    const result = await apiClient.getArtwork(owner, repoName, artworkId);
+    setRemoteArtwork(result.artwork);
+    return result.artwork;
+  }, [owner, repoName, artworkId]);
+
+  const saveAsNew = useCallback(async (name) => {
+    if (!owner || !repoName || !artworkMeta) return;
+    const result = await apiClient.createArtwork(owner, repoName, {
+      name,
+      description: artworkMeta.description || "",
+      gridSize,
+      backgroundColor,
+      cells,
+    });
+    const artwork = result.artwork;
+    setArtworkId(artwork.id);
+    setArtworkMeta({
+      name: artwork.name,
+      description: artwork.description || "",
+      gridSize: artwork.gridSize,
+      backgroundColor: artwork.backgroundColor,
+      createdAt: artwork.createdAt,
+      updatedAt: artwork.updatedAt,
+    });
+    shaRef.current = result.sha;
+    lastSavedArtworkRef.current = artwork;
+    setRemoteArtwork(null);
+    setIsDirty(false);
+    setSaveState("saved");
+    setHistory([]);
+    setFuture([]);
+    return artwork;
+  }, [owner, repoName, artworkMeta, gridSize, backgroundColor, cells]);
+
+  const rename = useCallback(async (newName) => {
+    if (!owner || !repoName || !artworkId || !shaRef.current) return;
+    try {
+      const result = await apiClient.renameArtwork(owner, repoName, artworkId, {
+        newName,
+        sha: shaRef.current,
+      });
+      setArtworkId(result.artworkId);
+      shaRef.current = result.sha;
+      lastSavedArtworkRef.current = result.artwork;
+      setArtworkMeta((meta) => ({
+        ...meta,
+        name: result.artwork.name,
+        updatedAt: result.artwork.updatedAt,
+      }));
+      setIsDirty(false);
+      setSaveState("saved");
+      return result.artwork;
+    } catch (error) {
+      if (error.status === 409) setSaveState("conflict");
+      throw error;
+    }
+  }, [owner, repoName, artworkId]);
+
   const discardChanges = useCallback(() => {
-    if (!lastSavedCellsRef.current) return;
-    setCells([...lastSavedCellsRef.current]);
+    const saved = lastSavedArtworkRef.current;
+    if (!saved) return;
+    setCells([...saved.cells]);
+    setGridSize(saved.gridSize);
+    setBackgroundColor(saved.backgroundColor);
+    setArtworkMeta({
+      name: saved.name,
+      description: saved.description || "",
+      gridSize: saved.gridSize,
+      backgroundColor: saved.backgroundColor,
+      createdAt: saved.createdAt,
+      updatedAt: saved.updatedAt,
+    });
     setHistory([]);
     setFuture([]);
     setIsDirty(false);
     setSaveState("saved");
   }, []);
+
+  const markConflict = useCallback(() => setSaveState("conflict"), []);
 
   return {
     // identity
@@ -208,17 +294,23 @@ export default function useArtworkEditor() {
     // loading
     isLoading,
     loadError,
+    remoteArtwork,
     // actions
     loadArtwork,
     paintCell,
     setCellsBulk,
+    changeGridSize,
     undo,
     redo,
     clearCanvas,
     updateBackgroundColor,
     save,
     reloadFromRemote,
+    inspectRemote,
+    saveAsNew,
+    rename,
     discardChanges,
+    markConflict,
     setArtworkMeta,
   };
 }

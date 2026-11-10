@@ -4,11 +4,12 @@ import {
   UpdateAlbumSchema,
   slugifyRepoName,
 } from "../validators/albumValidator.js";
+import { APP_VERSION } from "../config/version.js";
 
 const GITHUB_API_URL = "https://api.github.com";
 const GITHUB_API_HEADERS = {
   Accept: "application/vnd.github+json",
-  "User-Agent": "GridCraft/4.0.0",
+  "User-Agent": `GridCraft/${APP_VERSION}`,
   "X-GitHub-Api-Version": "2022-11-28",
 };
 
@@ -176,7 +177,7 @@ export class AlbumService {
       updatedAt: new Date().toISOString(),
       createdWith: {
         name: "GridCraft",
-        version: "4.0.0",
+        version: APP_VERSION,
       },
     };
 
@@ -390,7 +391,7 @@ export class AlbumService {
       updatedAt: new Date().toISOString(),
       createdWith: {
         name: "GridCraft",
-        version: "4.0.0",
+        version: APP_VERSION,
       },
     };
 

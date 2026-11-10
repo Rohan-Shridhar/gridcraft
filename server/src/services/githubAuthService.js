@@ -1,4 +1,5 @@
 import { config } from "../config/env.js";
+import { APP_VERSION } from "../config/version.js";
 
 export class GitHubAuthService {
   constructor(cfg = config) {
@@ -22,7 +23,7 @@ export class GitHubAuthService {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "User-Agent": "GridCraft/4.0.0",
+        "User-Agent": `GridCraft/${APP_VERSION}`,
       },
       body: JSON.stringify({
         client_id: this.config.github.clientId,
@@ -58,7 +59,7 @@ export class GitHubAuthService {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/vnd.github+json",
-        "User-Agent": "GridCraft/4.0.0",
+        "User-Agent": `GridCraft/${APP_VERSION}`,
         "X-GitHub-Api-Version": "2022-11-28",
       },
     });
@@ -96,7 +97,7 @@ export class GitHubAuthService {
           headers: {
             Authorization: `Basic ${auth}`,
             Accept: "application/vnd.github+json",
-            "User-Agent": "GridCraft/4.0.0",
+            "User-Agent": `GridCraft/${APP_VERSION}`,
             "X-GitHub-Api-Version": "2022-11-28",
             "Content-Type": "application/json",
           },

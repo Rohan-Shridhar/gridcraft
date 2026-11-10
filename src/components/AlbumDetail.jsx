@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import apiClient from "../services/apiClient.js";
+import ArtworksTab from "./ArtworksTab.jsx";
 
 export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, showToast }) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -175,7 +176,6 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
         >
           <i className="fa-solid fa-palette"></i>
           <span>Artworks</span>
-          <span className="tab-pill-roadmap">v3.6.0</span>
         </button>
 
         <button
@@ -253,7 +253,7 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
                   </div>
                   <div className="manifest-row">
                     <span>Created With</span>
-                    <code>{manifest?.createdWith?.name || "GridCraft"} v{manifest?.createdWith?.version || "3.5.0"}</code>
+                    <code>{manifest?.createdWith?.name || "GridCraft"} v{manifest?.createdWith?.version || "3.6.0"}</code>
                   </div>
                   <div className="manifest-row">
                     <span>Default Branch</span>
@@ -309,21 +309,14 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
           </div>
         )}
 
-        {/* TAB 2: ARTWORKS (Coming in v3.6.0) */}
+        {/* TAB 2: ARTWORKS */}
         {activeTab === "artworks" && (
-          <div className="tab-pane-placeholder">
-            <div className="placeholder-icon">
-              <i className="fa-solid fa-palette"></i>
-            </div>
-            <h3>Artworks Arriving in v3.6.0</h3>
-            <p>
-              In <strong>v3.6.0</strong>, you will be able to create, open, edit, and save versioned JSON artworks
-              inside this album repository using the GridCraft pixel canvas with SHA conflict detection.
-            </p>
-            <button className="btn-modal-primary" onClick={onOpenEditor}>
-              <i className="fa-solid fa-paint-brush"></i> Open Pixel Editor
-            </button>
-          </div>
+          <ArtworksTab
+            owner={owner}
+            repoName={repoName}
+            onOpenEditor={onOpenEditor}
+            showToast={showToast}
+          />
         )}
 
         {/* TAB 3: STORIES (Coming in v3.7.0) */}

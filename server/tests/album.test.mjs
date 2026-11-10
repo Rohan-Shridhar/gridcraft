@@ -51,7 +51,7 @@ describe("Album Validator Tests", () => {
       updatedAt: new Date().toISOString(),
       createdWith: {
         name: "GridCraft",
-        version: "3.5.0",
+        version: "3.6.0",
       },
     };
 
@@ -158,7 +158,7 @@ describe("Album API Integration Tests", () => {
             description: "Retro RPG Assets",
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            createdWith: { name: "GridCraft", version: "3.5.0" },
+            createdWith: { name: "GridCraft", version: "3.6.0" },
           },
         };
       },

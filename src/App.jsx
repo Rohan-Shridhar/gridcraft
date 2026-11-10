@@ -11,6 +11,7 @@ import SnapsPanel from './components/SnapsPanel.jsx';
 import PresentationMode from './components/PresentationMode.jsx';
 import DashboardShell from './components/DashboardShell.jsx';
 import AlbumDetail from './components/AlbumDetail.jsx';
+import ArtworkEditor from './components/ArtworkEditor.jsx';
 import useSnaps from './hooks/useSnaps.js';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 
@@ -33,43 +34,84 @@ function parseRoute(pathname) {
   if (pathname === "/dashboard") {
     return { view: "dashboard", album: null };
   }
+  const artworkMatch = pathname.match(/^\/albums\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)\/artworks\/([a-zA-Z0-9-]+)$/);
+  if (artworkMatch) {
+    return {
+      view: "artwork-editor",
+      album: { owner: artworkMatch[1], repo: artworkMatch[2] },
+      artworkId: artworkMatch[3],
+    };
+  }
   const match = pathname.match(/^\/albums\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)/);
   if (match) {
-    return { view: "album-detail", album: { owner: match[1], repo: match[2] } };
+    return { view: "album-detail", album: { owner: match[1], repo: match[2] }, artworkId: null };
   }
   if (pathname === "/" || pathname === "/editor") {
     return { view: "editor", album: null };
   }
-  return { view: "404", album: null };
+  return { view: "404", album: null, artworkId: null };
 }
 
 function AppContent({ showToast, toast }) {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
+  const [artworkDirty, setArtworkDirty] = useState(false);
 
   const activeView = route.view;
   const selectedAlbum = route.album;
+  const selectedArtworkId = route.artworkId;
 
-  const navigateTo = useCallback((view, album = null) => {
+  const navigateTo = useCallback((view, album = null, artworkId = null, replace = false) => {
     let targetPath = "/";
     if (view === "dashboard") {
       targetPath = "/dashboard";
     } else if (view === "album-detail" && album) {
       targetPath = `/albums/${album.owner}/${album.repo}`;
+    } else if (view === "artwork-editor" && album && artworkId) {
+      targetPath = `/albums/${album.owner}/${album.repo}/artworks/${encodeURIComponent(artworkId)}`;
     }
     if (window.location.pathname !== targetPath) {
-      window.history.pushState(null, "", targetPath);
+      if (replace) {
+        window.history.replaceState(null, "", targetPath);
+      } else {
+        window.history.pushState(null, "", targetPath);
+      }
     }
-    setRoute({ view, album });
+    setRoute({ view, album, artworkId });
   }, []);
+  const navigateFromHeader = useCallback((view) => {
+    if (
+      activeView === "artwork-editor" &&
+      artworkDirty &&
+      !window.confirm("Leave the artwork editor? Any unsaved changes will be lost.")
+    ) return;
+    navigateTo(view);
+  }, [activeView, artworkDirty, navigateTo]);
+  const logoutFromHeader = useCallback(() => {
+    if (
+      activeView === "artwork-editor" &&
+      artworkDirty &&
+      !window.confirm("Sign out and leave the artwork editor? Any unsaved changes will be lost.")
+    ) return;
+    logout();
+  }, [activeView, artworkDirty, logout]);
 
   useEffect(() => {
     const handlePopState = () => {
-      setRoute(parseRoute(window.location.pathname));
+      const nextRoute = parseRoute(window.location.pathname);
+      if (route.view === "artwork-editor" && artworkDirty) {
+        const leave = window.confirm("Leave the artwork editor? Any unsaved changes will be lost.");
+        if (!leave) {
+          const currentPath = `/albums/${route.album.owner}/${route.album.repo}/artworks/${encodeURIComponent(route.artworkId)}`;
+          window.history.pushState(null, "", currentPath);
+          return;
+        }
+      }
+      setRoute(nextRoute);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [route, artworkDirty]);
 
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
   const [cells, setCells] = useState(
@@ -101,6 +143,7 @@ function AppContent({ showToast, toast }) {
   const fileInputRef = useRef(null);
 
   const handleKeyPress = useCallback((event) => {
+    if (activeView === "artwork-editor") return;
     if (document.querySelector(".presentation-overlay")) return;
 
     if (
@@ -174,7 +217,7 @@ function AppContent({ showToast, toast }) {
       clearAll();
       showToast("Canvas cleared", "success");
     }
-  }, [history, future, showGrid]);
+  }, [history, future, showGrid, activeView]);
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyPress);
@@ -444,9 +487,9 @@ function AppContent({ showToast, toast }) {
         isAuthenticated={isAuthenticated}
         isLoading={isLoading}
         onLogin={login}
-        onLogout={logout}
+        onLogout={logoutFromHeader}
         activeView={activeView}
-        setActiveView={navigateTo}
+        setActiveView={navigateFromHeader}
       />
 
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
@@ -467,7 +510,25 @@ function AppContent({ showToast, toast }) {
             owner={selectedAlbum.owner}
             repoName={selectedAlbum.repo}
             onBackToDashboard={() => navigateTo("dashboard")}
-            onOpenEditor={() => navigateTo("editor")}
+            onOpenEditor={(artworkId) =>
+              navigateTo("artwork-editor", selectedAlbum, artworkId)
+            }
+            showToast={showToast}
+          />
+          <Footer />
+        </>
+      ) : activeView === "artwork-editor" && selectedAlbum && selectedArtworkId ? (
+        <>
+          <ArtworkEditor
+            key={`${selectedAlbum.owner}/${selectedAlbum.repo}/${selectedArtworkId}`}
+            owner={selectedAlbum.owner}
+            repoName={selectedAlbum.repo}
+            artworkId={selectedArtworkId}
+            onDirtyChange={setArtworkDirty}
+            onBack={() => navigateTo("album-detail", selectedAlbum)}
+            onArtworkChanged={(nextArtworkId) =>
+              navigateTo("artwork-editor", selectedAlbum, nextArtworkId, true)
+            }
             showToast={showToast}
           />
           <Footer />

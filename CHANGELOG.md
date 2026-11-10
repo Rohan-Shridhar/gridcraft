@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.0] - 2026-11-10
+
+### Added
+- Replaced the album Artworks roadmap placeholder with a live GitHub-backed artwork library and JSON thumbnails.
+- Added artwork creation with name, description, and supported grid-size metadata.
+- Connected album artwork editing to the existing canvas tools, including grid-size changes, undo/redo, image import, PNG export, transparency, and background color.
+- Added explicit saves with progress, success, and error states, meaningful Git commit messages, and per-artwork commit history.
+- Added artwork rename and confirmed deletion, plus a conflict flow to inspect remote changes, reload them, or save local work as a new artwork.
+- Required the current file SHA for save, rename, and delete operations to prevent stale writes.
+- Added strict artwork size validation, exact cell-data persistence tests for all supported grid sizes, and useful invalid/oversized payload errors.
+- Updated version metadata and the manual/API documentation for v3.6.0.
+
+### Preserved
+- Standalone editor behavior and the existing Snaps storyboard remain available.
+
+---
+
 ## [3.5.0] - 2026-11-10
 
 ### Added

@@ -8,8 +8,14 @@ export default function EditorSaveBar({
   onReload,
   onBack,
   onRename,
+  onDelete,
+  onInspectRemote,
+  onSaveAsNew,
+  isBusy = false,
   commits = [],
 }) {
+  const isSaving = saveState === "saving";
+  const controlsDisabled = isSaving || isBusy;
   const labels = {
     unsaved: "Unsaved",
     saving: "Saving…",
@@ -39,16 +45,29 @@ export default function EditorSaveBar({
           {isDirty && saveState === "saved" ? "Unsaved" : labels[saveState] || saveState}
         </span>
         {onRename && (
-          <button className="btn-secondary" onClick={onRename} type="button">
+          <button className="btn-secondary" onClick={onRename} disabled={controlsDisabled} type="button">
             Rename
           </button>
         )}
-        {saveState === "conflict" && (
-          <button className="btn-secondary" onClick={onReload} type="button">
-            Reload remote
+        {onDelete && (
+          <button className="btn-secondary" onClick={onDelete} disabled={controlsDisabled} type="button">
+            Delete
           </button>
         )}
-        <button className="btn-primary" onClick={onSave} disabled={saveState === "saving"} type="button">
+        {saveState === "conflict" && (
+          <>
+            <button className="btn-secondary" onClick={onInspectRemote} disabled={controlsDisabled} type="button">
+              Compare remote
+            </button>
+            <button className="btn-secondary" onClick={onSaveAsNew} disabled={controlsDisabled} type="button">
+              Save as new
+            </button>
+            <button className="btn-secondary" onClick={onReload} disabled={controlsDisabled} type="button">
+              Reload remote
+            </button>
+          </>
+        )}
+        <button className="btn-primary" onClick={onSave} disabled={controlsDisabled || saveState === "conflict" || (!isDirty && saveState === "saved")} type="button">
           {saveState === "saving" ? "Saving…" : "Save to GitHub"}
         </button>
       </div>

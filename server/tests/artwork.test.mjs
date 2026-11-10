@@ -10,6 +10,7 @@ import {
   sanitizeArtworkId,
   SUPPORTED_GRID_SIZES,
 } from "../src/validators/artworkValidator.js";
+import { ArtworkService } from "../src/services/artworkService.js";
 
 describe("Artwork Validator and Data Model Tests", () => {
   it("sanitizes artwork IDs and prevents path traversal", () => {
@@ -95,6 +96,23 @@ describe("Artwork Validator and Data Model Tests", () => {
     });
   });
 
+  it("rejects artwork payloads larger than the maximum supported grid", () => {
+    const oversizedArtwork = {
+      format: "gridcraft-artwork",
+      schemaVersion: 1,
+      id: "oversized",
+      name: "Oversized",
+      gridSize: 128,
+      width: 128,
+      height: 128,
+      backgroundColor: "transparent",
+      cells: Array(128 * 128 + 1).fill(null),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    assert.throws(() => ArtworkSchema.parse(oversizedArtwork));
+  });
+
   it("rejects invalid hex colors and malformed formats", () => {
     const cells = Array(256).fill(null);
     cells[5] = "not-a-hex-color";
@@ -119,6 +137,78 @@ describe("Artwork Validator and Data Model Tests", () => {
   });
 });
 
+describe("Artwork GitHub persistence", () => {
+  it("saves exact pixel data and the SHA for each supported grid size", async () => {
+    for (const gridSize of SUPPORTED_GRID_SIZES) {
+      const expectedCells = Array.from({ length: gridSize * gridSize }, (_, index) =>
+        index % 3 === 0 ? "#a1b2c3" : null
+      );
+      let writtenFile;
+      const service = new ArtworkService(async (url, options) => {
+        assert.match(url, /\/contents\/artworks\/round-trip\.json$/);
+        writtenFile = JSON.parse(options.body);
+        return new Response(JSON.stringify({
+          content: { sha: `new-sha-${gridSize}` },
+          commit: { sha: `commit-sha-${gridSize}` },
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      });
+
+      const createdAt = new Date().toISOString();
+      const result = await service.saveArtwork(
+        "test-token",
+        { login: "pixelcrafter" },
+        "pixelcrafter",
+        "rpg-items",
+        "round-trip",
+        {
+          sha: `old-sha-${gridSize}`,
+          name: `Round trip ${gridSize}`,
+          description: "Exact pixels",
+          gridSize,
+          backgroundColor: "#123456",
+          cells: expectedCells,
+          createdAt,
+        }
+      );
+      const stored = JSON.parse(Buffer.from(writtenFile.content, "base64").toString("utf8"));
+
+      assert.equal(writtenFile.sha, `old-sha-${gridSize}`);
+      assert.deepEqual(stored.cells, expectedCells);
+      assert.equal(stored.gridSize, gridSize);
+      assert.equal(stored.backgroundColor, "#123456");
+      assert.equal(result.sha, `new-sha-${gridSize}`);
+    }
+  });
+
+  it("requires a SHA for updates and propagates stale-SHA conflicts", async () => {
+    let requestCount = 0;
+    const service = new ArtworkService(async () => {
+      requestCount += 1;
+      return new Response(JSON.stringify({ message: "sha was used but the file changed" }), {
+        status: 409,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await assert.rejects(
+      service.saveArtwork("token", {}, "owner", "repo", "art", { cells: [] }),
+      /SHA is required/
+    );
+    assert.equal(requestCount, 0);
+
+    await assert.rejects(
+      service.saveArtwork("token", {}, "owner", "repo", "art", {
+        sha: "stale-sha",
+        name: "Art",
+        gridSize: 16,
+        backgroundColor: "transparent",
+        cells: Array(256).fill(null),
+      }),
+      (error) => error.status === 409 && error.code === "CONFLICT"
+    );
+  });
+});
+
 describe("Artwork API Integration Tests", () => {
   const dummyUser = {
     id: 101,
@@ -137,6 +227,22 @@ describe("Artwork API Integration Tests", () => {
     const res = await request(app).get("/api/v1/albums/pixelcrafter/my-repo/artworks");
     assert.equal(res.status, 401);
     assert.equal(res.body.error.code, "UNAUTHORIZED");
+  });
+
+  it("rejects oversized JSON requests with a useful 413 error", async () => {
+    const app = createApp();
+    const res = await request(app)
+      .post("/api/v1/albums/pixelcrafter/rpg-items/artworks")
+      .set("Cookie", [`${config.session.cookieName}=${authCookie}`])
+      .send({
+        name: "oversized",
+        gridSize: 16,
+        description: "x".repeat(2 * 1024 * 1024),
+      });
+
+    assert.equal(res.status, 413);
+    assert.equal(res.body.error.code, "PAYLOAD_TOO_LARGE");
+    assert.match(res.body.error.message, /2 MB limit/);
   });
 
   it("lists artworks in an album", async () => {

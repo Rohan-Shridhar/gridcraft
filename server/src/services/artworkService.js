@@ -5,6 +5,19 @@ import {
 } from "../validators/artworkValidator.js";
 import { githubRequest } from "../utils/githubClient.js";
 
+function parseArtworkFile(content, path) {
+  try {
+    if (!content) throw new Error("Artwork file has no readable content");
+    const raw = Buffer.from(content, "base64").toString("utf8");
+    return ArtworkSchema.parse(JSON.parse(raw));
+  } catch (cause) {
+    const err = new Error(`Invalid artwork file ${path}: ${cause.message}`, { cause });
+    err.status = 422;
+    err.code = "VALIDATION_ERROR";
+    throw err;
+  }
+}
+
 export class ArtworkService {
   constructor(fetchFn = globalThis.fetch) {
     this.fetch = fetchFn;
@@ -39,32 +52,21 @@ export class ArtworkService {
     );
 
     // Fetch and decode each artwork
-    const artworks = await Promise.all(
+    return Promise.all(
       jsonFiles.map(async (file) => {
-        try {
-          const detail = await this.#request(
-            `/repos/${owner}/${repoName}/contents/${file.path}?ref=${encodeURIComponent(branch)}`,
-            accessToken
-          );
-          if (detail && detail.content) {
-            const raw = Buffer.from(detail.content, "base64").toString("utf8");
-            const parsed = JSON.parse(raw);
-            const validated = ArtworkSchema.parse(parsed);
-            return {
-              ...validated,
-              sha: detail.sha,
-              downloadUrl: detail.download_url,
-              htmlUrl: detail.html_url,
-            };
-          }
-        } catch (parseErr) {
-          console.warn(`Could not parse artwork file ${file.path}:`, parseErr.message);
-        }
-        return null;
+        const detail = await this.#request(
+          `/repos/${owner}/${repoName}/contents/${file.path}?ref=${encodeURIComponent(branch)}`,
+          accessToken
+        );
+        const validated = parseArtworkFile(detail?.content, file.path);
+        return {
+          ...validated,
+          sha: detail.sha,
+          downloadUrl: detail.download_url,
+          htmlUrl: detail.html_url,
+        };
       })
     );
-
-    return artworks.filter(Boolean);
   }
 
   async getArtwork(accessToken, owner, repoName, artworkId, branch = "master") {
@@ -86,9 +88,7 @@ export class ArtworkService {
       throw err;
     }
 
-    const raw = Buffer.from(file.content, "base64").toString("utf8");
-    const parsed = JSON.parse(raw);
-    const validated = ArtworkSchema.parse(parsed);
+    const validated = parseArtworkFile(file.content, `artworks/${cleanId}.json`);
 
     return {
       artwork: validated,
@@ -110,7 +110,7 @@ export class ArtworkService {
 
     const now = new Date().toISOString();
     const cellCount = validatedInput.gridSize * validatedInput.gridSize;
-    const initialCells = Array(cellCount).fill(null);
+    const initialCells = validatedInput.cells || Array(cellCount).fill(null);
 
     const artwork = {
       format: "gridcraft-artwork",
@@ -159,6 +159,12 @@ export class ArtworkService {
       err.status = 400;
       throw err;
     }
+    if (typeof body.sha !== "string" || !body.sha) {
+      const err = new Error("Current artwork SHA is required to save changes safely.");
+      err.status = 400;
+      err.code = "VALIDATION_ERROR";
+      throw err;
+    }
 
     const artworkInput = body.artwork || (Array.isArray(body.cells) ? body : null);
     if (!artworkInput) {
@@ -192,7 +198,7 @@ export class ArtworkService {
           message: msg,
           content: encoded,
           branch,
-          ...(body.sha ? { sha: body.sha } : {}),
+          sha: body.sha,
         }),
       }
     );
@@ -205,17 +211,25 @@ export class ArtworkService {
   }
 
   async renameArtwork(accessToken, user, owner, repoName, artworkId, { newName, sha, branch = "master" }) {
+    if (typeof sha !== "string" || !sha) {
+      const err = new Error("Current artwork SHA is required to rename this artwork safely.");
+      err.status = 400;
+      err.code = "VALIDATION_ERROR";
+      throw err;
+    }
     const current = await this.getArtwork(accessToken, owner, repoName, artworkId, branch);
+    if (sha !== current.sha) {
+      const err = new Error("The remote artwork changed. Reload it before renaming.");
+      err.status = 409;
+      err.code = "CONFLICT";
+      throw err;
+    }
     const nextId = sanitizeArtworkId(newName);
     if (!nextId) {
       const err = new Error("Invalid new artwork name");
       err.status = 400;
       throw err;
     }
-    if (nextId === current.artwork.id) {
-      return { artwork: current.artwork, sha: current.sha, artworkId: nextId };
-    }
-
     const renamed = {
       ...current.artwork,
       id: nextId,
@@ -225,6 +239,28 @@ export class ArtworkService {
     ArtworkSchema.parse(renamed);
 
     const encoded = Buffer.from(JSON.stringify(renamed, null, 2), "utf8").toString("base64");
+    if (nextId === current.artwork.id) {
+      const updated = await this.#request(
+        `/repos/${owner}/${repoName}/contents/artworks/${nextId}.json`,
+        accessToken,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            message: `rename(artwork): ${current.artwork.name} to ${newName}`,
+            content: encoded,
+            sha: current.sha,
+            branch,
+          }),
+        }
+      );
+      return {
+        artwork: renamed,
+        sha: updated.content.sha,
+        commitSha: updated.commit.sha,
+        artworkId: nextId,
+      };
+    }
+
     const created = await this.#request(
       `/repos/${owner}/${repoName}/contents/artworks/${nextId}.json`,
       accessToken,
@@ -263,11 +299,11 @@ export class ArtworkService {
       err.status = 400;
       throw err;
     }
-
-    let fileSha = sha;
-    if (!fileSha) {
-      const current = await this.getArtwork(accessToken, owner, repoName, cleanId, branch);
-      fileSha = current.sha;
+    if (typeof sha !== "string" || !sha) {
+      const err = new Error("Current artwork SHA is required to delete this artwork safely.");
+      err.status = 400;
+      err.code = "VALIDATION_ERROR";
+      throw err;
     }
 
     await this.#request(
@@ -277,7 +313,7 @@ export class ArtworkService {
         method: "DELETE",
         body: JSON.stringify({
           message: `delete(artwork): remove ${cleanId}`,
-          sha: fileSha,
+          sha,
           branch,
         }),
       }

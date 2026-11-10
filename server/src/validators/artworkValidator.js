@@ -1,8 +1,10 @@
 import { z } from "zod";
 
 export const SUPPORTED_GRID_SIZES = [16, 32, 64, 128];
-const HEX_COLOR_REGEX = /^#[0-9a-f]{3,8}$/i;
+const HEX_COLOR_REGEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const ARTWORK_ID_REGEX = /^[a-z0-9-]+$/;
+const MAX_CELLS = 128 * 128;
+const cellSchema = z.union([z.string().regex(HEX_COLOR_REGEX), z.null()]);
 
 export function sanitizeArtworkId(input) {
   if (!input || typeof input !== "string") return "";
@@ -38,7 +40,14 @@ export const CreateArtworkInputSchema = z.object({
       message: 'backgroundColor must be "transparent" or a valid hex color string',
     })
     .default("transparent"),
-});
+  cells: z.array(cellSchema).max(MAX_CELLS, "Artwork exceeds the maximum grid size").optional(),
+}).refine(
+  (data) => data.cells === undefined || data.cells.length === data.gridSize * data.gridSize,
+  (data) => ({
+    message: `cells array length (${data.cells?.length}) must match gridSize * gridSize (${data.gridSize * data.gridSize})`,
+    path: ["cells"],
+  })
+);
 
 export const ArtworkSchema = z
   .object({
@@ -59,7 +68,7 @@ export const ArtworkSchema = z
     backgroundColor: z.string().refine(isValidBackgroundColor, {
       message: 'backgroundColor must be "transparent" or a valid hex color string',
     }),
-    cells: z.array(z.union([z.string().regex(HEX_COLOR_REGEX), z.null()])),
+    cells: z.array(cellSchema).max(MAX_CELLS, "Artwork exceeds the maximum grid size"),
     createdAt: z.string().refine((val) => !isNaN(Date.parse(val)), {
       message: "Invalid createdAt date string",
     }),
