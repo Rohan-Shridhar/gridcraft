@@ -7,8 +7,15 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { loadSession } from "./middleware/auth.js";
 import authRoutes, { createAuthRoutes } from "./routes/authRoutes.js";
 import { AuthController } from "./controllers/authController.js";
+import albumRoutes, { createAlbumRoutes } from "./routes/albumRoutes.js";
+import { AlbumController } from "./controllers/albumController.js";
 
-export function createApp({ authService, authController } = {}) {
+export function createApp({
+  authService,
+  authController,
+  albumService,
+  albumController,
+} = {}) {
   const app = express();
 
   let resolvedAuthRoutes = authRoutes;
@@ -16,6 +23,13 @@ export function createApp({ authService, authController } = {}) {
     resolvedAuthRoutes = createAuthRoutes(authController);
   } else if (authService) {
     resolvedAuthRoutes = createAuthRoutes(new AuthController(authService));
+  }
+
+  let resolvedAlbumRoutes = albumRoutes;
+  if (albumController) {
+    resolvedAlbumRoutes = createAlbumRoutes(albumController);
+  } else if (albumService) {
+    resolvedAlbumRoutes = createAlbumRoutes(new AlbumController(albumService));
   }
 
   // Cross-Origin Resource Sharing
@@ -62,6 +76,7 @@ export function createApp({ authService, authController } = {}) {
 
   // Mount API v1 routes
   app.use("/api/v1/auth", resolvedAuthRoutes);
+  app.use("/api/v1/albums", resolvedAlbumRoutes);
 
   // Fallthrough 404 handler
   app.use(notFoundHandler);
