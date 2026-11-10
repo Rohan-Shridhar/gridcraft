@@ -9,7 +9,7 @@ const FrameSchema = z.object({
   artworkId: z.string().min(1).max(100),
   artworkPath: z
     .string()
-    .regex(/^artworks\/[a-z0-9-]+\.json$/, "artworkPath must be artworks/<id>.json"),
+    .regex(/^[a-z0-9-]+\.json$/, "artworkPath must be <id>.json"),
   durationMs: z.number().int().min(20).max(10000),
 });
 
@@ -35,7 +35,7 @@ export const StorySchema = z
     updatedAt: z.string().refine((val) => !isNaN(Date.parse(val))),
   })
   .refine(
-    (data) => data.frames.every((frame) => frame.artworkPath === `artworks/${frame.artworkId}.json`),
+    (data) => data.frames.every((frame) => frame.artworkPath === `${frame.artworkId}.json`),
     { message: "Each frame artworkPath must match artworkId", path: ["frames"] }
   );
 

@@ -32,8 +32,8 @@ export function DashboardShell({ user, onOpenEditor, onSelectAlbum, showToast })
   const handleAlbumCreated = async (payload) => {
     const res = await apiClient.createAlbum(payload);
     await loadAlbums();
-    if (res?.repo?.name) {
-      onSelectAlbum(res.repo.owner, res.repo.name);
+    if (res?.repo?.slug) {
+      onSelectAlbum(res.repo.owner, res.repo.slug);
     }
   };
 
@@ -140,7 +140,7 @@ export function DashboardShell({ user, onOpenEditor, onSelectAlbum, showToast })
           <p>
             {searchTerm
               ? `No albums match "${searchTerm}".`
-              : "Albums in GridCraft are real GitHub repositories initialized with master as the default branch. Create your first album to begin!"}
+              : "Albums are folders in your public gridcraft-artworks repository. Create your first album to begin!"}
           </p>
           <button className="dashboard-cta-btn" onClick={() => setShowCreateModal(true)}>
             <i className="fa-solid fa-plus"></i> Create First Album
@@ -152,17 +152,12 @@ export function DashboardShell({ user, onOpenEditor, onSelectAlbum, showToast })
             <div key={album.id} className="album-card">
               <div className="album-card-header">
                 <div className="album-card-title-wrap">
-                  <h4 className="album-card-name" onClick={() => onSelectAlbum(album.owner, album.name)}>
+                  <h4 className="album-card-name" onClick={() => onSelectAlbum(album.owner, album.slug)}>
                     {album.name}
                   </h4>
                   <div className="album-badges-row">
-                    <span className={`badge-visibility-small ${album.isPrivate ? "private" : "public"}`}>
-                      <i className={`fa-solid ${album.isPrivate ? "fa-lock" : "fa-globe"}`}></i>
-                      {album.isPrivate ? "Private" : "Public"}
-                    </span>
-                    <span className="badge-branch-small">
-                      <i className="fa-solid fa-code-branch"></i>
-                      {album.defaultBranch || "master"}
+                    <span className="badge-visibility-small public">
+                      <i className="fa-solid fa-globe"></i> Public
                     </span>
                   </div>
                 </div>
@@ -189,7 +184,7 @@ export function DashboardShell({ user, onOpenEditor, onSelectAlbum, showToast })
 
                 <button
                   className="btn-open-album"
-                  onClick={() => onSelectAlbum(album.owner, album.name)}
+                  onClick={() => onSelectAlbum(album.owner, album.slug)}
                 >
                   <span>Open Album</span>
                   <i className="fa-solid fa-arrow-right"></i>
@@ -203,15 +198,15 @@ export function DashboardShell({ user, onOpenEditor, onSelectAlbum, showToast })
       {/* Roadmapped Meta Information */}
       <div className="dashboard-meta-grid">
         <div className="meta-card">
-          <h5><i className="fa-solid fa-shield-halved"></i> GitHub Repositories as Source of Truth</h5>
+          <h5><i className="fa-solid fa-shield-halved"></i> Stored in your GitHub repository</h5>
           <p>
-            Every album is stored in GitHub. GridCraft does not store your artwork in a closed database.
+            Albums, stories, and artwork files are folders and JSON files in <code>gridcraft-artworks</code>.
           </p>
         </div>
         <div className="meta-card">
-          <h5><i className="fa-solid fa-code-branch"></i> Master Default Branch Enforced</h5>
+          <h5><i className="fa-solid fa-folder-tree"></i> Albums → Stories → Artworks</h5>
           <p>
-            Albums initialize with <code>master</code> as the verified default branch, compliant with the GridCraft platform standard.
+            Create stories inside albums and edit each artwork JSON file as a visual canvas.
           </p>
         </div>
       </div>

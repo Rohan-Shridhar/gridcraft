@@ -55,7 +55,8 @@ export class BranchService {
   async createBranch(accessToken, owner, repoName, input) {
     const validated = CreateBranchSchema.parse(input);
     const name = assertSafeBranchName(validated.name);
-    const from = assertSafeBranchName(validated.from || "master");
+    const repository = await this.#request(`/repos/${owner}/${repoName}`, accessToken);
+    const from = assertSafeBranchName(validated.from || repository.data.default_branch || "master");
     const base = await this.getBranch(accessToken, owner, repoName, from);
     const { data } = await this.#request(`/repos/${owner}/${repoName}/git/refs`, accessToken, {
       method: "POST",
@@ -69,8 +70,9 @@ export class BranchService {
 
   async renameBranch(accessToken, owner, repoName, branchName, input) {
     assertSafeBranchName(branchName);
-    if (branchName === "master") {
-      const err = new Error("The default branch master cannot be renamed from GridCraft.");
+    const repository = await this.#request(`/repos/${owner}/${repoName}`, accessToken);
+    if (branchName === repository.data.default_branch) {
+      const err = new Error("The default branch cannot be renamed from GridCraft.");
       err.status = 400;
       throw err;
     }
@@ -90,7 +92,7 @@ export class BranchService {
   async deleteBranch(accessToken, owner, repoName, branchName) {
     assertSafeBranchName(branchName);
     const repo = await this.#request(`/repos/${owner}/${repoName}`, accessToken);
-    if (branchName === repo.data.default_branch || branchName === "master") {
+    if (branchName === repo.data.default_branch) {
       const err = new Error("The default branch cannot be deleted.");
       err.status = 400;
       err.code = "FORBIDDEN";

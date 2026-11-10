@@ -18,26 +18,14 @@ describe("Album Validator Tests", () => {
     assert.equal(slugifyRepoName("---spaced---"), "spaced");
   });
 
-  it("validates repository name constraints with CreateAlbumSchema", () => {
+  it("validates album fields and derives a folder name from the title", () => {
     const valid = CreateAlbumSchema.parse({
-      name: "pixel-creatures",
+      name: "Pixel Creatures",
       description: "My custom sprites",
-      isPrivate: false,
     });
-    assert.equal(valid.name, "pixel-creatures");
-    assert.equal(valid.isPrivate, false);
-
-    assert.throws(() => {
-      CreateAlbumSchema.parse({ name: "-invalid-start" });
-    });
-
-    assert.throws(() => {
-      CreateAlbumSchema.parse({ name: ".hidden-repo" });
-    });
-
-    assert.throws(() => {
-      CreateAlbumSchema.parse({ name: "has spaces in name" });
-    });
+    assert.equal(valid.name, "Pixel Creatures");
+    assert.equal(slugifyRepoName(valid.name), "pixel-creatures");
+    assert.throws(() => CreateAlbumSchema.parse({ name: "!!!" }));
   });
 
   it("validates album manifest schema", () => {
@@ -127,7 +115,7 @@ describe("Album API Integration Tests", () => {
     assert.equal(res.body.albums[0].defaultBranch, "master");
   });
 
-  it("creates a new album repository, enforces master default branch, and commits manifest", async () => {
+  it("creates an album folder in the shared artwork repository", async () => {
     const createdOperations = [];
 
     const mockService = {
@@ -177,7 +165,6 @@ describe("Album API Integration Tests", () => {
     assert.equal(res.status, 201);
     assert.equal(res.body.repo.name, "retro-rpg");
     assert.equal(res.body.repo.defaultBranch, "master");
-    assert.equal(res.body.repo.isPrivate, true);
     assert.equal(res.body.manifest.format, "gridcraft-album");
     assert.deepEqual(createdOperations, ["create_repo:retro-rpg"]);
   });
@@ -237,7 +224,7 @@ describe("Album API Integration Tests", () => {
 
   it("requires matching confirmation name to delete an album", async () => {
     const mockService = {
-      deleteAlbum: async (token, owner, repo, confirmName) => {
+      deleteAlbum: async (token, user, owner, repo, confirmName) => {
         if (confirmName !== repo) {
           const err = new Error("Confirmation name does not match repository name");
           err.status = 400;

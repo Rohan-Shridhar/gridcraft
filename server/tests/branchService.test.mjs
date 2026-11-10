@@ -11,6 +11,9 @@ describe("Branch GitHub operations", () => {
     const calls = [];
     const service = new BranchService(async (url, options) => {
       calls.push({ url: new URL(url), options });
+      if (url.endsWith("/repos/owner/repo")) {
+        return response({ default_branch: "main" });
+      }
       if (url.includes("/branches/feature%2Fbase")) {
         return response({ name: "feature/base", commit: { sha: "base-sha" } });
       }
@@ -23,8 +26,8 @@ describe("Branch GitHub operations", () => {
     });
 
     assert.equal(result.sha, "new-sha");
-    assert.equal(calls[0].url.pathname, "/repos/owner/repo/branches/feature%2Fbase");
-    assert.deepEqual(JSON.parse(calls[1].options.body), {
+    assert.equal(calls[1].url.pathname, "/repos/owner/repo/branches/feature%2Fbase");
+    assert.deepEqual(JSON.parse(calls[2].options.body), {
       ref: "refs/heads/feature/new",
       sha: "base-sha",
     });

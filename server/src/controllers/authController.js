@@ -1,11 +1,13 @@
 import { config } from "../config/env.js";
 import { generateRandomState, encryptToken, signSessionPayload } from "../utils/crypto.js";
 import { githubAuthService } from "../services/githubAuthService.js";
+import { albumService } from "../services/albumService.js";
 import { getSessionAccessToken } from "../middleware/auth.js";
 
 export class AuthController {
-  constructor(service = githubAuthService) {
+  constructor(service = githubAuthService, libraryService = albumService) {
     this.service = service;
+    this.libraryService = libraryService;
   }
 
   startGitHubAuth = (req, res) => {
@@ -71,6 +73,8 @@ export class AuthController {
 
       // 5. Fetch user profile from GitHub
       const user = await this.service.fetchUserProfile(tokenData.accessToken);
+
+      await this.libraryService.initializeExistingRepo(tokenData.accessToken, user);
 
       // 6. Encrypt access token at rest for session storage
       const encryptedToken = encryptToken(

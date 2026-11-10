@@ -15,7 +15,6 @@ function slugify(text) {
 export function CreateAlbumModal({ user, onClose, onAlbumCreated, showToast }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -33,18 +32,17 @@ export function CreateAlbumModal({ user, onClose, onAlbumCreated, showToast }) {
       setError(null);
 
       await onAlbumCreated({
-        name: slug,
+        name: name.trim(),
         description,
-        isPrivate,
       });
 
       if (showToast) {
-        showToast(`Album "${slug}" created on GitHub with default branch master!`, "success");
+        showToast(`Album "${slug}" created in gridcraft-artworks.`, "success");
       }
       onClose();
     } catch (err) {
       console.error("Failed to create album:", err);
-      setError(err.message || "Failed to create album repository on GitHub.");
+      setError(err.message || "Failed to create album in GridCraft.");
       if (showToast) {
         showToast(err.message || "Album creation failed", "error");
       }
@@ -65,7 +63,7 @@ export function CreateAlbumModal({ user, onClose, onAlbumCreated, showToast }) {
 
         <form onSubmit={handleSubmit} className="modal-form">
           <p className="modal-subtitle">
-            An album is a real GitHub repository under your account where artworks and stories are versioned.
+            An album is a folder in your <code>gridcraft-artworks</code> GitHub repository.
           </p>
 
           {error && <div className="form-error-banner">{error}</div>}
@@ -86,7 +84,7 @@ export function CreateAlbumModal({ user, onClose, onAlbumCreated, showToast }) {
               required
             />
             <span className="form-hint">
-              GitHub repository: <code>github.com/{user?.login || "user"}/{slug || "your-album"}</code> (default branch: <code>master</code>)
+              Folder: <code>{slug || "your-album"}/</code>
             </span>
           </div>
 
@@ -100,47 +98,6 @@ export function CreateAlbumModal({ user, onClose, onAlbumCreated, showToast }) {
               onChange={(e) => setDescription(e.target.value)}
               disabled={isSubmitting}
             />
-          </div>
-
-          <div className="form-group">
-            <label className="form-section-title">Visibility</label>
-            <div className="radio-group">
-              <label className={`radio-card ${!isPrivate ? "selected" : ""}`}>
-                <input
-                  type="radio"
-                  name="visibility"
-                  checked={!isPrivate}
-                  onChange={() => setIsPrivate(false)}
-                  disabled={isSubmitting}
-                />
-                <div className="radio-card-content">
-                  <div className="radio-card-title">
-                    <i className="fa-solid fa-globe"></i> Public
-                  </div>
-                  <div className="radio-card-desc">
-                    Anyone on GitHub and GridCraft can see this album.
-                  </div>
-                </div>
-              </label>
-
-              <label className={`radio-card ${isPrivate ? "selected" : ""}`}>
-                <input
-                  type="radio"
-                  name="visibility"
-                  checked={isPrivate}
-                  onChange={() => setIsPrivate(true)}
-                  disabled={isSubmitting}
-                />
-                <div className="radio-card-content">
-                  <div className="radio-card-title">
-                    <i className="fa-solid fa-lock"></i> Private
-                  </div>
-                  <div className="radio-card-desc">
-                    Only you and people you grant access to can see this album.
-                  </div>
-                </div>
-              </label>
-            </div>
           </div>
 
           <div className="modal-footer">
@@ -160,7 +117,7 @@ export function CreateAlbumModal({ user, onClose, onAlbumCreated, showToast }) {
               {isSubmitting ? (
                 <>
                   <i className="fa-solid fa-spinner fa-spin"></i>
-                  <span>Initializing on GitHub...</span>
+                  <span>Creating album...</span>
                 </>
               ) : (
                 <>

@@ -66,7 +66,7 @@ export function snapsToMigrationPlan(snaps, { storyName = "Migrated Snaps", albu
 
   const frames = artworks.map((artwork, index) => ({
     artworkId: artwork.id,
-    artworkPath: `artworks/${artwork.id}.json`,
+    artworkPath: `${artwork.id}.json`,
     durationMs: durationToStoryMs(valid[index].durationMs),
   }));
 

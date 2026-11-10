@@ -104,48 +104,48 @@ export const apiClient = {
     return request(albumPath(owner, repo, "/initialize"), { method: "POST" });
   },
 
-  async listArtworks(owner, repo, branch = "master") {
-    return request(withBranch(albumPath(owner, repo, "/artworks"), branch));
+  async listArtworks(owner, repo, storyId, branch = "master") {
+    return request(withBranch(albumPath(owner, repo, `/stories/${encodeURIComponent(storyId)}/artworks`), branch));
   },
 
-  async createArtwork(owner, repo, payload, branch = "master") {
-    return request(withBranch(albumPath(owner, repo, "/artworks"), branch), {
+  async createArtwork(owner, repo, storyId, payload, branch = "master") {
+    return request(withBranch(albumPath(owner, repo, `/stories/${encodeURIComponent(storyId)}/artworks`), branch), {
       method: "POST",
       body: payload,
     });
   },
 
-  async getArtwork(owner, repo, artworkId, branch = "master") {
+  async getArtwork(owner, repo, storyId, artworkId, branch = "master") {
     return request(
-      withBranch(albumPath(owner, repo, `/artworks/${encodeURIComponent(artworkId)}`), branch)
+      withBranch(albumPath(owner, repo, `/stories/${encodeURIComponent(storyId)}/artworks/${encodeURIComponent(artworkId)}`), branch)
     );
   },
 
-  async saveArtwork(owner, repo, artworkId, payload, branch = "master") {
+  async saveArtwork(owner, repo, storyId, artworkId, payload, branch = "master") {
     return request(
-      withBranch(albumPath(owner, repo, `/artworks/${encodeURIComponent(artworkId)}`), branch),
+      withBranch(albumPath(owner, repo, `/stories/${encodeURIComponent(storyId)}/artworks/${encodeURIComponent(artworkId)}`), branch),
       { method: "PUT", body: payload }
     );
   },
 
-  async renameArtwork(owner, repo, artworkId, payload, branch = "master") {
+  async renameArtwork(owner, repo, storyId, artworkId, payload, branch = "master") {
     return request(
-      withBranch(albumPath(owner, repo, `/artworks/${encodeURIComponent(artworkId)}`), branch),
+      withBranch(albumPath(owner, repo, `/stories/${encodeURIComponent(storyId)}/artworks/${encodeURIComponent(artworkId)}`), branch),
       { method: "PATCH", body: payload }
     );
   },
 
-  async deleteArtwork(owner, repo, artworkId, sha, branch = "master") {
+  async deleteArtwork(owner, repo, storyId, artworkId, sha, branch = "master") {
     return request(
-      withBranch(albumPath(owner, repo, `/artworks/${encodeURIComponent(artworkId)}`), branch),
+      withBranch(albumPath(owner, repo, `/stories/${encodeURIComponent(storyId)}/artworks/${encodeURIComponent(artworkId)}`), branch),
       { method: "DELETE", body: { sha } }
     );
   },
 
-  async getArtworkHistory(owner, repo, artworkId, branch = "master") {
+  async getArtworkHistory(owner, repo, storyId, artworkId, branch = "master") {
     return request(
       withBranch(
-        albumPath(owner, repo, `/artworks/${encodeURIComponent(artworkId)}/commits`),
+        albumPath(owner, repo, `/stories/${encodeURIComponent(storyId)}/artworks/${encodeURIComponent(artworkId)}/commits`),
         branch
       )
     );

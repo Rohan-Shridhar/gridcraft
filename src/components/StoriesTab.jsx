@@ -4,6 +4,7 @@ import { sanitizeArtworkId, snapsToMigrationPlan } from "../utils/snapToStory.mj
 import { downloadGif, encodeStoryGif } from "../utils/gifExport.mjs";
 import { createSnapExportData } from "../utils/snapExport.mjs";
 import ArtworkThumbnail from "./ArtworkThumbnail.jsx";
+import ArtworksTab from "./ArtworksTab.jsx";
 
 function downloadJson(data, filename) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
@@ -25,7 +26,7 @@ function uniqueId(base, used) {
   return id;
 }
 
-export default function StoriesTab({ owner, repoName, branch = "master", localSnaps = [], onDirtyChange, showToast }) {
+export default function StoriesTab({ owner, repoName, branch = "master", localSnaps = [], onDirtyChange, onOpenArtwork, showToast }) {
   const [stories, setStories] = useState([]);
   const [artworks, setArtworks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,12 +46,8 @@ export default function StoriesTab({ owner, repoName, branch = "master", localSn
     try {
       setIsLoading(true);
       setError(null);
-      const [storyResult, artworkResult] = await Promise.all([
-        apiClient.listStories(owner, repoName, branch),
-        apiClient.listArtworks(owner, repoName, branch),
-      ]);
+      const storyResult = await apiClient.listStories(owner, repoName, branch);
       setStories(storyResult.stories || []);
-      setArtworks(artworkResult.artworks || []);
     } catch (requestError) {
       setError(requestError.message || "Failed to load album stories and artworks.");
     } finally {
@@ -95,9 +92,13 @@ export default function StoriesTab({ owner, repoName, branch = "master", localSn
     if (hasUnsavedChanges && !window.confirm("Open another Story and discard your unsaved changes?")) return;
     setPlayingIndex(-1);
     try {
-      const result = await apiClient.getStory(owner, repoName, storyId, branch);
+      const [result, artworkResult] = await Promise.all([
+        apiClient.getStory(owner, repoName, storyId, branch),
+        apiClient.listArtworks(owner, repoName, storyId, branch),
+      ]);
       setStoryDoc(result);
       setDraft(result.story);
+      setArtworks(artworkResult.artworks || []);
       if (autoplay && result.story.frames.length) setPlayingIndex(0);
     } catch (requestError) {
       showToast(requestError.message || "Could not load this story.", "error");
@@ -122,6 +123,7 @@ export default function StoriesTab({ owner, repoName, branch = "master", localSn
       await load();
       setStoryDoc({ story: result.story, sha: result.sha });
       setDraft(result.story);
+      setArtworks([]);
       showToast(`Story "${result.story.name}" created.`, "success");
     } catch (requestError) {
       showToast(requestError.message || "Could not create story.", "error");
@@ -155,7 +157,7 @@ export default function StoriesTab({ owner, repoName, branch = "master", localSn
       ...current,
       frames: [...current.frames, {
         artworkId: selectedArtwork,
-        artworkPath: `artworks/${selectedArtwork}.json`,
+        artworkPath: `${selectedArtwork}.json`,
         durationMs: current.defaultFrameDurationMs,
       }],
     }));
@@ -268,7 +270,16 @@ export default function StoriesTab({ owner, repoName, branch = "master", localSn
     setMigrating(true);
     const createdArtworkIds = [];
     try {
-      const usedArtworkIds = new Set(artworks.map((artwork) => artwork.id));
+      const usedStoryIds = new Set(stories.map((story) => story.id));
+      const storyName = uniqueId("migrated-snaps", usedStoryIds);
+      const storyResult = await apiClient.createStory(owner, repoName, {
+        name: storyName,
+        description: plan.story.description,
+        loop: plan.story.loop,
+        defaultFrameDurationMs: plan.story.defaultFrameDurationMs,
+        frames: [],
+      }, branch);
+      const usedArtworkIds = new Set();
       const idMap = new Map();
       for (const artwork of plan.artworks) {
         const id = uniqueId(artwork.id, usedArtworkIds);
@@ -276,7 +287,7 @@ export default function StoriesTab({ owner, repoName, branch = "master", localSn
         const baseId = sanitizeArtworkId(artwork.name);
         const suffix = id.startsWith(`${baseId}-`) ? id.slice(baseId.length + 1) : "";
         const artworkName = id === baseId ? artwork.name : baseId ? `${artwork.name} ${suffix}` : id;
-        const created = await apiClient.createArtwork(owner, repoName, {
+        const created = await apiClient.createArtwork(owner, repoName, storyName, {
           name: artworkName,
           description: artwork.description,
           gridSize: artwork.gridSize,
@@ -288,21 +299,21 @@ export default function StoriesTab({ owner, repoName, branch = "master", localSn
         }
         createdArtworkIds.push(created.artwork.id);
       }
-      const usedStoryIds = new Set(stories.map((story) => story.id));
-      const storyName = uniqueId("migrated-snaps", usedStoryIds);
-      const storyResult = await apiClient.createStory(owner, repoName, {
-        name: storyName,
-        description: plan.story.description,
-        loop: plan.story.loop,
-        defaultFrameDurationMs: plan.story.defaultFrameDurationMs,
-        frames: plan.story.frames.map((frame) => {
+      const savedStory = await apiClient.saveStory(owner, repoName, storyName, {
+        sha: storyResult.sha,
+        story: {
+          ...storyResult.story,
+          frames: plan.story.frames.map((frame) => {
           const artworkId = idMap.get(frame.artworkId);
-          return { ...frame, artworkId, artworkPath: `artworks/${artworkId}.json` };
-        }),
+          return { ...frame, artworkId, artworkPath: `${artworkId}.json` };
+          }),
+        },
       }, branch);
       await load();
-      setStoryDoc({ story: storyResult.story, sha: storyResult.sha });
-      setDraft(storyResult.story);
+      setStoryDoc(savedStory);
+      setDraft(savedStory.story);
+      const artworkResult = await apiClient.listArtworks(owner, repoName, storyName, branch);
+      setArtworks(artworkResult.artworks || []);
       showToast(`Snaps migrated into a Story. Your original local Snaps remain untouched.${plan.skippedCount ? ` Skipped ${plan.skippedCount} invalid Snap(s).` : ""}`, "success");
     } catch (requestError) {
       const partial = createdArtworkIds.length
@@ -339,14 +350,14 @@ export default function StoriesTab({ owner, repoName, branch = "master", localSn
       )}
 
       {stories.length === 0 ? (
-        <div className="artworks-empty"><i className="fa-solid fa-film"></i><h4>No stories yet</h4><p>A Story is an ordered sequence of artworks in this album.</p></div>
+        <div className="artworks-empty"><i className="fa-solid fa-film"></i>        <h4>No stories yet</h4><p>A Story is an ordered sequence of artworks within this album.</p></div>
       ) : (
         <div className="artworks-grid">
           {stories.map((story) => (
             <div key={story.id} className={`artwork-card${draft?.id === story.id ? " story-card-selected" : ""}`}>
               <button className="story-card-open" onClick={() => openStory(story.id)}>
                 <span className="story-card-thumb">
-                  {story.frames?.[0] && artworkById.get(story.frames[0].artworkId) && (
+                  {draft?.id === story.id && story.frames?.[0] && artworkById.get(story.frames[0].artworkId) && (
                     <ArtworkThumbnail
                       cells={artworkById.get(story.frames[0].artworkId).cells}
                       gridSize={artworkById.get(story.frames[0].artworkId).gridSize}
@@ -367,6 +378,14 @@ export default function StoriesTab({ owner, repoName, branch = "master", localSn
 
       {draft && (
         <section className="story-editor">
+          <ArtworksTab
+            owner={owner}
+            repoName={repoName}
+            storyId={draft.id}
+            branch={branch}
+            onOpenEditor={(artworkId) => onOpenArtwork?.(draft.id, artworkId)}
+            showToast={showToast}
+          />
           <div className="story-editor-header">
             <div><h3>{draft.name}</h3><p>{draft.description || "Edit the ordered frames in this Story."}</p></div>
             <div className="story-editor-actions">

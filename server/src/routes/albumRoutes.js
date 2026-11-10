@@ -36,7 +36,7 @@ export function createAlbumRoutes(
   const router = Router();
   router.use(requireAuth);
 
-  router.use("/:owner/:repo/artworks", createArtworkRoutes(artworkCtrl));
+  router.use("/:owner/:repo/stories/:storyId/artworks", createArtworkRoutes(artworkCtrl));
   router.use("/:owner/:repo/stories", createStoryRoutes(storyCtrl));
   router.use("/:owner/:repo/branches", createBranchRoutes(branchCtrl));
   router.use("/:owner/:repo/issues", createIssueRoutes(issueCtrl));

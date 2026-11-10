@@ -1,13 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import apiClient from "../services/apiClient.js";
-import ArtworksTab from "./ArtworksTab.jsx";
 import StoriesTab from "./StoriesTab.jsx";
-import BranchesTab from "./BranchesTab.jsx";
 import IssuesTab from "./IssuesTab.jsx";
-import BranchSelector from "./BranchSelector.jsx";
 import PullRequestsTab from "./PullRequestsTab.jsx";
 
-export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [], currentUserLogin, onStoryDirtyChange, onBranchChange, onBackToDashboard, onOpenEditor, onSelectAlbum, showToast }) {
+export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [], currentUserLogin, onStoryDirtyChange, onBackToDashboard, onOpenEditor, onSelectAlbum, showToast }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [storyDirty, setStoryDirty] = useState(false);
   const [albumData, setAlbumData] = useState(null);
@@ -29,23 +26,10 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
     try {
       const { repo: createdFork } = await apiClient.forkAlbum(owner, repoName);
       if (!createdFork?.owner || !createdFork?.name) {
-        throw new Error("GitHub accepted the fork request but did not return its repository location.");
+        throw new Error("GridCraft did not return the copied album location.");
       }
-
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        try {
-          const forkData = await apiClient.getAlbum(createdFork.owner, createdFork.name);
-          if (forkData.repo?.fork && forkData.repo.parent?.fullName?.toLowerCase() === `${owner}/${repoName}`.toLowerCase()) {
-            showToast?.(`Fork ready: ${createdFork.owner}/${createdFork.name}`, "success");
-            onSelectAlbum?.(createdFork.owner, createdFork.name);
-            return;
-          }
-        } catch (pollError) {
-          if (pollError.status !== 404) throw pollError;
-        }
-        await new Promise((resolve) => window.setTimeout(resolve, 1500));
-      }
-      throw new Error(`GitHub is still creating ${createdFork.owner}/${createdFork.name}. Refresh the dashboard and open it shortly.`);
+      showToast?.(`Album copied to ${createdFork.owner}/${createdFork.name}`, "success");
+      onSelectAlbum?.(createdFork.owner, createdFork.name);
     } catch (forkRequestError) {
       setForkError(forkRequestError.message || "GitHub could not create this fork.");
       showToast?.(forkRequestError.message || "GitHub could not create this fork.", "error");
@@ -90,7 +74,7 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
       } catch (err) {
         if (!isMounted) return;
         console.error("Failed to load album:", err);
-        setError(err.message || "Could not load album repository from GitHub.");
+        setError(err.message || "Could not load album from the GitHub artwork library.");
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -127,7 +111,7 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
     return (
       <div className="album-detail-loading">
         <i className="fa-solid fa-spinner fa-spin"></i>
-        <span>Loading album repository from GitHub...</span>
+        <span>Loading album from the GitHub artwork library...</span>
       </div>
     );
   }
@@ -162,7 +146,7 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
           target="_blank"
           rel="noreferrer"
           className="btn-github-external"
-          title="Open repository in GitHub"
+          title="Open album folder in GitHub"
         >
           <i className="fa-brands fa-github"></i>
           <span>Open on GitHub</span>
@@ -171,7 +155,7 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
         {currentUserLogin && repo.owner?.toLowerCase() !== currentUserLogin.toLowerCase() && !repo.fork && (
           <button className="btn-secondary album-fork-button" onClick={forkAlbum} disabled={isForking}>
             <i className={`fa-solid ${isForking ? "fa-spinner fa-spin" : "fa-code-fork"}`}></i>
-            <span>{isForking ? "Creating GitHub fork…" : "Fork album"}</span>
+            <span>{isForking ? "Copying album…" : "Fork album"}</span>
           </button>
         )}
       </div>
@@ -182,16 +166,9 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
           <div className="album-title-group">
             <h2>{manifest?.name || repo.name}</h2>
             <div className="album-badges">
-              <span className={`badge-visibility ${repo.isPrivate ? "private" : "public"}`}>
-                <i className={`fa-solid ${repo.isPrivate ? "fa-lock" : "fa-globe"}`}></i>
-                {repo.isPrivate ? "Private" : "Public"}
+              <span className="badge-visibility public">
+                <i className="fa-solid fa-globe"></i> Public
               </span>
-
-              <span className="badge-branch">
-                <i className="fa-solid fa-code-branch"></i>
-                {branch}
-              </span>
-              <BranchSelector owner={owner} repoName={repoName} branch={branch} onChange={onBranchChange} showToast={showToast} />
 
               {isGridCraftAlbum && (
                 <span className="badge-verified" title="Verified GridCraft Album structure">
@@ -208,8 +185,7 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
         {repo.parent && (
           <p className="upstream-notice">
             <i className="fa-solid fa-code-fork"></i>
-            Fork of <a href={repo.parent.htmlUrl || `https://github.com/${repo.parent.fullName}`} target="_blank" rel="noreferrer">{repo.parent.fullName}</a>.
-            The fork belongs to your GitHub account and follows GitHub's access and organization policies.
+            Copy of <a href={repo.parent.htmlUrl} target="_blank" rel="noreferrer">{repo.parent.fullName}</a> in your album library.
           </p>
         )}
         {forkError && <div className="form-error-banner">{forkError}</div>}
@@ -237,16 +213,6 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
         </button>
 
         <button
-          className={`tab-btn ${activeTab === "artworks" ? "active" : ""}`}
-          onClick={() => selectTab("artworks")}
-          role="tab"
-          aria-selected={activeTab === "artworks"}
-        >
-          <i className="fa-solid fa-palette"></i>
-          <span>Artworks</span>
-        </button>
-
-        <button
           className={`tab-btn ${activeTab === "stories" ? "active" : ""}`}
           onClick={() => selectTab("stories")}
           role="tab"
@@ -254,16 +220,6 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
         >
           <i className="fa-solid fa-film"></i>
           <span>Stories</span>
-        </button>
-
-        <button
-          className={`tab-btn ${activeTab === "branches" ? "active" : ""}`}
-          onClick={() => selectTab("branches")}
-          role="tab"
-          aria-selected={activeTab === "branches"}
-        >
-          <i className="fa-solid fa-code-branch"></i>
-          <span>Branches</span>
         </button>
 
         <button
@@ -317,11 +273,11 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
                   </div>
                   <div className="manifest-row">
                     <span>Created With</span>
-                    <code>{manifest?.createdWith?.name || "GridCraft"} v{manifest?.createdWith?.version || "3.11.0"}</code>
+                    <code>{manifest?.createdWith?.name || "GridCraft"} v{manifest?.createdWith?.version || "4.0.0"}</code>
                   </div>
                   <div className="manifest-row">
                     <span>Default Branch</span>
-                    <code>master</code>
+                    <code>{albumData?.repo?.defaultBranch || branch || "master"}</code>
                   </div>
                 </div>
               </div>
@@ -331,19 +287,11 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
                 <h4><i className="fa-regular fa-folder-tree"></i> Repository Structure</h4>
                 <ul className="folder-tree-list">
                   <li>
-                    <i className="fa-regular fa-folder"></i> <code>.gridcraft/</code>
+                    <i className="fa-regular fa-folder"></i> <code>{repoName}/</code>
                     <ul>
-                      <li><i className="fa-regular fa-file-code"></i> <code>album.json</code> (Manifest)</li>
+                      <li><i className="fa-regular fa-file-code"></i> <code>album.json</code></li>
+                      <li><i className="fa-regular fa-folder"></i> <code>&lt;story&gt;/&lt;artwork&gt;.json</code></li>
                     </ul>
-                  </li>
-                  <li>
-                    <i className="fa-regular fa-folder"></i> <code>artworks/</code> (Pixel art canvas files)
-                  </li>
-                  <li>
-                    <i className="fa-regular fa-folder"></i> <code>stories/</code> (Animation sequence folders)
-                  </li>
-                  <li>
-                    <i className="fa-regular fa-file-lines"></i> <code>README.md</code>
                   </li>
                 </ul>
               </div>
@@ -373,25 +321,9 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
           </div>
         )}
 
-        {/* TAB 2: ARTWORKS */}
-        {activeTab === "artworks" && (
-          <ArtworksTab
-            owner={owner}
-            repoName={repoName}
-            branch={branch}
-            onOpenEditor={(artworkId) => onOpenEditor(artworkId, branch)}
-            showToast={showToast}
-          />
-        )}
-
-        {/* TAB 3: STORIES */}
+        {/* TAB 2: STORIES */}
         {activeTab === "stories" && (
-          <StoriesTab owner={owner} repoName={repoName} branch={branch} localSnaps={localSnaps} onDirtyChange={reportStoryDirty} showToast={showToast} />
-        )}
-
-        {/* TAB 4: BRANCHES */}
-        {activeTab === "branches" && (
-          <BranchesTab owner={owner} repoName={repoName} branch={branch} onSelectBranch={onBranchChange} showToast={showToast} />
+          <StoriesTab owner={owner} repoName={repoName} branch={branch} localSnaps={localSnaps} onDirtyChange={reportStoryDirty} onOpenArtwork={(storyId, artworkId) => onOpenEditor(storyId, artworkId, branch)} showToast={showToast} />
         )}
 
         {/* TAB 5: ISSUES */}
@@ -416,8 +348,8 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
             <div className="settings-danger-card">
               <h4><i className="fa-solid fa-triangle-exclamation"></i> Danger Zone</h4>
               <p>
-                Deleting this album will permanently delete the GitHub repository <strong>{owner}/{repoName}</strong>,
-                all its branches, artworks, stories, and commit history. This action cannot be undone.
+                Deleting this album removes its folder from <strong>{owner}/gridcraft-artworks</strong>,
+                including its stories and artwork files. This action cannot be undone.
               </p>
               <button
                 className="btn-danger"
@@ -438,7 +370,7 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
         <div className="modal-backdrop" onClick={() => !isDeleting && setShowDeleteModal(false)} role="dialog" aria-modal="true">
           <div className="modal-container modal-danger" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Delete Album Repository</h3>
+              <h3>Delete Album Folder</h3>
               <button className="modal-close-btn" onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
                 <i className="fa-solid fa-xmark"></i>
               </button>
@@ -446,7 +378,7 @@ export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [
 
             <form onSubmit={handleDeleteAlbum} className="modal-form">
               <p className="danger-warning-text">
-                This will delete the repository <strong>{owner}/{repoName}</strong> from GitHub.
+                This will delete the album folder <strong>{repoName}</strong> from {owner}'s <code>gridcraft-artworks</code> repository.
               </p>
 
               <div className="form-group">

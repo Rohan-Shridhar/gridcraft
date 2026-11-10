@@ -1,153 +1,93 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { AppStore } from "../src/services/appStore.js";
 import { PullRequestService } from "../src/services/pullRequestService.js";
 
-function response(data, status = 200, headers = {}) {
+function response(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json", ...headers },
+    headers: { "content-type": "application/json" },
   });
 }
 
-function pull(overrides = {}) {
-  return {
-    number: 12,
-    title: "Update artwork",
-    body: "A change",
-    state: "open",
-    merged: false,
-    mergeable: true,
-    mergeable_state: "clean",
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-02T00:00:00Z",
-    user: { login: "contributor", avatar_url: "https://avatars.example/contributor.png" },
-    base: { ref: "master", sha: "base-sha", repo: { full_name: "owner/repo" } },
-    head: { ref: "feature/art", sha: "head-sha", repo: { full_name: "artist/repo" } },
-    ...overrides,
-  };
-}
-
-describe("Pull request GitHub operations", () => {
-  it("creates a fork-based pull request with a validated head branch and master base", async () => {
-    let requestBody;
-    const service = new PullRequestService(async (_url, options) => {
-      requestBody = JSON.parse(options.body);
-      return response(pull());
-    });
-
-    const result = await service.createPull("token", "owner", "repo", {
-      title: "Update artwork",
-      head: "feature/art",
-      headRepo: "artist/repo",
-    });
-
-    assert.equal(requestBody.head, "artist:feature/art");
-    assert.equal(requestBody.base, "master");
-    assert.equal(result.pull.head.repo, "artist/repo");
-    await assert.rejects(
-      service.createPull("token", "owner", "repo", {
-        title: "Bad branch",
-        head: "../private",
-      }),
-      (error) => error.status === 400
-    );
-    await assert.rejects(
-      service.createPull("token", "owner", "repo", {
-        title: "Bad repository",
-        head: "branch",
-        headRepo: "not-a-full-repository",
-      })
-    );
-  });
-
-  it("loads real conversation, review, commit, file, merge method, and permission data", async () => {
+describe("GridCraft pull request service", () => {
+  it("creates an app-owned request from the file changes between albums", async () => {
+    const store = new AppStore(":memory:");
+    const owner = { id: 31, login: "owner", name: "Owner" };
+    const contributor = { id: 32, login: "contributor", name: "Contributor" };
+    const base = store.createAlbum(owner, { slug: "base", name: "Base" });
+    const head = store.createAlbum(contributor, { slug: "proposal", name: "Proposal" });
     const service = new PullRequestService(async (url) => {
-      if (url.endsWith("/pulls/12")) return response(pull());
-      if (url.includes("/issues/12/comments")) {
-        return response([{ id: 2, body: "Looks good", created_at: "2026-01-03T00:00:00Z", user: { login: "reviewer" } }],
-          200,
-          { link: '<https://api.github.com/repos/owner/repo/issues/12/comments?page=2>; rel="next"' });
+      const requestUrl = new URL(url);
+      if (requestUrl.pathname.endsWith("/gridcraft-artworks")) {
+        return response({ default_branch: "main" });
       }
-      if (url.includes("/reviews?")) return response([{ id: 3, state: "APPROVED", body: "Approved", user: { login: "reviewer" } }]);
-      if (url.includes("/files?")) return response([{ filename: "artworks/cat.json", status: "modified", additions: 2, deletions: 1, changes: 3 }]);
-      if (url.includes("/commits?")) return response([{ sha: "123456789", commit: { message: "Update cat", author: { name: "Artist" } } }]);
-      return response({
-        allow_merge_commit: true,
-        allow_squash_merge: false,
-        allow_rebase_merge: true,
-        permissions: { push: true },
+      if (requestUrl.pathname.endsWith("/git/trees/main")) {
+        const isHead = requestUrl.pathname.includes("/contributor/");
+        const slug = isHead ? "proposal" : "base";
+        const files = isHead
+          ? [
+              { path: `${slug}/opening/story.json`, sha: "story-sha", type: "blob" },
+              { path: `${slug}/opening/sprite.json`, sha: "new-sha", type: "blob" },
+              { path: `${slug}/opening/extra.json`, sha: "added-sha", type: "blob" },
+            ]
+          : [
+              { path: `${slug}/opening/story.json`, sha: "story-sha", type: "blob" },
+              { path: `${slug}/opening/sprite.json`, sha: "old-sha", type: "blob" },
+            ];
+        return response({ truncated: false, tree: files });
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    }, store);
+
+    try {
+      const result = await service.createPull("token", "owner", "base", contributor, {
+        title: "Add forest sprites",
+        headOwner: "contributor",
+        headAlbum: "proposal",
       });
-    });
+      const detail = service.getPull("token", "owner", "base", contributor, result.pull.number);
+      assert.equal(result.pull.state, "open");
+      assert.equal(result.pull.base.ref, "base");
+      assert.equal(result.pull.head.ref, "proposal");
+      assert.equal(detail.files.length, 2);
+      assert.deepEqual(detail.files.map((file) => file.status), ["added", "modified"]);
 
-    const result = await service.getPull("token", "owner", "repo", 12, 1);
-    assert.equal(result.pull.mergeable, true);
-    assert.equal(result.comments[0].body, "Looks good");
-    assert.equal(result.commentsHasNext, true);
-    assert.equal(result.reviews[0].state, "APPROVED");
-    assert.equal(result.files[0].filename, "artworks/cat.json");
-    assert.equal(result.commits[0].message, "Update cat");
-    assert.deepEqual(result.mergeMethods, { merge: true, squash: false, rebase: true });
-    assert.equal(result.permissions.push, true);
+      const comment = service.commentOnPull("token", "owner", "base", owner, result.pull.number, "Looks good");
+      const review = service.submitReview("token", "owner", "base", owner, result.pull.number, {
+        event: "APPROVE",
+        body: "Approved",
+      });
+      assert.equal(comment.comment.body, "Looks good");
+      assert.equal(review.review.state, "APPROVE");
+      assert.equal(store.getAlbum("owner", "base").id, base.id);
+      assert.equal(store.getAlbum("contributor", "proposal").id, head.id);
+    } finally {
+      store.close();
+    }
   });
 
-  it("blocks merging unless GitHub confirms mergeability and target write permission", async () => {
-    let mergeRequested = false;
-    const service = new PullRequestService(async (url, options) => {
-      if (url.endsWith("/pulls/12")) return response(pull({ mergeable: false }));
-      if (url.endsWith("/pulls/12/merge")) {
-        mergeRequested = true;
-        return response({ merged: true, sha: "merged-sha" });
-      }
-      return response({ permissions: { push: true }, allow_merge_commit: true });
-    });
+  it("rejects a source album that the submitter does not own", async () => {
+    const store = new AppStore(":memory:");
+    const owner = { id: 41, login: "owner", name: "Owner" };
+    const other = { id: 42, login: "other", name: "Other" };
+    store.createAlbum(owner, { slug: "base", name: "Base" });
+    store.createAlbum(other, { slug: "source", name: "Source" });
+    const service = new PullRequestService(async () => {
+      throw new Error("No GitHub request should be made");
+    }, store);
 
-    await assert.rejects(
-      service.mergePull("token", "owner", "repo", 12, { mergeMethod: "merge" }),
-      (error) => error.status === 409 && error.code === "NOT_MERGEABLE"
-    );
-    assert.equal(mergeRequested, false);
-
-    const noPermission = new PullRequestService(async (url) => (
-      url.endsWith("/pulls/12")
-        ? response(pull())
-        : response({ permissions: { push: false }, allow_merge_commit: true })
-    ));
-    await assert.rejects(
-      noPermission.mergePull("token", "owner", "repo", 12),
-      (error) => error.status === 403
-    );
-  });
-
-  it("uses only repository-enabled merge methods after permission checks", async () => {
-    const calls = [];
-    const service = new PullRequestService(async (url, options) => {
-      calls.push({ url, options });
-      if (url.endsWith("/pulls/12")) return response(pull());
-      if (url.endsWith("/pulls/12/merge")) return response({ merged: true, sha: "merged-sha", message: "Merged" });
-      return response({ permissions: { push: true }, allow_merge_commit: true, allow_squash_merge: false });
-    });
-
-    await assert.rejects(
-      service.mergePull("token", "owner", "repo", 12, { mergeMethod: "squash" }),
-      (error) => error.status === 400
-    );
-    assert.equal(calls.some(({ url }) => url.endsWith("/pulls/12/merge")), false);
-    const result = await service.mergePull("token", "owner", "repo", 12, { mergeMethod: "merge" });
-    assert.equal(result.merged, true);
-  });
-
-  it("does not submit merges for a closed pull request", async () => {
-    let mergeRequested = false;
-    const service = new PullRequestService(async (url) => {
-      if (url.endsWith("/pulls/12")) return response(pull({ state: "closed" }));
-      if (url.endsWith("/pulls/12/merge")) mergeRequested = true;
-      return response({ permissions: { push: true }, allow_merge_commit: true });
-    });
-
-    await assert.rejects(
-      service.mergePull("token", "owner", "repo", 12),
-      (error) => error.status === 409
-    );
-    assert.equal(mergeRequested, false);
+    try {
+      await assert.rejects(
+        service.createPull("token", "owner", "base", owner, {
+          title: "Unauthorized source",
+          headOwner: "other",
+          headAlbum: "source",
+        }),
+        (error) => error.status === 403
+      );
+    } finally {
+      store.close();
+    }
   });
 });

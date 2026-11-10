@@ -7,7 +7,6 @@ import useArtworkEditor from "../hooks/useArtworkEditor.js";
 import apiClient from "../services/apiClient.js";
 import EditorSaveBar from "./EditorSaveBar.jsx";
 import ArtworkThumbnail from "./ArtworkThumbnail.jsx";
-import BranchSelector from "./BranchSelector.jsx";
 
 const GRID_SIZES = [16, 32, 64, 128];
 
@@ -18,6 +17,7 @@ function rgbToHex(r, g, b) {
 export default function ArtworkEditor({
   owner,
   repoName,
+  storyId,
   artworkId,
   branch = "master",
   onBranchChange,
@@ -38,8 +38,8 @@ export default function ArtworkEditor({
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    editor.loadArtwork(owner, repoName, artworkId, branch);
-  }, [editor.loadArtwork, owner, repoName, artworkId, branch]);
+    editor.loadArtwork(owner, repoName, storyId, artworkId, branch);
+  }, [editor.loadArtwork, owner, repoName, storyId, artworkId, branch]);
 
   useEffect(() => {
     onDirtyChange(editor.isDirty);
@@ -47,12 +47,12 @@ export default function ArtworkEditor({
 
   const loadCommits = useCallback(async () => {
     try {
-      const result = await apiClient.getArtworkHistory(owner, repoName, editor.artworkId || artworkId, branch);
+      const result = await apiClient.getArtworkHistory(owner, repoName, storyId, editor.artworkId || artworkId, branch);
       setCommits(result.commits || []);
     } catch (error) {
       showToast(error.message || "Could not load artwork history.", "error");
     }
-  }, [owner, repoName, artworkId, editor.artworkId, branch, showToast]);
+  }, [owner, repoName, storyId, artworkId, editor.artworkId, branch, showToast]);
 
   useEffect(() => {
     if (editor.artworkId) loadCommits();
@@ -138,7 +138,7 @@ export default function ArtworkEditor({
     if (!window.confirm(`Delete "${name}" from this album? This cannot be undone.${unsavedWarning}`)) return;
     setIsWorking(true);
     try {
-      await apiClient.deleteArtwork(owner, repoName, editor.artworkId, editor.shaRef.current, branch);
+      await apiClient.deleteArtwork(owner, repoName, storyId, editor.artworkId, editor.shaRef.current, branch);
       showToast(`Artwork "${name}" deleted.`, "success");
       onBack();
     } catch (error) {
@@ -290,9 +290,6 @@ export default function ArtworkEditor({
 
   return (
     <>
-      <div className="artwork-branch-control">
-        <BranchSelector owner={owner} repoName={repoName} branch={branch} onChange={onBranchChange} showToast={showToast} />
-      </div>
       <EditorSaveBar
         albumLabel={`${owner}/${repoName}`}
         artworkName={editor.artworkMeta.name}

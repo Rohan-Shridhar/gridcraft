@@ -10,6 +10,9 @@ export const config = {
   port: parseInt(process.env.PORT || "4000", 10),
   frontendUrl: (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, ""),
   backendUrl: (process.env.BACKEND_URL || "http://localhost:4000").replace(/\/$/, ""),
+  database: {
+    path: process.env.GRIDCRAFT_DATABASE_PATH || path.resolve(process.cwd(), "server", "data", "gridcraft.sqlite"),
+  },
 
   github: {
     appId: process.env.GITHUB_APP_ID || "",

@@ -22,8 +22,8 @@ export class ForkController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo } = req.params;
-      const result = await this.service.forkAlbum(token, owner, repo);
-      return res.status(202).json(result);
+      const result = await this.service.forkAlbum(token, req.user, owner, repo);
+      return res.status(201).json(result);
     } catch (err) {
       next(err);
     }
@@ -35,7 +35,7 @@ export class ForkController {
       if (!token) return;
       const page = Math.max(1, parseInt(req.query.page || "1", 10));
       const perPage = Math.min(100, Math.max(1, parseInt(req.query.per_page || "30", 10)));
-      const data = await this.service.listUserForks(token, { page, perPage });
+      const data = await this.service.listUserForks(token, req.user, { page, perPage });
       return res.json(data);
     } catch (err) {
       next(err);

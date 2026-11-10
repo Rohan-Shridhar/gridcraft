@@ -15,21 +15,24 @@ function storyFixture() {
     description: "",
     loop: true,
     defaultFrameDurationMs: 150,
-    frames: [{ artworkId: "frame-one", artworkPath: "artworks/frame-one.json", durationMs: 200 }],
+    frames: [{ artworkId: "frame-one", artworkPath: "frame-one.json", durationMs: 200 }],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 }
 
 describe("Story GitHub persistence", () => {
+  const owner = { id: 51, login: "owner", name: "Owner" };
+  const store = { getAlbum: () => ({ id: 1, owner: "owner", slug: "repo" }) };
+
   it("requires a current SHA and rejects stale story updates", async () => {
     let requestCount = 0;
     const service = new StoryService(async () => {
       requestCount += 1;
       return response({ message: "not expected" }, 500);
-    });
+    }, store);
     await assert.rejects(
-      service.saveStory("token", {}, "owner", "repo", "opening", { story: storyFixture() }),
+      service.saveStory("token", owner, "owner", "repo", "opening", { story: storyFixture() }),
       (error) => error.status === 400 && /SHA is required/.test(error.message)
     );
     assert.equal(requestCount, 0);
@@ -39,9 +42,9 @@ describe("Story GitHub persistence", () => {
       sha: "current-sha",
       content: Buffer.from(JSON.stringify(existing)).toString("base64"),
     });
-    const staleService = new StoryService(fetchFn);
+    const staleService = new StoryService(fetchFn, store);
     await assert.rejects(
-      staleService.saveStory("token", {}, "owner", "repo", "opening", {
+      staleService.saveStory("token", owner, "owner", "repo", "opening", {
         story: existing,
         sha: "stale-sha",
       }),
@@ -54,19 +57,19 @@ describe("Story GitHub persistence", () => {
     const requests = [];
     const service = new StoryService(async (url, options) => {
       requests.push({ url, options });
-      if (url.includes("/contents/stories/opening/story.json") && options.method !== "PUT") {
+      if (url.includes("/contents/repo/opening/story.json") && options.method !== "PUT") {
         return response({
           sha: "current-sha",
           content: Buffer.from(JSON.stringify(existing)).toString("base64"),
         });
       }
-      if (url.includes("/contents/artworks/frame-one.json")) return response({ content: "encoded-artwork" });
+      if (url.includes("/contents/repo/opening/frame-one.json")) return response({ content: "encoded-artwork" });
       if (options.method === "PUT") return response({ content: { sha: "saved-sha" }, commit: { sha: "commit-sha" } });
       throw new Error(`Unexpected request: ${url}`);
-    });
+    }, store);
 
     const updated = { ...existing, description: "Updated" };
-    const result = await service.saveStory("token", {}, "owner", "repo", "opening", {
+    const result = await service.saveStory("token", owner, "owner", "repo", "opening", {
       story: updated,
       sha: "current-sha",
     }, "feature/story");
@@ -82,7 +85,7 @@ describe("Story GitHub persistence", () => {
   });
 
   it("surfaces non-404 story listing failures", async () => {
-    const service = new StoryService(async () => response({ message: "Forbidden" }, 403));
+    const service = new StoryService(async () => response({ message: "Forbidden" }, 403), store);
     await assert.rejects(service.listStories("token", "owner", "repo"), (error) => error.status === 403);
   });
 });

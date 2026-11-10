@@ -1,5 +1,11 @@
 import { albumService } from "../services/albumService.js";
 import { getSessionAccessToken } from "../middleware/auth.js";
+import { resolveLibraryBranch } from "../utils/githubClient.js";
+
+async function branchFor(service, token, owner, branch) {
+  if (!service.fetch) return branch || "master";
+  return resolveLibraryBranch(service.fetch, token, owner, branch);
+}
 
 export class AlbumController {
   constructor(service = albumService) {
@@ -18,7 +24,7 @@ export class AlbumController {
       const page = Math.max(1, parseInt(req.query.page || "1", 10));
       const perPage = Math.min(100, Math.max(1, parseInt(req.query.per_page || "30", 10)));
 
-      const data = await this.service.listAlbums(token, { page, perPage });
+      const data = await this.service.listAlbums(token, { page, perPage, user: req.user });
       return res.json(data);
     } catch (err) {
       next(err);
@@ -68,7 +74,7 @@ export class AlbumController {
       }
 
       const { owner, repo } = req.params;
-      const data = await this.service.updateAlbum(token, owner, repo, req.body);
+      const data = await this.service.updateAlbum(token, req.user, owner, repo, req.body);
       return res.json(data);
     } catch (err) {
       next(err);
@@ -87,7 +93,7 @@ export class AlbumController {
       const { owner, repo } = req.params;
       const { confirmName } = req.body;
 
-      const data = await this.service.deleteAlbum(token, owner, repo, confirmName);
+      const data = await this.service.deleteAlbum(token, req.user, owner, repo, confirmName);
       return res.json(data);
     } catch (err) {
       next(err);
@@ -104,7 +110,7 @@ export class AlbumController {
       }
 
       const { owner, repo } = req.params;
-      const branch = req.query.branch || "master";
+      const branch = await branchFor(this.service, token, owner, req.query.branch);
       const commits = await this.service.listCommits(token, owner, repo, branch);
       return res.json({ commits });
     } catch (err) {
@@ -122,7 +128,7 @@ export class AlbumController {
       }
 
       const { owner, repo } = req.params;
-      const branch = req.query.branch || "master";
+      const branch = await branchFor(this.service, token, owner, req.query.branch);
       const tree = await this.service.getTree(token, owner, repo, branch);
       return res.json({ tree });
     } catch (err) {

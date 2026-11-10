@@ -21,14 +21,16 @@ For **v3.4.0 (Authentication)**:
   - `Email addresses`: Read-only (optional)
   - `User Profile`: Basic identity is accessible via OAuth `/user`.
 
-For the current release (**v3.11.0**):
+For the current release (**v4.0.0**):
 - **Repository permissions**:
-  - `Contents`: Read & Write (for artwork JSON files, story manifests, and commits)
+  - `Contents`: Read & Write (to create the shared artwork library and manage album, Story, and artwork files)
   - `Metadata`: Read-only (required for all apps)
-  - `Pull requests`: Read & Write (for reviewing and opening PRs)
-  - `Issues`: Read & Write (for commenting, creating, and managing issues)
-  - `Administration`: Read & Write (for repository creation/default branch initialization)
-  - Forking is controlled by GitHub account and organization policies; there is no separate GitHub App permission for it.
+  - `Administration`: Read & Write (to create the user's `gridcraft-artworks` repository)
+
+GridCraft issues, pull requests, comments, and reviews are stored by GridCraft,
+so GitHub Issues and Pull Requests permissions are not required. Albums are
+folders in the single public artwork repository, not separate GitHub
+repositories.
 
 ---
 

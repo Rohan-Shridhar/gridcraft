@@ -13,7 +13,7 @@ describe("Backend Health and Authentication API Integration Tests", () => {
     const res = await request(app).get("/api/v1/health");
     assert.equal(res.status, 200);
     assert.equal(res.body.status, "ok");
-    assert.equal(res.body.version, "3.11.0");
+    assert.equal(res.body.version, "4.0.0");
     assert.equal(res.body.githubApp, "gridcraft-auth");
   });
 
@@ -103,7 +103,16 @@ describe("Backend Health and Authentication API Integration Tests", () => {
       revokeToken: async () => true,
     };
 
-    const customApp = createApp({ authService: mockService });
+    let initializedLibrary;
+    const customApp = createApp({
+      authService: mockService,
+      artworkLibraryService: {
+        initializeExistingRepo: async (token, user) => {
+          initializedLibrary = { token, user };
+          return {};
+        },
+      },
+    });
 
     const res = await request(customApp)
       .get(`/api/v1/auth/github/callback?code=test_valid_auth_code&state=${validState}`)
@@ -119,6 +128,8 @@ describe("Backend Health and Authentication API Integration Tests", () => {
     assert.ok(sessionCookie);
     assert.match(sessionCookie, /HttpOnly/i);
     assert.match(sessionCookie, /SameSite=Lax/i);
+    assert.equal(initializedLibrary.token, "ghu_mock_user_token_12345");
+    assert.equal(initializedLibrary.user.login, "pixelcrafter");
   });
 
   it("returns unauthenticated for GET /api/v1/auth/me when no session cookie is provided", async () => {

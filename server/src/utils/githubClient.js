@@ -99,6 +99,16 @@ export function resolveBranch(req) {
   return (
     (typeof req.query?.branch === "string" && req.query.branch) ||
     (typeof req.body?.branch === "string" && req.body.branch) ||
-    "master"
+    undefined
   );
+}
+
+export async function resolveLibraryBranch(fetchFn, accessToken, owner, branch) {
+  if (branch && branch !== "master") return branch;
+  const { data } = await githubRequest(
+    fetchFn,
+    `/repos/${encodeURIComponent(owner)}/gridcraft-artworks`,
+    accessToken
+  );
+  return data.default_branch || branch || "master";
 }

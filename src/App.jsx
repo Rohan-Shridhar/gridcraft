@@ -33,12 +33,13 @@ function parseRoute(pathname) {
   if (pathname === "/dashboard") {
     return { view: "dashboard", album: null, branch };
   }
-  const artworkMatch = pathname.match(/^\/albums\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)\/artworks\/([a-zA-Z0-9-]+)$/);
+  const artworkMatch = pathname.match(/^\/albums\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)\/stories\/([a-zA-Z0-9-]+)\/artworks\/([a-zA-Z0-9-]+)$/);
   if (artworkMatch) {
     return {
       view: "artwork-editor",
       album: { owner: artworkMatch[1], repo: artworkMatch[2] },
-      artworkId: artworkMatch[3],
+      storyId: artworkMatch[3],
+      artworkId: artworkMatch[4],
       branch,
     };
   }
@@ -61,16 +62,17 @@ function AppContent({ showToast, toast }) {
   const activeView = route.view;
   const selectedAlbum = route.album;
   const selectedArtworkId = route.artworkId;
+  const selectedStoryId = route.storyId;
   const selectedBranch = route.branch || "master";
 
-  const navigateTo = useCallback((view, album = null, artworkId = null, replace = false, branch = "master") => {
+  const navigateTo = useCallback((view, album = null, artworkId = null, replace = false, branch = "master", storyId = null) => {
     let targetPath = "/";
     if (view === "dashboard") {
       targetPath = "/dashboard";
     } else if (view === "album-detail" && album) {
       targetPath = `/albums/${album.owner}/${album.repo}`;
     } else if (view === "artwork-editor" && album && artworkId) {
-      targetPath = `/albums/${album.owner}/${album.repo}/artworks/${encodeURIComponent(artworkId)}`;
+      targetPath = `/albums/${album.owner}/${album.repo}/stories/${encodeURIComponent(storyId)}/artworks/${encodeURIComponent(artworkId)}`;
     }
     if ((view === "album-detail" || view === "artwork-editor") && branch !== "master") {
       targetPath += `?branch=${encodeURIComponent(branch)}`;
@@ -82,14 +84,14 @@ function AppContent({ showToast, toast }) {
         window.history.pushState(null, "", targetPath);
       }
     }
-    setRoute({ view, album, artworkId, branch });
+    setRoute({ view, album, artworkId, storyId, branch });
   }, []);
   const changeSelectedBranch = useCallback((branch) => {
     if ((activeView === "artwork-editor" && artworkDirty) || storyDirty) {
       if (!window.confirm("Switch branches and discard your unsaved changes?")) return;
     }
-    navigateTo(activeView, selectedAlbum, selectedArtworkId, false, branch);
-  }, [activeView, artworkDirty, storyDirty, navigateTo, selectedAlbum, selectedArtworkId]);
+    navigateTo(activeView, selectedAlbum, selectedArtworkId, false, branch, selectedStoryId);
+  }, [activeView, artworkDirty, storyDirty, navigateTo, selectedAlbum, selectedArtworkId, selectedStoryId]);
   const navigateFromHeader = useCallback((view) => {
     if (
       ((activeView === "artwork-editor" && artworkDirty) || storyDirty) &&
@@ -112,7 +114,7 @@ function AppContent({ showToast, toast }) {
         const leave = window.confirm("Leave this page? Any unsaved changes will be lost.");
         if (!leave) {
           const currentPath = route.view === "artwork-editor"
-            ? `/albums/${route.album.owner}/${route.album.repo}/artworks/${encodeURIComponent(route.artworkId)}`
+            ? `/albums/${route.album.owner}/${route.album.repo}/stories/${encodeURIComponent(route.storyId)}/artworks/${encodeURIComponent(route.artworkId)}`
             : `/albums/${route.album.owner}/${route.album.repo}`;
           const branchQuery = route.branch && route.branch !== "master" ? `?branch=${encodeURIComponent(route.branch)}` : "";
           window.history.pushState(null, "", `${currentPath}${branchQuery}`);
@@ -528,8 +530,8 @@ function AppContent({ showToast, toast }) {
             onBranchChange={changeSelectedBranch}
             onBackToDashboard={() => navigateTo("dashboard")}
             onSelectAlbum={(nextOwner, nextRepo) => navigateTo("album-detail", { owner: nextOwner, repo: nextRepo })}
-            onOpenEditor={(artworkId) =>
-              navigateTo("artwork-editor", selectedAlbum, artworkId, false, selectedBranch)
+            onOpenEditor={(storyId, artworkId) =>
+              navigateTo("artwork-editor", selectedAlbum, artworkId, false, selectedBranch, storyId)
             }
             showToast={showToast}
           />
@@ -538,16 +540,17 @@ function AppContent({ showToast, toast }) {
       ) : activeView === "artwork-editor" && selectedAlbum && selectedArtworkId ? (
         <>
           <ArtworkEditor
-            key={`${selectedAlbum.owner}/${selectedAlbum.repo}/${selectedArtworkId}`}
+            key={`${selectedAlbum.owner}/${selectedAlbum.repo}/${selectedStoryId}/${selectedArtworkId}`}
             owner={selectedAlbum.owner}
             repoName={selectedAlbum.repo}
+            storyId={selectedStoryId}
             artworkId={selectedArtworkId}
             branch={selectedBranch}
             onBranchChange={changeSelectedBranch}
             onDirtyChange={setArtworkDirty}
             onBack={() => navigateTo("album-detail", selectedAlbum, null, false, selectedBranch)}
             onArtworkChanged={(nextArtworkId) =>
-              navigateTo("artwork-editor", selectedAlbum, nextArtworkId, true, selectedBranch)
+              navigateTo("artwork-editor", selectedAlbum, nextArtworkId, true, selectedBranch, selectedStoryId)
             }
             showToast={showToast}
           />

@@ -1,6 +1,7 @@
 import { branchService } from "../services/branchService.js";
 import { getSessionAccessToken } from "../middleware/auth.js";
-import { resolveBranch } from "../utils/githubClient.js";
+import { resolveBranch, resolveLibraryBranch } from "../utils/githubClient.js";
+import { ARTWORKS_REPOSITORY } from "../services/albumService.js";
 
 function requireToken(req, res) {
   const token = getSessionAccessToken(req);
@@ -13,6 +14,19 @@ function requireToken(req, res) {
   return token;
 }
 
+function requireOwner(req, res, owner) {
+  if (req.user?.login?.toLowerCase() === owner.toLowerCase()) return true;
+  res.status(403).json({
+    error: { code: "FORBIDDEN", message: "Only the library owner can manage its branches." },
+  });
+  return false;
+}
+
+async function branchFor(service, token, owner, branch) {
+  if (!service.fetch) return branch || "master";
+  return resolveLibraryBranch(service.fetch, token, owner, branch);
+}
+
 export class BranchController {
   constructor(service = branchService) {
     this.service = service;
@@ -22,10 +36,10 @@ export class BranchController {
     try {
       const token = requireToken(req, res);
       if (!token) return;
-      const { owner, repo } = req.params;
+      const { owner } = req.params;
       const page = Math.max(1, parseInt(req.query.page || "1", 10));
       const perPage = Math.min(100, Math.max(1, parseInt(req.query.per_page || "30", 10)));
-      const data = await this.service.listBranches(token, owner, repo, { page, perPage });
+      const data = await this.service.listBranches(token, owner, ARTWORKS_REPOSITORY, { page, perPage });
       return res.json(data);
     } catch (err) {
       next(err);
@@ -36,8 +50,9 @@ export class BranchController {
     try {
       const token = requireToken(req, res);
       if (!token) return;
-      const { owner, repo, branch } = req.params;
-      const data = await this.service.getBranch(token, owner, repo, branch);
+      const { owner, branch } = req.params;
+      const resolvedBranch = await branchFor(this.service, token, owner, branch);
+      const data = await this.service.getBranch(token, owner, ARTWORKS_REPOSITORY, resolvedBranch);
       return res.json(data);
     } catch (err) {
       next(err);
@@ -48,8 +63,9 @@ export class BranchController {
     try {
       const token = requireToken(req, res);
       if (!token) return;
-      const { owner, repo } = req.params;
-      const result = await this.service.createBranch(token, owner, repo, req.body);
+      const { owner } = req.params;
+      if (!requireOwner(req, res, owner)) return;
+      const result = await this.service.createBranch(token, owner, ARTWORKS_REPOSITORY, req.body);
       return res.status(201).json(result);
     } catch (err) {
       next(err);
@@ -60,8 +76,9 @@ export class BranchController {
     try {
       const token = requireToken(req, res);
       if (!token) return;
-      const { owner, repo, branch } = req.params;
-      const result = await this.service.renameBranch(token, owner, repo, branch, req.body);
+      const { owner, branch } = req.params;
+      if (!requireOwner(req, res, owner)) return;
+      const result = await this.service.renameBranch(token, owner, ARTWORKS_REPOSITORY, branch, req.body);
       return res.json(result);
     } catch (err) {
       next(err);
@@ -72,8 +89,9 @@ export class BranchController {
     try {
       const token = requireToken(req, res);
       if (!token) return;
-      const { owner, repo, branch } = req.params;
-      const result = await this.service.deleteBranch(token, owner, repo, branch);
+      const { owner, branch } = req.params;
+      if (!requireOwner(req, res, owner)) return;
+      const result = await this.service.deleteBranch(token, owner, ARTWORKS_REPOSITORY, branch);
       return res.json(result);
     } catch (err) {
       next(err);
@@ -84,13 +102,13 @@ export class BranchController {
     try {
       const token = requireToken(req, res);
       if (!token) return;
-      const { owner, repo } = req.params;
-      const base = req.query.base || req.params.base || "master";
+      const { owner } = req.params;
+      const base = await branchFor(this.service, token, owner, req.query.base || req.params.base);
       const head = req.query.head || req.params.head;
       if (!head) {
         return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "head branch is required" } });
       }
-      const data = await this.service.compare(token, owner, repo, base, head);
+      const data = await this.service.compare(token, owner, ARTWORKS_REPOSITORY, base, head);
       return res.json(data);
     } catch (err) {
       next(err);
@@ -101,10 +119,10 @@ export class BranchController {
     try {
       const token = requireToken(req, res);
       if (!token) return;
-      const { owner, repo } = req.params;
-      const branch = resolveBranch(req);
+      const { owner } = req.params;
+      const branch = await branchFor(this.service, token, owner, resolveBranch(req));
       const page = Math.max(1, parseInt(req.query.page || "1", 10));
-      const commits = await this.service.listCommits(token, owner, repo, branch, { page });
+      const commits = await this.service.listCommits(token, owner, ARTWORKS_REPOSITORY, branch, { page });
       return res.json({ commits });
     } catch (err) {
       next(err);

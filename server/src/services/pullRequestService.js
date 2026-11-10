@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { githubRequest } from "../utils/githubClient.js";
-import { assertSafeBranchName } from "../validators/branchValidator.js";
+import { albumService } from "./albumService.js";
+import { ARTWORKS_REPOSITORY } from "./albumService.js";
 
 const CreatePullSchema = z.object({
   title: z.string().min(1).max(256),
   body: z.string().max(65536).optional().default(""),
-  head: z.string().min(1).max(255),
-  base: z.string().min(1).max(255).optional().default("master"),
-  headRepo: z.string().max(201).regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/).optional(),
+  head: z.string().min(1).max(255).optional(),
+  headOwner: z.string().max(39).optional(),
+  headAlbum: z.string().max(100).optional(),
 });
 
 const ReviewSchema = z.object({
@@ -15,255 +16,280 @@ const ReviewSchema = z.object({
   event: z.enum(["COMMENT", "APPROVE", "REQUEST_CHANGES"]),
 });
 
-function mapPull(pr) {
-  return {
-    number: pr.number,
-    title: pr.title,
-    body: pr.body || "",
-    state: pr.merged_at ? "merged" : pr.state,
-    merged: Boolean(pr.merged_at || pr.merged),
-    draft: !!pr.draft,
-    htmlUrl: pr.html_url,
-    user: { login: pr.user?.login, avatarUrl: pr.user?.avatar_url },
-    base: { ref: pr.base?.ref, sha: pr.base?.sha, repo: pr.base?.repo?.full_name },
-    head: { ref: pr.head?.ref, sha: pr.head?.sha, repo: pr.head?.repo?.full_name },
-    mergeable: pr.mergeable,
-    mergeableState: pr.mergeable_state,
-    createdAt: pr.created_at,
-    updatedAt: pr.updated_at,
-    mergedAt: pr.merged_at,
-    comments: pr.comments,
-    commits: pr.commits,
-    changedFiles: pr.changed_files,
-    additions: pr.additions,
-    deletions: pr.deletions,
-    maintainerCanModify: pr.maintainer_can_modify,
-    assignees: (pr.assignees || []).map((assignee) => ({
-      login: assignee.login,
-      avatarUrl: assignee.avatar_url,
-    })),
-    labels: (pr.labels || []).map((label) => ({ name: label.name, color: label.color })),
-    requestedReviewers: (pr.requested_reviewers || []).map((reviewer) => ({
-      login: reviewer.login,
-      avatarUrl: reviewer.avatar_url,
-    })),
-  };
+function encodedPath(filePath) {
+  return filePath.split("/").map(encodeURIComponent).join("/");
+}
+
+function albumFiles(tree, slug) {
+  const prefix = `${slug}/`;
+  return new Map(
+    (tree.tree || [])
+      .filter((entry) => entry.type === "blob" && entry.path.startsWith(prefix)
+        && entry.path !== `${prefix}album.json`)
+      .map((entry) => [entry.path.slice(prefix.length), entry.sha])
+  );
 }
 
 export class PullRequestService {
-  constructor(fetchFn = globalThis.fetch) {
+  constructor(fetchFn = globalThis.fetch, store = albumService.store) {
     this.fetch = fetchFn;
+    this.store = store;
   }
 
   async #request(endpoint, accessToken, options = {}) {
     return githubRequest(this.fetch, endpoint, accessToken, options);
   }
 
-  async listPulls(accessToken, owner, repoName, query = {}) {
-    const state = query.state || "open";
-    const page = query.page || 1;
-    const perPage = query.perPage || 20;
-    const { data, headers } = await this.#request(
-      `/repos/${owner}/${repoName}/pulls?state=${encodeURIComponent(state)}&page=${page}&per_page=${perPage}`,
+  async #getAlbumFiles(accessToken, owner, slug) {
+    const { data: repository } = await this.#request(
+      `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}`,
       accessToken
     );
+    const branch = repository.default_branch || "master";
+    const { data } = await this.#request(
+      `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+      accessToken
+    );
+    if (data.truncated) {
+      const error = new Error("The artwork library is too large to safely compare.");
+      error.status = 422;
+      throw error;
+    }
+    return { files: albumFiles(data, slug), branch };
+  }
+
+  async #getBlobContent(accessToken, owner, sha) {
+    const { data } = await this.#request(
+      `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/git/blobs/${encodeURIComponent(sha)}`,
+      accessToken
+    );
+    if (data.encoding !== "base64" || typeof data.content !== "string") {
+      const error = new Error("The proposed file could not be read from GitHub.");
+      error.status = 422;
+      throw error;
+    }
+    return data.content.replace(/\s/g, "");
+  }
+
+  #album(owner, slug) {
+    const album = this.store.getAlbum(owner, slug);
+    if (!album) {
+      const error = new Error("Album was not found in GridCraft.");
+      error.status = 404;
+      throw error;
+    }
+    return album;
+  }
+
+  #requireSignedIn(user) {
+    if (!user?.id || !user.login) {
+      const error = new Error("A signed-in GridCraft user is required.");
+      error.status = 401;
+      throw error;
+    }
+  }
+
+  #pullForAlbum(owner, slug, number) {
+    const album = this.#album(owner, slug);
+    const result = this.store.getPull(Number(number));
+    const context = this.store.getPullContext(Number(number));
+    if (!result || !context
+      || (context.base_album_id !== album.id && context.head_album_id !== album.id)) {
+      const error = new Error("Pull request was not found in this album.");
+      error.status = 404;
+      throw error;
+    }
+    return { album, result, context };
+  }
+
+  listPulls(_accessToken, owner, repoName, query = {}) {
+    const album = this.#album(owner, repoName);
+    return this.store.listPulls(album.id, {
+      state: query.state || "open",
+      page: query.page || 1,
+      perPage: query.perPage || 20,
+    });
+  }
+
+  getPull(_accessToken, owner, repoName, user, number) {
+    const { result, context } = this.#pullForAlbum(owner, repoName, number);
     return {
-      pulls: (data || []).map(mapPull),
-      page,
-      perPage,
-      hasNext: /rel="next"/.test(headers.get("link") || ""),
+      ...result,
+      permissions: { push: context.base_owner.toLowerCase() === user?.login?.toLowerCase() },
     };
   }
 
-  async getPull(accessToken, owner, repoName, number, commentsPage = 1) {
-    const { data } = await this.#request(`/repos/${owner}/${repoName}/pulls/${number}`, accessToken);
-    const [comments, reviews, files, commits, repository] = await Promise.all([
-      this.#request(
-        `/repos/${owner}/${repoName}/issues/${number}/comments?per_page=50&page=${commentsPage}`,
-        accessToken
-      ),
-      this.#request(`/repos/${owner}/${repoName}/pulls/${number}/reviews?per_page=100`, accessToken),
-      this.#request(`/repos/${owner}/${repoName}/pulls/${number}/files?per_page=100`, accessToken),
-      this.#request(`/repos/${owner}/${repoName}/pulls/${number}/commits?per_page=100`, accessToken),
-      this.#request(`/repos/${owner}/${repoName}`, accessToken),
-    ]);
-    return {
-      pull: mapPull(data),
-      commentsPage,
-      commentsHasNext: /rel="next"/.test(comments.headers.get("link") || ""),
-      comments: (comments.data || []).map((comment) => ({
-        id: comment.id,
-        body: comment.body,
-        createdAt: comment.created_at,
-        updatedAt: comment.updated_at,
-        htmlUrl: comment.html_url,
-        user: { login: comment.user?.login, avatarUrl: comment.user?.avatar_url },
-      })),
-      reviews: (reviews.data || []).map((review) => ({
-        id: review.id,
-        state: review.state,
-        body: review.body || "",
-        submittedAt: review.submitted_at,
-        htmlUrl: review.html_url,
-        user: { login: review.user?.login, avatarUrl: review.user?.avatar_url },
-      })),
-      files: (files.data || []).map((file) => ({
-        filename: file.filename,
-        status: file.status,
-        additions: file.additions,
-        deletions: file.deletions,
-        changes: file.changes,
-        patch: file.patch,
-        previousFilename: file.previous_filename,
-        blobUrl: file.blob_url,
-        rawUrl: file.raw_url,
-      })),
-      commits: (commits.data || []).map((commit) => ({
-        sha: commit.sha,
-        shortSha: commit.sha.slice(0, 7),
-        message: commit.commit.message,
-        author: commit.commit.author?.name,
-        htmlUrl: commit.html_url,
-      })),
-      mergeMethods: {
-        merge: Boolean(repository.data?.allow_merge_commit),
-        squash: Boolean(repository.data?.allow_squash_merge),
-        rebase: Boolean(repository.data?.allow_rebase_merge),
-      },
-      permissions: repository.data?.permissions || {},
-    };
-  }
-
-  async createPull(accessToken, owner, repoName, input) {
+  async createPull(accessToken, owner, repoName, user, input) {
+    this.#requireSignedIn(user);
+    const baseAlbum = this.#album(owner, repoName);
     const validated = CreatePullSchema.parse(input);
-    assertSafeBranchName(validated.base);
-    assertSafeBranchName(validated.head);
-    const head = validated.headRepo ? `${validated.headRepo.split("/")[0]}:${validated.head}` : validated.head;
-    const { data } = await this.#request(`/repos/${owner}/${repoName}/pulls`, accessToken, {
-      method: "POST",
-      body: JSON.stringify({
+    let headOwner = validated.headOwner;
+    let headAlbum = validated.headAlbum;
+    if ((!headOwner || !headAlbum) && validated.head) {
+      const match = validated.head.match(/^([^/]+)\/([^/]+)$/);
+      if (match) [, headOwner, headAlbum] = match;
+    }
+    if (!headOwner || !headAlbum) {
+      const error = new Error("Select a source album for this pull request.");
+      error.status = 400;
+      throw error;
+    }
+    const sourceAlbum = this.#album(headOwner, headAlbum);
+    if (sourceAlbum.id === baseAlbum.id) {
+      const error = new Error("A pull request must come from a different album.");
+      error.status = 400;
+      throw error;
+    }
+    if (sourceAlbum.owner.toLowerCase() !== user.login.toLowerCase()) {
+      const error = new Error("You can only submit a pull request from an album you own.");
+      error.status = 403;
+      throw error;
+    }
+    const [baseSnapshot, headSnapshot] = await Promise.all([
+      this.#getAlbumFiles(accessToken, baseAlbum.owner, baseAlbum.slug),
+      this.#getAlbumFiles(accessToken, sourceAlbum.owner, sourceAlbum.slug),
+    ]);
+    const baseFiles = baseSnapshot.files;
+    const headFiles = headSnapshot.files;
+    const files = [...new Set([...baseFiles.keys(), ...headFiles.keys()])]
+      .filter((path) => baseFiles.get(path) !== headFiles.get(path))
+      .map((path) => ({
+        path,
+        baseSha: baseFiles.get(path) || null,
+        headSha: headFiles.get(path) || null,
+      }));
+    if (!files.length) {
+      const error = new Error("The selected albums have no story or artwork changes to propose.");
+      error.status = 409;
+      error.code = "NO_CHANGES";
+      throw error;
+    }
+    return {
+      pull: this.store.createPull({
+        baseAlbumId: baseAlbum.id,
+        headAlbumId: sourceAlbum.id,
+        author: user,
         title: validated.title,
         body: validated.body,
-        head,
-        base: validated.base,
-      }),
-    });
-    return { pull: mapPull(data) };
+        files,
+      }).pull,
+    };
   }
 
-  async updatePull(accessToken, owner, repoName, number, input) {
-    const { data } = await this.#request(`/repos/${owner}/${repoName}/pulls/${number}`, accessToken, {
-      method: "PATCH",
-      body: JSON.stringify(input),
-    });
-    return { pull: mapPull(data) };
+  updatePull(_accessToken, owner, repoName, user, number, input) {
+    this.#requireSignedIn(user);
+    const { result, context } = this.#pullForAlbum(owner, repoName, number);
+    if (![result.pull.user.login, context.base_owner].some((login) => login.toLowerCase() === user.login.toLowerCase())) {
+      const error = new Error("Only the pull request author or base album owner can update it.");
+      error.status = 403;
+      throw error;
+    }
+    const changes = z.object({
+      title: z.string().min(1).max(256).optional(),
+      body: z.string().max(65536).optional(),
+      state: z.enum(["open", "closed"]).optional(),
+    }).parse(input);
+    if (!Object.keys(changes).length) {
+      const error = new Error("No supported pull request changes were provided.");
+      error.status = 400;
+      throw error;
+    }
+    return { pull: this.store.updatePull(Number(number), changes).pull };
   }
 
-  async submitReview(accessToken, owner, repoName, number, input) {
-    const validated = ReviewSchema.parse(input);
-    const { data } = await this.#request(
-      `/repos/${owner}/${repoName}/pulls/${number}/reviews`,
+  submitReview(_accessToken, owner, repoName, user, number, input) {
+    this.#requireSignedIn(user);
+    this.#pullForAlbum(owner, repoName, number);
+    const review = ReviewSchema.parse(input);
+    return { review: this.store.addPullReview(Number(number), user, review.event, review.body) };
+  }
+
+  commentOnPull(_accessToken, owner, repoName, user, number, body) {
+    this.#requireSignedIn(user);
+    this.#pullForAlbum(owner, repoName, number);
+    const text = z.string().min(1).max(65536).parse(body);
+    return { comment: this.store.addPullComment(Number(number), user, text) };
+  }
+
+  async mergePull(accessToken, owner, repoName, user, number) {
+    this.#requireSignedIn(user);
+    const { context } = this.#pullForAlbum(owner, repoName, number);
+    if (context.base_owner.toLowerCase() !== user.login.toLowerCase()) {
+      const error = new Error("Only the base album owner can merge this pull request.");
+      error.status = 403;
+      throw error;
+    }
+    if (context.state !== "open") {
+      const error = new Error("Only open pull requests can be merged.");
+      error.status = 409;
+      error.code = "NOT_MERGEABLE";
+      throw error;
+    }
+
+    const snapshot = this.store.getPull(Number(number)).files;
+    const [baseSnapshot, headSnapshot] = await Promise.all([
+      this.#getAlbumFiles(accessToken, context.base_owner, context.base_slug),
+      this.#getAlbumFiles(accessToken, context.head_owner, context.head_slug),
+    ]);
+    const baseFiles = baseSnapshot.files;
+    const headFiles = headSnapshot.files;
+    for (const file of snapshot) {
+      const sourceExpected = file.status === "removed" ? null : file.headSha;
+      const destinationExpected = file.status === "added" ? null : file.baseSha;
+      if ((headFiles.get(file.filename) || null) !== sourceExpected
+        || (baseFiles.get(file.filename) || null) !== destinationExpected) {
+        const error = new Error(`The proposed file "${file.filename}" changed after this request was opened.`);
+        error.status = 409;
+        error.code = "CONFLICT";
+        throw error;
+      }
+    }
+
+    const { data: branchCommit } = await this.#request(
+      `/repos/${encodeURIComponent(context.base_owner)}/${ARTWORKS_REPOSITORY}/commits/${encodeURIComponent(baseSnapshot.branch)}`,
+      accessToken
+    );
+    const treeEntries = [];
+    for (const file of snapshot) {
+      const destinationPath = `${context.base_slug}/${file.filename}`;
+      if (file.status === "removed") {
+        treeEntries.push({ path: destinationPath, mode: "100644", type: "blob", sha: null });
+        continue;
+      }
+      const content = await this.#getBlobContent(accessToken, context.head_owner, file.headSha);
+      const { data: blob } = await this.#request(
+        `/repos/${encodeURIComponent(context.base_owner)}/${ARTWORKS_REPOSITORY}/git/blobs`,
+        accessToken,
+        { method: "POST", body: JSON.stringify({ content, encoding: "base64" }) }
+      );
+      treeEntries.push({ path: destinationPath, mode: "100644", type: "blob", sha: blob.sha });
+    }
+    const { data: mergedTree } = await this.#request(
+      `/repos/${encodeURIComponent(context.base_owner)}/${ARTWORKS_REPOSITORY}/git/trees`,
+      accessToken,
+      { method: "POST", body: JSON.stringify({ base_tree: branchCommit.commit.tree.sha, tree: treeEntries }) }
+    );
+    const { data: commit } = await this.#request(
+      `/repos/${encodeURIComponent(context.base_owner)}/${ARTWORKS_REPOSITORY}/git/commits`,
       accessToken,
       {
         method: "POST",
-        body: JSON.stringify(validated),
-      }
-    );
-    return {
-      review: {
-        id: data.id,
-        state: data.state,
-        body: data.body,
-        htmlUrl: data.html_url,
-      },
-    };
-  }
-
-  async commentOnPull(accessToken, owner, repoName, number, body) {
-    if (typeof body !== "string" || !body.trim() || body.length > 65536) {
-      const err = new Error("A comment between 1 and 65,536 characters is required.");
-      err.status = 400;
-      throw err;
-    }
-    const { data } = await this.#request(
-      `/repos/${owner}/${repoName}/issues/${number}/comments`,
-      accessToken,
-      { method: "POST", body: JSON.stringify({ body }) }
-    );
-    return {
-      comment: {
-        id: data.id,
-        body: data.body,
-        createdAt: data.created_at,
-        htmlUrl: data.html_url,
-        user: { login: data.user?.login, avatarUrl: data.user?.avatar_url },
-      },
-    };
-  }
-
-  async mergePull(accessToken, owner, repoName, number, input = {}) {
-    const mergeMethod = input.mergeMethod || "merge";
-    if (!["merge", "squash", "rebase"].includes(mergeMethod)) {
-      const err = new Error("Unsupported merge method");
-      err.status = 400;
-      throw err;
-    }
-    const [{ data: pull }, { data: repository }] = await Promise.all([
-      this.#request(`/repos/${owner}/${repoName}/pulls/${number}`, accessToken),
-      this.#request(`/repos/${owner}/${repoName}`, accessToken),
-    ]);
-    if (pull.state !== "open" || pull.merged || pull.merged_at) {
-      const err = new Error("Only open, unmerged pull requests can be merged.");
-      err.status = 409;
-      err.code = "NOT_MERGEABLE";
-      throw err;
-    }
-    if (pull.mergeable !== true) {
-      const err = new Error(
-        pull.mergeable === false
-          ? "GitHub reports this pull request has merge conflicts."
-          : "GitHub has not confirmed that this pull request is mergeable yet. Refresh and try again."
-      );
-      err.status = 409;
-      err.code = "NOT_MERGEABLE";
-      throw err;
-    }
-    if (repository.permissions?.push !== true) {
-      const err = new Error("You need write permission on the target repository to merge this pull request.");
-      err.status = 403;
-      err.code = "FORBIDDEN";
-      throw err;
-    }
-    const methodEnabled = {
-      merge: repository.allow_merge_commit,
-      squash: repository.allow_squash_merge,
-      rebase: repository.allow_rebase_merge,
-    }[mergeMethod];
-    if (methodEnabled !== true) {
-      const err = new Error(`The ${mergeMethod} merge method is disabled for this repository.`);
-      err.status = 400;
-      throw err;
-    }
-    const { data } = await this.#request(
-      `/repos/${owner}/${repoName}/pulls/${number}/merge`,
-      accessToken,
-      {
-        method: "PUT",
         body: JSON.stringify({
-          merge_method: mergeMethod,
-          commit_title: input.commitTitle,
-          commit_message: input.commitMessage,
+          message: `merge(pull): ${context.title}`,
+          tree: mergedTree.sha,
+          parents: [branchCommit.sha],
         }),
-        retry: false,
       }
     );
-    return {
-      merged: data.merged,
-      sha: data.sha,
-      message: data.message,
-    };
-  }
+    await this.#request(
+      `/repos/${encodeURIComponent(context.base_owner)}/${ARTWORKS_REPOSITORY}/git/refs/heads/${encodeURIComponent(baseSnapshot.branch)}`,
+      accessToken,
+      { method: "PATCH", body: JSON.stringify({ sha: commit.sha, force: false }), retry: false }
+    );
 
+    const result = this.store.updatePull(Number(number), { state: "merged" });
+    return { merged: true, pull: result.pull };
+  }
 }
 
 export const pullRequestService = new PullRequestService();

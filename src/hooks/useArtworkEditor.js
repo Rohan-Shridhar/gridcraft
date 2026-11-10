@@ -19,6 +19,7 @@ const SUPPORTED_GRID_SIZES = [16, 32, 64, 128];
 export default function useArtworkEditor() {
   const [owner, setOwner] = useState(null);
   const [repoName, setRepoName] = useState(null);
+  const [storyId, setStoryId] = useState(null);
   const [artworkId, setArtworkId] = useState(null);
   const [branch, setBranch] = useState("master");
   const [artworkMeta, setArtworkMeta] = useState(null); // { name, description, gridSize, backgroundColor, createdAt }
@@ -41,16 +42,17 @@ export default function useArtworkEditor() {
   // Keeps last good cells in case user wants to discard after conflict
   const lastSavedArtworkRef = useRef(null);
 
-  const loadArtwork = useCallback(async (ownerArg, repoArg, idArg, branchArg = "master") => {
+  const loadArtwork = useCallback(async (ownerArg, repoArg, storyArg, idArg, branchArg = "master") => {
     setOwner(ownerArg);
     setRepoName(repoArg);
+    setStoryId(storyArg);
     setArtworkId(idArg);
     setBranch(branchArg);
     setIsLoading(true);
     setLoadError(null);
 
     try {
-      const res = await apiClient.getArtwork(ownerArg, repoArg, idArg, branchArg);
+      const res = await apiClient.getArtwork(ownerArg, repoArg, storyArg, idArg, branchArg);
       const aw = res.artwork;
       shaRef.current = res.sha;
       lastSavedArtworkRef.current = aw;
@@ -172,7 +174,7 @@ export default function useArtworkEditor() {
         backgroundColor,
         cells,
       };
-      const res = await apiClient.saveArtwork(owner, repoName, artworkId, payload, branch);
+      const res = await apiClient.saveArtwork(owner, repoName, storyId, artworkId, payload, branch);
       shaRef.current = res.sha;
       lastSavedArtworkRef.current = res.artwork;
       setIsDirty(false);
@@ -186,24 +188,24 @@ export default function useArtworkEditor() {
       }
       throw err;
     }
-  }, [owner, repoName, artworkId, artworkMeta, gridSize, backgroundColor, cells, branch]);
+  }, [owner, repoName, storyId, artworkId, artworkMeta, gridSize, backgroundColor, cells, branch]);
 
   // Reload fresh copy from GitHub (used after conflict → "Reload Remote")
   const reloadFromRemote = useCallback(async () => {
-    if (!owner || !repoName || !artworkId) return;
-    await loadArtwork(owner, repoName, artworkId, branch);
-  }, [owner, repoName, artworkId, branch, loadArtwork]);
+    if (!owner || !repoName || !storyId || !artworkId) return;
+    await loadArtwork(owner, repoName, storyId, artworkId, branch);
+  }, [owner, repoName, storyId, artworkId, branch, loadArtwork]);
 
   const inspectRemote = useCallback(async () => {
-    if (!owner || !repoName || !artworkId) return null;
-    const result = await apiClient.getArtwork(owner, repoName, artworkId, branch);
+    if (!owner || !repoName || !storyId || !artworkId) return null;
+    const result = await apiClient.getArtwork(owner, repoName, storyId, artworkId, branch);
     setRemoteArtwork(result.artwork);
     return result.artwork;
-  }, [owner, repoName, artworkId, branch]);
+  }, [owner, repoName, storyId, artworkId, branch]);
 
   const saveAsNew = useCallback(async (name) => {
-    if (!owner || !repoName || !artworkMeta) return;
-    const result = await apiClient.createArtwork(owner, repoName, {
+    if (!owner || !repoName || !storyId || !artworkMeta) return;
+    const result = await apiClient.createArtwork(owner, repoName, storyId, {
       name,
       description: artworkMeta.description || "",
       gridSize,
@@ -228,12 +230,12 @@ export default function useArtworkEditor() {
     setHistory([]);
     setFuture([]);
     return artwork;
-  }, [owner, repoName, artworkMeta, gridSize, backgroundColor, cells, branch]);
+  }, [owner, repoName, storyId, artworkMeta, gridSize, backgroundColor, cells, branch]);
 
   const rename = useCallback(async (newName) => {
-    if (!owner || !repoName || !artworkId || !shaRef.current) return;
+    if (!owner || !repoName || !storyId || !artworkId || !shaRef.current) return;
     try {
-      const result = await apiClient.renameArtwork(owner, repoName, artworkId, {
+      const result = await apiClient.renameArtwork(owner, repoName, storyId, artworkId, {
         newName,
         sha: shaRef.current,
       }, branch);
@@ -252,7 +254,7 @@ export default function useArtworkEditor() {
       if (error.status === 409) setSaveState("conflict");
       throw error;
     }
-  }, [owner, repoName, artworkId, branch]);
+  }, [owner, repoName, storyId, artworkId, branch]);
 
   const discardChanges = useCallback(() => {
     const saved = lastSavedArtworkRef.current;

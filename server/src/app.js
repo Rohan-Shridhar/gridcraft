@@ -17,10 +17,12 @@ import { IssueController } from "./controllers/issueController.js";
 import { PullRequestController } from "./controllers/pullRequestController.js";
 import { ForkController } from "./controllers/forkController.js";
 import { forkController as defaultForkController } from "./controllers/forkController.js";
+import { albumService as defaultAlbumService } from "./services/albumService.js";
 
 export function createApp({
   authService,
   authController,
+  artworkLibraryService = defaultAlbumService,
   albumService,
   albumController,
   artworkService,
@@ -42,7 +44,7 @@ export function createApp({
   if (authController) {
     resolvedAuthRoutes = createAuthRoutes(authController);
   } else if (authService) {
-    resolvedAuthRoutes = createAuthRoutes(new AuthController(authService));
+    resolvedAuthRoutes = createAuthRoutes(new AuthController(authService, artworkLibraryService));
   }
 
   const extras = {

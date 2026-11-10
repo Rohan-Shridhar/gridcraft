@@ -1,15 +1,21 @@
-# GridCraft --- Full-Stack GitHub for Pixel Art
+# GridCraft --- Pixel Art and Collaboration Workspace
 
 ## Product and Engineering Roadmap
 
-**Current release:** `v3.11.0`\
-**Roadmap target:** `v4.0.0`\
-**Product direction:** A GitHub-inspired platform for creating,
-organizing, versioning, sharing, and collaborating on pixel art.\
-**Core principle:** GitHub repositories are the source of truth for
-albums, stories, artworks, branches, issues, pull requests, and forks.
-GridCraft is the visual interface that makes those Git concepts
-accessible to pixel artists.
+**Current release:** `v4.0.0`\
+**Product direction:** Organize, edit, and collaborate on pixel art through a
+visual workspace backed by each creator's GitHub artwork library.
+
+**Current v4.0.0 data model (supersedes the earlier repository-per-album
+roadmap below):** A signed-in creator has one public `gridcraft-artworks`
+repository. Every root-level folder with a valid `album.json` is an album;
+Story folders and artwork JSON files are nested within that album folder.
+Artwork files are the GitHub-backed source of truth. GridCraft issues and pull
+requests, including comments and reviews, are application records stored in
+SQLite, not GitHub Issues or Pull Requests. Forking copies an album folder and
+its content into the signed-in creator's artwork repository. Earlier sections
+describing one GitHub repository per album or GitHub-native collaboration are
+historical requirements and are superseded by this model.
 
 ------------------------------------------------------------------------
 
@@ -52,41 +58,24 @@ If the repository's current architecture differs from this plan, adapt
 the implementation while preserving the product requirements. Explain
 material deviations instead of silently ignoring requirements.
 
-## Non-negotiable product requirements
+## Current non-negotiable product requirements
 
--   GitHub authentication.
--   Users can create and manage albums. An album is one GitHub
-    repository.
--   Users can create, edit, rename, view, export, and delete artworks
-    inside an album.
--   An artwork is a validated JSON file containing canvas dimensions,
-    pixel cells, and metadata.
--   Albums contain stories. A story is a folder containing ordered
-    artwork frames plus a story manifest.
--   Replace the current standalone Snap/storyboard system with
-    album-owned Stories.
--   A Story can be previewed as a controlled slideshow and exported as a
-    GIF.
--   Git branching must work. The default branch must be named `master`.
--   Users can create, switch, rename, and delete eligible branches, and
-    compare branches.
--   Issues must support listing, viewing, creating, commenting, editing
-    where permitted, and closing/reopening.
--   Pull requests must support listing, viewing, creating,
-    reviewing/commenting where supported, and merging where the current
-    user has permission.
--   Users can fork albums/repositories and open pull requests from their
-    forks.
--   Public/private repository visibility must be respected.
--   GitHub permissions and repository access must be enforced by GitHub,
-    not simulated by frontend checks.
--   No paid technology or paid API is required for local development or
-    the core product.
--   Do not introduce MongoDB for artwork storage. Do not add a database
-    unless a concrete requirement justifies it. A small local SQLite
-    database may be used for secure sessions/token records if required
-    by the chosen deployment architecture; it is not an artwork
-    database.
+- Authenticate users with GitHub and initialize one public
+  `gridcraft-artworks` repository per user at sign-in.
+- Represent albums as root-level folders, Stories as folders inside albums,
+  and artworks as validated editable JSON files inside Story folders.
+- Keep GitHub as the source of truth for artwork files and file history.
+- Store GridCraft issues, pull requests, comments, and reviews independently
+  from GitHub collaboration objects.
+- Forking copies an album folder and all nested content into the user's own
+  artwork repository.
+- Preserve the canvas editor, Story playback/GIF export, safe file writes,
+  and applicable branch workflows.
+- Use SQLite for the album index and GridCraft-owned collaboration records;
+  never use it as the artwork file store.
+- Do not silently overwrite artwork or discard browser data during migration.
+- No paid technology or paid API is required for local development or the core
+  product.
 
 ------------------------------------------------------------------------
 
@@ -101,9 +90,8 @@ than source code.
   Creator account         GitHub user             The authenticated
                                                   person using GridCraft
 
-  Album                   Repository              A project that contains
-                                                  pixel artworks and
-                                                  stories
+  Album                   Folder                  A project folder in the
+                                                  creator's artwork library
 
   Artwork                 JSON file               One editable pixel
                                                   canvas
@@ -121,16 +109,17 @@ than source code.
   Commit                  Git commit              A saved change to
                                                   repository content
 
-  Issue                   GitHub Issue            A task, bug, idea, or
-                                                  discussion
+  Issue                   GridCraft record        A task, bug, idea, or
+                                                  discussion stored by
+                                                  GridCraft
 
-  Pull request            GitHub Pull Request     A proposal to merge
+  Pull request            GridCraft record        A proposal to merge
                                                   changes from one
                                                   branch/fork into
                                                   another
 
-  Fork                    GitHub fork             A separate copy of an
-                                                  album repository
+  Fork                    Folder copy             A copied album folder in
+                                                  another user's library
 
   Default branch          `master`                The main stable line of
                                                   work
@@ -142,27 +131,24 @@ A typical user journey:
 
 1.  A visitor opens GridCraft and chooses **Continue with GitHub**.
 2.  The user authorizes GridCraft.
-3.  The user creates an album named, for example, `minecraft-items`.
-4.  GridCraft creates a GitHub repository for that album and ensures its
-    default branch is `master`.
-5.  The user opens the album and creates an artwork.
-6.  GridCraft opens the existing pixel editor with a blank or loaded
-    canvas.
-7.  The user draws and saves. GridCraft writes the artwork JSON into the
-    album repository and creates a Git commit.
-8.  The user creates a Story called `diamond-sword-animation`.
-9.  The user adds existing artworks as frames, orders them, adjusts
-    frame durations, previews the slideshow, and exports a GIF.
-10. The user creates a branch such as `feature/animated-sword`, makes
-    changes, and opens a pull request into `master`.
-11. Other users can discuss the work through Issues and Pull Requests,
-    fork the album, and contribute their own changes.
+3.  GridCraft initializes one `gridcraft-artworks` repository for the user.
+4.  The user creates an album folder, then creates Stories and artwork JSON
+    files inside it.
+5.  GridCraft opens the existing visual editor to draw or edit artwork.
+6.  The user saves; GridCraft writes the JSON file and a Git commit to the
+    shared artwork repository.
+7.  The user adds artworks as Story frames, orders them, previews the sequence,
+    and exports a GIF.
+8.  The user opens a GridCraft issue or pull request to discuss and propose
+    album changes; these records are stored by GridCraft, not GitHub.
+9.  Another user forks the album by copying its folder into their own artwork
+    repository.
 
 ## Product principles
 
--   GitHub is the canonical storage and collaboration engine.
--   GridCraft should not maintain a second copy of the full artwork data
-    in a database.
+-   GitHub is the canonical storage engine for artwork files and history.
+-   GridCraft's SQLite database contains metadata/indexing and
+    GridCraft-specific collaboration records, not artwork file contents.
 -   The editor should remain responsive: drawing happens locally;
     network requests happen on load/save and explicit Git operations.
 -   Every write should be attributable to the authenticated user and

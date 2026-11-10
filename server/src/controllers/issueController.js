@@ -54,7 +54,7 @@ export class IssueController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo } = req.params;
-      const result = await this.service.createIssue(token, owner, repo, req.body);
+      const result = await this.service.createIssue(token, owner, repo, req.user, req.body);
       return res.status(201).json(result);
     } catch (err) {
       next(err);
@@ -66,7 +66,7 @@ export class IssueController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, number } = req.params;
-      const result = await this.service.updateIssue(token, owner, repo, number, req.body);
+      const result = await this.service.updateIssue(token, owner, repo, req.user, number, req.body);
       return res.json(result);
     } catch (err) {
       next(err);
@@ -78,7 +78,7 @@ export class IssueController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, number } = req.params;
-      const result = await this.service.addComment(token, owner, repo, number, req.body?.body);
+      const result = await this.service.addComment(token, owner, repo, req.user, number, req.body?.body);
       return res.status(201).json(result);
     } catch (err) {
       next(err);

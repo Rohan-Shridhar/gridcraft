@@ -39,9 +39,9 @@ export default function IssuesTab({ owner, repoName, showToast }) {
       });
       setIssues(result.issues || []);
       setPage(nextPage);
-      setHasNext(Boolean(result.link?.includes('rel="next"')));
+      setHasNext(Boolean(result.hasNext || result.link?.includes('rel="next"')));
     } catch (requestError) {
-      setError(requestError.message || "Could not load GitHub issues.");
+      setError(requestError.message || "Could not load GridCraft issues.");
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export default function IssuesTab({ owner, repoName, showToast }) {
       setBody("");
       setNewLabels("");
       setNewAssignees("");
-      showToast(`Issue #${result.issue.number} created.`, "success");
+      showToast(`GridCraft issue #${result.issue.number} created.`, "success");
       await loadIssues(1);
       await openIssue(result.issue.number);
     } catch (requestError) {
@@ -161,7 +161,7 @@ export default function IssuesTab({ owner, repoName, showToast }) {
         ...current,
         comments: [...current.comments, ...result.comments],
         commentsPage: result.commentsPage,
-        commentsLink: result.commentsLink,
+        commentsHasNext: result.commentsHasNext,
       }));
     } catch (requestError) {
       showToast(requestError.message || "Could not load more comments.", "error");
@@ -173,7 +173,7 @@ export default function IssuesTab({ owner, repoName, showToast }) {
   return (
     <div className="issues-tab">
       <div className="issues-toolbar">
-        <h3><i className="fa-regular fa-circle-dot"></i> Issues</h3>
+        <h3><i className="fa-regular fa-circle-dot"></i> GridCraft Issues</h3>
         <button className="btn-primary" onClick={() => setNewIssue(true)}>
           <i className="fa-solid fa-plus"></i> New issue
         </button>
@@ -189,7 +189,7 @@ export default function IssuesTab({ owner, repoName, showToast }) {
         <button className="btn-secondary" type="submit">Filter</button>
       </form>
 
-      {loading ? <p className="issues-status">Loading issues from GitHub…</p> : error ? (
+      {loading ? <p className="issues-status">Loading GridCraft issues…</p> : error ? (
         <div className="artworks-error"><p>{error}</p><button className="btn-secondary" onClick={() => loadIssues(page)}>Retry</button></div>
       ) : issues.length === 0 ? (
         <div className="artworks-empty"><i className="fa-regular fa-circle-dot"></i><h4>No issues found</h4></div>
@@ -221,7 +221,7 @@ export default function IssuesTab({ owner, repoName, showToast }) {
             <label>Title<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={256} required autoFocus /></label>
             <label>Markdown description<textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={65536} rows={8} /></label>
             <label>Labels (comma-separated)<input value={newLabels} onChange={(event) => setNewLabels(event.target.value)} /></label>
-            <label>Assignees (GitHub usernames, comma-separated)<input value={newAssignees} onChange={(event) => setNewAssignees(event.target.value)} /></label>
+            <label>Assignees (usernames, comma-separated)<input value={newAssignees} onChange={(event) => setNewAssignees(event.target.value)} /></label>
             <div className="modal-footer"><button type="button" className="btn-modal-secondary" onClick={() => setNewIssue(false)}>Cancel</button><button type="submit" className="btn-modal-primary" disabled={creating}>{creating ? "Creating…" : "Create issue"}</button></div>
           </form>
         </div>
@@ -257,13 +257,12 @@ export default function IssuesTab({ owner, repoName, showToast }) {
                     </div>
                   ))}
                 </div>
-                {detail.commentsLink?.includes('rel="next"') && <button className="btn-secondary" disabled={busy} onClick={loadMoreComments}>Load more comments</button>}
+                {detail.commentsHasNext && <button className="btn-secondary" disabled={busy} onClick={loadMoreComments}>Load more comments</button>}
                 <form className="issue-comment-form" onSubmit={addComment}>
                   <label htmlFor="issue-comment">Add a comment</label><textarea id="issue-comment" rows={4} maxLength={65536} value={comment} onChange={(event) => setComment(event.target.value)} />
                   <button className="btn-primary" disabled={busy || !comment.trim()}>Comment</button>
                 </form>
                 <div className="modal-footer issue-detail-actions">
-                  <a className="btn-secondary" href={detail.issue.htmlUrl} target="_blank" rel="noreferrer">Open on GitHub ↗</a>
                   {editing ? (
                     <><button className="btn-secondary" onClick={() => setEditing(false)}>Cancel edit</button><button className="btn-primary" disabled={busy || !editDraft.title.trim()} onClick={saveIssueEdit}>Save edit</button></>
                   ) : (

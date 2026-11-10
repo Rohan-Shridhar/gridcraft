@@ -1,409 +1,107 @@
-# GridCraft Backend API Documentation (v3.11.0)
-
-Base URL: `/api/v1`
-
----
-
-## Health Check
-
-### `GET /api/v1/health`
-Returns the operational health and version of the backend service.
-
-**Response (200 OK):**
-```json
-{
-  "status": "ok",
-  "version": "3.11.0",
-  "app": "GridCraft",
-  "githubApp": "gridcraft-auth",
-  "timestamp": "2026-11-10T11:00:00.000Z"
-}
-```
-
----
-
-## Authentication
-
-### `GET /api/v1/auth/github`
-Initiates the GitHub App user authorization flow.
-
-**Query Parameters:**
-- `format` (optional): If set to `json`, returns the authorization URL in a JSON payload instead of redirecting.
-
----
-
-### `GET /api/v1/auth/github/callback`
-Handles the redirect callback from GitHub after user authorization.
-
-**Query Parameters:**
-- `code`: The temporary GitHub authorization code.
-- `state`: The unguessable state string for CSRF validation.
-- `error` / `error_description`: Present if user denied authorization.
-
----
-
-### `GET /api/v1/auth/me`
-Retrieves the currently authenticated user session.
-
-**Response (Authenticated - 200 OK):**
-```json
-{
-  "authenticated": true,
-  "user": {
-    "id": 1234567,
-    "login": "pixelartist",
-    "name": "Pixel Artist",
-    "avatarUrl": "https://avatars.githubusercontent.com/u/1234567",
-    "htmlUrl": "https://github.com/pixelartist"
-  }
-}
-```
-
----
-
-### `POST /api/v1/auth/logout`
-Signs out the user by clearing the session cookie.
-
----
-
-### `POST /api/v1/auth/disconnect`
-Requires authentication (`requireAuth`). Revokes the GitHub user access token with GitHub and clears the session cookie.
-
----
-
-## Albums (GitHub Repositories)
-
-All album endpoints require an authenticated user session (`requireAuth`).
-
-### `GET /api/v1/albums`
-Lists repositories and GridCraft albums accessible to the authenticated creator.
-
-**Query Parameters:**
-- `page` (optional, default: 1): Page number.
-- `per_page` (optional, default: 30, max: 100): Number of albums per page.
-
-**Response (200 OK):**
-```json
-{
-  "albums": [
-    {
-      "id": 123456,
-      "name": "minecraft-items",
-      "fullName": "pixelartist/minecraft-items",
-      "owner": "pixelartist",
-      "ownerAvatar": "https://avatars.githubusercontent.com/u/123456",
-      "description": "Pixel art inspired by Minecraft",
-      "isPrivate": false,
-      "defaultBranch": "master",
-      "htmlUrl": "https://github.com/pixelartist/minecraft-items",
-      "updatedAt": "2026-11-10T11:00:00.000Z",
-      "createdAt": "2026-11-10T10:00:00.000Z",
-      "isGridCraftAlbum": true,
-      "permissions": {
-        "admin": true,
-        "push": true,
-        "pull": true
-      }
-    }
-  ],
-  "page": 1,
-  "perPage": 30,
-  "total": 1
-}
-```
-
----
-
-### `POST /api/v1/albums`
-Creates a new GitHub repository under the authenticated user's account, enforces `master` as the verified default branch, and commits the initial GridCraft structure (`.gridcraft/album.json`, `artworks/`, `stories/`, `README.md`).
-
-**Request Body:**
-```json
-{
-  "name": "retro-items",
-  "description": "Retro game item sprites",
-  "isPrivate": false,
-  "readme": "Optional custom README markdown content"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "repo": {
-    "id": 987654,
-    "name": "retro-items",
-    "fullName": "pixelartist/retro-items",
-    "owner": "pixelartist",
-    "ownerAvatar": "https://avatars.githubusercontent.com/u/123456",
-    "description": "Retro game item sprites",
-    "isPrivate": false,
-    "defaultBranch": "master",
-    "htmlUrl": "https://github.com/pixelartist/retro-items",
-    "updatedAt": "2026-11-10T11:00:00.000Z",
-    "createdAt": "2026-11-10T11:00:00.000Z"
-  },
-  "manifest": {
-    "format": "gridcraft-album",
-    "schemaVersion": 1,
-    "id": "retro-items",
-    "name": "retro-items",
-    "description": "Retro game item sprites",
-    "createdAt": "2026-11-10T11:00:00.000Z",
-    "updatedAt": "2026-11-10T11:00:00.000Z",
-    "createdWith": {
-      "name": "GridCraft",
-      "version": "3.11.0"
-    }
-  }
-}
-```
-
----
-
-### `GET /api/v1/albums/:owner/:repo`
-Fetches GitHub repository details and the decoded `.gridcraft/album.json` manifest.
-
-**Response (200 OK):**
-```json
-{
-  "repo": {
-    "id": 987654,
-    "name": "retro-items",
-    "fullName": "pixelartist/retro-items",
-    "owner": "pixelartist",
-    "defaultBranch": "master",
-    "isPrivate": false
-  },
-  "manifest": {
-    "format": "gridcraft-album",
-    "schemaVersion": 1,
-    "id": "retro-items",
-    "name": "retro-items",
-    "description": "Retro game item sprites"
-  },
-  "isGridCraftAlbum": true
-}
-```
-
----
-
-### `PATCH /api/v1/albums/:owner/:repo`
-Updates album repository metadata (description, visibility) on GitHub.
-
-**Request Body:**
-```json
-{
-  "description": "Updated description",
-  "isPrivate": true
-}
-```
-
----
-
-### `DELETE /api/v1/albums/:owner/:repo`
-Permanently deletes the album's GitHub repository. Requires confirming the exact repository name.
-
-**Request Body:**
-```json
-{
-  "confirmName": "retro-items"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Album pixelartist/retro-items deleted."
-}
-```
-
----
-
-### `GET /api/v1/albums/:owner/:repo/commits`
-Lists recent commits on the selected branch.
-
-**Query Parameters:**
-- `branch` (optional, default: `"master"`): Branch to query.
-
----
-
-### `GET /api/v1/albums/:owner/:repo/tree`
-Returns the recursive git tree for the repository. Accepts the optional
-`branch` query parameter (default: `master`).
-
----
-
-### `POST /api/v1/albums/:owner/:repo/initialize`
-Initializes an existing repository as a GridCraft album by ensuring `master` branch and creating `.gridcraft/album.json`.
-
----
-
-## Artworks
-
-All artwork endpoints require an authenticated GitHub session. Files are stored
-as JSON under `artworks/` in the album repository. Supported grid sizes are
-16, 32, 64, and 128; `cells` contains exactly `gridSize * gridSize` hex colors
-or `null` values.
-
-### `GET /api/v1/albums/:owner/:repo/artworks`
-Lists validated artwork files on the selected branch. The optional `branch`
-query parameter defaults to `master`. Each artwork includes its current file
-`sha`, which must be supplied for later writes.
-
-### `POST /api/v1/albums/:owner/:repo/artworks`
-Creates an artwork and an initial GitHub commit.
-
-```json
-{
-  "name": "Golden Apple",
-  "description": "A pixel-art item",
-  "gridSize": 16,
-  "backgroundColor": "transparent"
-}
-```
-
-`backgroundColor` may be `"transparent"` or a hex color. An optional `cells`
-array is used when saving a copy of existing pixel data.
-
-### `GET /api/v1/albums/:owner/:repo/artworks/:artworkId`
-Returns `{ "artwork": { ... }, "sha": "..." }` for an artwork file.
-
-### `PUT /api/v1/albums/:owner/:repo/artworks/:artworkId`
-Saves a complete artwork and commits it. The current file SHA is required;
-GitHub rejects stale SHAs with `409 CONFLICT`.
-
-```json
-{
-  "sha": "current-file-sha",
-  "artwork": {
-    "format": "gridcraft-artwork",
-    "schemaVersion": 1,
-    "id": "golden-apple",
-    "name": "Golden Apple",
-    "description": "A pixel-art item",
-    "gridSize": 16,
-    "width": 16,
-    "height": 16,
-    "backgroundColor": "transparent",
-    "cells": ["#e63946", null],
-    "createdAt": "2026-11-10T11:00:00.000Z"
-  }
-}
-```
-
-The `cells` array in this abbreviated example must contain exactly 256 entries
-for a 16×16 artwork.
-
-### `PATCH /api/v1/albums/:owner/:repo/artworks/:artworkId`
-Renames an artwork and its JSON file. Requires `{ "newName": "...", "sha": "current-file-sha" }`.
-
-### `DELETE /api/v1/albums/:owner/:repo/artworks/:artworkId`
-Deletes an artwork file. Requires `{ "sha": "current-file-sha" }`.
-
-### `GET /api/v1/albums/:owner/:repo/artworks/:artworkId/commits`
-Lists recent commits for the artwork file. Accepts the optional `branch` query
-parameter, defaulting to `master`.
-
----
-
-## Stories
-
-Stories are stored as manifests under `stories/<storyId>/story.json`. All
-endpoints accept an optional `branch` query parameter (default: `master`).
-Frames reference existing artwork files; pixel data is not duplicated.
-
-- `GET /api/v1/albums/:owner/:repo/stories` — list Stories.
-- `POST /api/v1/albums/:owner/:repo/stories` — create a Story with `name`,
-  optional `description`, `loop`, `defaultFrameDurationMs`, and `frames`.
-- `GET /api/v1/albums/:owner/:repo/stories/:storyId` — read a Story and its
-  current file SHA.
-- `PUT /api/v1/albums/:owner/:repo/stories/:storyId` — save `{ "story": {},
-  "sha": "current-file-sha" }`; a stale SHA is rejected.
-- `DELETE /api/v1/albums/:owner/:repo/stories/:storyId` — delete with the
-  current `{ "sha": "..." }`.
-
-Each frame has an `artworkId`, matching `artworkPath` (`artworks/<id>.json`),
-and integer `durationMs`. Referenced artwork files are checked before a Story
-is written.
-
-## Branches
-
-- `GET /api/v1/albums/:owner/:repo/branches?page=1&per_page=30` — paginated
-  branches, actual default branch, protection flags, and a GitHub pagination
-  link.
-- `POST /api/v1/albums/:owner/:repo/branches` — create from `{ "name": "...",
-  "from": "master" }`.
-- `GET /api/v1/albums/:owner/:repo/branches/:branch` — branch and latest commit
-  details.
-- `PATCH /api/v1/albums/:owner/:repo/branches/:branch` — rename with
-  `{ "newName": "..." }`.
-- `DELETE /api/v1/albums/:owner/:repo/branches/:branch` — delete an eligible
-  branch; the default branch cannot be deleted.
-- `GET /api/v1/albums/:owner/:repo/compare?base=master&head=feature` — return
-  GitHub's comparison status, commits, and changed files.
-- `GET /api/v1/albums/:owner/:repo/branches/commits?branch=master&page=1` —
-  list commits on a branch.
-
-## Issues
-
-- `GET /api/v1/albums/:owner/:repo/issues` — list issues with `state`, `author`,
-  `assignee`, comma-separated `labels`, text `q`, `page`, and `per_page`
-  filters. Text searches use GitHub's Search API. Pull requests are excluded.
-- `POST /api/v1/albums/:owner/:repo/issues` — create with `title`, optional
+# GridCraft API (v4.0.0)
+
+Base URL: `/api/v1`. Except for health and OAuth routes, endpoints require the
+authenticated GridCraft session cookie.
+
+## Storage model
+
+Each user has one public GitHub repository named `gridcraft-artworks`. Albums
+are root-level folders; Stories are folders inside albums; artwork is stored as
+JSON files inside Story folders. `album.json` and `story.json` contain metadata.
+GridCraft Issues and Pull Requests, including their comments and reviews, are
+stored in GridCraft's SQLite database and do not create GitHub issues or pull
+requests. Forking copies an album folder into the current user's library.
+
+## Authentication and health
+
+- `GET /api/v1/health` — application health and version.
+- `GET /api/v1/auth/github` — start GitHub OAuth.
+- `GET /api/v1/auth/github/callback` — validate OAuth state, initialize the
+  user's artwork library, and establish a session.
+- `GET /api/v1/auth/me` — current session profile.
+- `POST /api/v1/auth/logout` — clear the session.
+- `POST /api/v1/auth/disconnect` — revoke the GitHub token and clear the session.
+
+## Albums and artwork files
+
+- `GET /api/v1/albums?page=1&per_page=30` — list indexed albums; the current
+  user's artwork repository is synchronized before listing.
+- `POST /api/v1/albums` — create an album folder and `album.json` in the user's
+  artwork repository. Body: `{ "name": "...", "description": "..." }`.
+- `GET /api/v1/albums/:owner/:album` — fetch an album and its manifest.
+- `PATCH /api/v1/albums/:owner/:album` — update album metadata.
+- `DELETE /api/v1/albums/:owner/:album` — delete the album folder after
+  confirmation with `{ "confirmName": "..." }`.
+- `GET /api/v1/albums/:owner/:album/tree` — album files and folders.
+- `GET /api/v1/albums/:owner/:album/commits` — recent GitHub commit history.
+
+Story endpoints:
+
+- `GET|POST /api/v1/albums/:owner/:album/stories` — list or create Story folders.
+- `GET|PUT|DELETE /api/v1/albums/:owner/:album/stories/:storyId` — read,
+  update, or delete a Story manifest.
+- `POST /api/v1/albums/:owner/:album/stories/:storyId/frames` — add a frame.
+- `PATCH /api/v1/albums/:owner/:album/stories/:storyId/frames/order` — reorder
+  frames.
+
+Artwork endpoints use the nested route
+`/api/v1/albums/:owner/:album/stories/:storyId/artworks`:
+
+- `GET|POST` — list artworks in a Story or create an artwork JSON file.
+- `GET|PUT|PATCH|DELETE /:artworkId` — read, save, rename, or delete an artwork.
+- `GET /:artworkId/commits` — artwork file history.
+
+Saves and deletes require the current file SHA to prevent stale writes. Only
+the album owner can modify its files.
+
+## GridCraft Issues
+
+- `GET /api/v1/albums/:owner/:album/issues` — list with `state`, `author`,
+  `assignee`, comma-separated `labels`, text `q`, `page`, and `per_page`.
+- `POST /api/v1/albums/:owner/:album/issues` — create with `title`, optional
   Markdown `body`, `labels`, and `assignees`.
-- `GET /api/v1/albums/:owner/:repo/issues/:number?page=1` — issue detail and a
+- `GET /api/v1/albums/:owner/:album/issues/:number?page=1` — issue plus a
   paginated comments page.
-- `PATCH /api/v1/albums/:owner/:repo/issues/:number` — update `title`, `body`,
-  and/or `state` (`open` or `closed`).
-- `POST /api/v1/albums/:owner/:repo/issues/:number/comments` — add a comment
-  with `{ "body": "..." }`.
+- `PATCH /api/v1/albums/:owner/:album/issues/:number` — update `title`, `body`,
+  or `state` (`open` or `closed`).
+- `POST /api/v1/albums/:owner/:album/issues/:number/comments` — add a comment
+  using `{ "body": "..." }`.
 
-## Pull Requests
+The issue author or album owner may edit an issue. Any signed-in user may
+comment.
 
-- `GET /api/v1/albums/:owner/:repo/pulls?state=open&page=1&per_page=20` —
-  list GitHub pull requests. `state` may be `open`, `closed`, or `all`;
-  the response includes `hasNext` for pagination.
-- `POST /api/v1/albums/:owner/:repo/pulls` — create a PR with `title`,
-  optional `body`, `head`, optional `base` (defaults to `master`), and optional
-  `headRepo` (`owner/repository`) when the head branch is in a fork. For a
-  fork-to-upstream contribution, address the endpoint to the upstream album.
-- `GET /api/v1/albums/:owner/:repo/pulls/:number?page=1` — return GitHub PR
-  metadata, a paginated conversation page, reviews, commits, changed files,
-  merge methods enabled on the repository, and the authenticated user's
-  repository permissions.
-- `POST /api/v1/albums/:owner/:repo/pulls/:number/comments` — add a conversation
-  comment using `{ "body": "..." }`.
-- `POST /api/v1/albums/:owner/:repo/pulls/:number/reviews` — submit
+## GridCraft Pull Requests
+
+- `GET /api/v1/albums/:owner/:album/pulls?state=open&page=1&per_page=20` — list
+  GridCraft pull requests associated with an album.
+- `POST /api/v1/albums/:owner/:album/pulls` — create a request with `title`,
+  optional `body`, and source `headOwner` and `headAlbum` (or `head` as
+  `owner/album`). The source album must belong to the submitting user.
+- `GET /api/v1/albums/:owner/:album/pulls/:number` — request details, file
+  changes, comments, and reviews.
+- `PATCH /api/v1/albums/:owner/:album/pulls/:number` — update title/body/state.
+- `POST /api/v1/albums/:owner/:album/pulls/:number/comments` — add a comment.
+- `POST /api/v1/albums/:owner/:album/pulls/:number/reviews` — submit
   `{ "event": "COMMENT|APPROVE|REQUEST_CHANGES", "body": "..." }`.
-- `PUT /api/v1/albums/:owner/:repo/pulls/:number/merge` — explicitly merge
-  with `{ "mergeMethod": "merge|squash|rebase" }`. The service rechecks GitHub's
-  `mergeable` state, repository write permission, and enabled merge method
-  before requesting the merge. GitHub remains authoritative for conflicts and
-  branch-protection rules.
+- `PUT /api/v1/albums/:owner/:album/pulls/:number/merge` — merge proposed file
+  changes. Only the base album owner may merge; the service checks file
+  snapshots and rejects stale changes.
 
-## Forks
+These are GridCraft database records. GitHub is used only to read and write the
+underlying artwork-library files.
 
-- `POST /api/v1/albums/:owner/:repo/forks` — ask GitHub to create a native
-  fork; responds `202` with the resulting repository, including `parent` and
-  `source` where returned by GitHub. GridCraft waits for the native fork to be
-  readable before navigating to it.
-- `GET /api/v1/forks?page=1&per_page=30` — list forks owned by the current
-  account, including their GitHub parent/source metadata.
-- `GET /api/v1/albums/:owner/:repo` includes `repo.fork`, `repo.parent`,
-  `repo.source`, and `repo.permissions` so the client can show upstream
-  information and respect GitHub's repository access rules.
+## Forks and branches
 
----
+- `POST /api/v1/albums/:owner/:album/forks` — copy an album and its contents
+  into the current user's `gridcraft-artworks` repository.
+- `GET /api/v1/forks?page=1&per_page=30` — list the current user's copied albums.
+- `/api/v1/albums/:owner/:album/branches` — branch operations against the
+  owner's shared artwork library.
+- `/api/v1/albums/:owner/:album/compare?base=...&head=...` — compare library
+  branches.
 
-## Standard Error Response Format
+## Errors
 
-```json
-{
-  "error": {
-    "code": "REQUEST_FAILED",
-    "message": "Human readable explanation"
-  }
-}
-```
+Errors use `{ "error": { "code": "...", "message": "..." } }`. Stale GitHub
+file writes return `409 CONFLICT`; invalid payloads return `400`; authorization
+failures return `401` or `403`; missing albums or records return `404`.

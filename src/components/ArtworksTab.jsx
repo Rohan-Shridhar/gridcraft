@@ -9,7 +9,7 @@ import ArtworkThumbnail from "./ArtworkThumbnail.jsx";
  *   onOpenEditor(artworkId) — called when user opens an artwork for editing
  *   showToast(msg, type)
  */
-export default function ArtworksTab({ owner, repoName, branch = "master", onOpenEditor, showToast }) {
+export default function ArtworksTab({ owner, repoName, storyId, branch = "master", onOpenEditor, showToast }) {
   const [artworks, setArtworks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,14 +20,14 @@ export default function ArtworksTab({ owner, repoName, branch = "master", onOpen
     try {
       setIsLoading(true);
       setError(null);
-      const res = await apiClient.listArtworks(owner, repoName, branch);
+      const res = await apiClient.listArtworks(owner, repoName, storyId, branch);
       setArtworks(res.artworks || []);
     } catch (err) {
       setError(err.message || "Failed to load artworks.");
     } finally {
       setIsLoading(false);
     }
-  }, [owner, repoName, branch]);
+  }, [owner, repoName, storyId, branch]);
 
   useEffect(() => {
     loadArtworks();
@@ -38,7 +38,7 @@ export default function ArtworksTab({ owner, repoName, branch = "master", onOpen
       if (!window.confirm(`Delete artwork "${artwork.name}"? This cannot be undone.`)) return;
       setDeletingId(artwork.id);
       try {
-        await apiClient.deleteArtwork(owner, repoName, artwork.id, artwork.sha, branch);
+        await apiClient.deleteArtwork(owner, repoName, storyId, artwork.id, artwork.sha, branch);
         setArtworks((prev) => prev.filter((a) => a.id !== artwork.id));
         showToast(`Artwork "${artwork.name}" deleted`, "success");
       } catch (err) {
@@ -47,7 +47,7 @@ export default function ArtworksTab({ owner, repoName, branch = "master", onOpen
         setDeletingId(null);
       }
     },
-    [owner, repoName, branch, showToast]
+    [owner, repoName, storyId, branch, showToast]
   );
 
   const handleCreated = useCallback(
@@ -124,6 +124,7 @@ export default function ArtworksTab({ owner, repoName, branch = "master", onOpen
         <NewArtworkModal
           owner={owner}
           repoName={repoName}
+          storyId={storyId}
           branch={branch}
           onCreated={handleCreated}
           onClose={() => setShowNewModal(false)}
@@ -187,7 +188,7 @@ function slugify(str) {
     .slice(0, 100);
 }
 
-function NewArtworkModal({ owner, repoName, branch, onCreated, onClose, showToast }) {
+function NewArtworkModal({ owner, repoName, storyId, branch, onCreated, onClose, showToast }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [gridSize, setGridSize] = useState(16);
@@ -200,7 +201,7 @@ function NewArtworkModal({ owner, repoName, branch, onCreated, onClose, showToas
     if (!name.trim()) return;
     setIsSaving(true);
     try {
-      const res = await apiClient.createArtwork(owner, repoName, {
+      const res = await apiClient.createArtwork(owner, repoName, storyId, {
         name: name.trim(),
         description: description.trim(),
         gridSize,
@@ -246,7 +247,7 @@ function NewArtworkModal({ owner, repoName, branch, onCreated, onClose, showToas
             />
             {slugPreview && (
               <span className="slug-preview">
-                <i className="fa-solid fa-link"></i> File: artworks/<code>{slugPreview}.json</code>
+                <i className="fa-solid fa-link"></i> File: <code>{storyId}/{slugPreview}.json</code>
               </span>
             )}
           </div>

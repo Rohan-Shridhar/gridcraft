@@ -138,6 +138,21 @@ describe("Artwork Validator and Data Model Tests", () => {
 });
 
 describe("Artwork GitHub persistence", () => {
+  const ownerUser = { id: 100, login: "pixelcrafter" };
+  const store = { getAlbum: () => ({ id: 1, owner: "pixelcrafter", slug: "rpg-items" }) };
+  const story = {
+    format: "gridcraft-story",
+    schemaVersion: 1,
+    id: "opening",
+    name: "Opening",
+    description: "",
+    loop: true,
+    defaultFrameDurationMs: 150,
+    frames: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
   it("saves exact pixel data and the SHA for each supported grid size", async () => {
     for (const gridSize of SUPPORTED_GRID_SIZES) {
       const expectedCells = Array.from({ length: gridSize * gridSize }, (_, index) =>
@@ -145,20 +160,27 @@ describe("Artwork GitHub persistence", () => {
       );
       let writtenFile;
       const service = new ArtworkService(async (url, options) => {
-        assert.match(url, /\/contents\/artworks\/round-trip\.json$/);
+        if (url.includes("/contents/rpg-items/opening/story.json")) {
+          return new Response(JSON.stringify({ content: Buffer.from(JSON.stringify(story)).toString("base64") }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        assert.match(url, /\/contents\/rpg-items\/opening\/round-trip\.json$/);
         writtenFile = JSON.parse(options.body);
         return new Response(JSON.stringify({
           content: { sha: `new-sha-${gridSize}` },
           commit: { sha: `commit-sha-${gridSize}` },
         }), { status: 200, headers: { "content-type": "application/json" } });
-      });
+      }, store);
 
       const createdAt = new Date().toISOString();
       const result = await service.saveArtwork(
         "test-token",
-        { login: "pixelcrafter" },
+        ownerUser,
         "pixelcrafter",
         "rpg-items",
+        "opening",
         "round-trip",
         {
           sha: `old-sha-${gridSize}`,
@@ -182,22 +204,29 @@ describe("Artwork GitHub persistence", () => {
 
   it("requires a SHA for updates and propagates stale-SHA conflicts", async () => {
     let requestCount = 0;
-    const service = new ArtworkService(async () => {
+    const service = new ArtworkService(async (url, options) => {
       requestCount += 1;
+      if (url.includes("/contents/repo/story/story.json")) {
+        return new Response(JSON.stringify({ content: Buffer.from(JSON.stringify(story)).toString("base64") }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      assert.equal(options.method, "PUT");
       return new Response(JSON.stringify({ message: "sha was used but the file changed" }), {
         status: 409,
         headers: { "content-type": "application/json" },
       });
-    });
+    }, { getAlbum: () => ({ id: 1, slug: "repo" }) });
 
     await assert.rejects(
-      service.saveArtwork("token", {}, "owner", "repo", "art", { cells: [] }),
+      service.saveArtwork("token", { id: 1, login: "owner" }, "owner", "repo", "story", "art", { cells: [] }),
       /SHA is required/
     );
-    assert.equal(requestCount, 0);
+    assert.equal(requestCount, 1);
 
     await assert.rejects(
-      service.saveArtwork("token", {}, "owner", "repo", "art", {
+      service.saveArtwork("token", { id: 1, login: "owner" }, "owner", "repo", "story", "art", {
         sha: "stale-sha",
         name: "Art",
         gridSize: 16,
@@ -222,9 +251,9 @@ describe("Artwork API Integration Tests", () => {
     config.session.secret
   );
 
-  it("rejects unauthenticated requests to artworks endpoint with 401 UNAUTHORIZED", async () => {
+  it("rejects unauthenticated requests to nested artwork endpoints with 401 UNAUTHORIZED", async () => {
     const app = createApp();
-    const res = await request(app).get("/api/v1/albums/pixelcrafter/my-repo/artworks");
+    const res = await request(app).get("/api/v1/albums/pixelcrafter/my-repo/stories/opening/artworks");
     assert.equal(res.status, 401);
     assert.equal(res.body.error.code, "UNAUTHORIZED");
   });
@@ -232,7 +261,7 @@ describe("Artwork API Integration Tests", () => {
   it("rejects oversized JSON requests with a useful 413 error", async () => {
     const app = createApp();
     const res = await request(app)
-      .post("/api/v1/albums/pixelcrafter/rpg-items/artworks")
+      .post("/api/v1/albums/pixelcrafter/rpg-items/stories/opening/artworks")
       .set("Cookie", [`${config.session.cookieName}=${authCookie}`])
       .send({
         name: "oversized",
@@ -247,9 +276,10 @@ describe("Artwork API Integration Tests", () => {
 
   it("lists artworks in an album", async () => {
     const mockService = {
-      listArtworks: async (token, owner, repo, branch) => {
+      listArtworks: async (token, owner, repo, storyId, branch) => {
         assert.equal(owner, "pixelcrafter");
         assert.equal(repo, "rpg-items");
+        assert.equal(storyId, "opening");
         assert.equal(branch, "master");
         return [
           {
@@ -270,7 +300,7 @@ describe("Artwork API Integration Tests", () => {
 
     const app = createApp({ artworkService: mockService });
     const res = await request(app)
-      .get("/api/v1/albums/pixelcrafter/rpg-items/artworks")
+      .get("/api/v1/albums/pixelcrafter/rpg-items/stories/opening/artworks")
       .set("Cookie", [`${config.session.cookieName}=${authCookie}`]);
 
     assert.equal(res.status, 200);
@@ -283,9 +313,10 @@ describe("Artwork API Integration Tests", () => {
     let capturedCommitMessage = null;
 
     const mockService = {
-      createArtwork: async (token, user, owner, repo, data, branch) => {
+      createArtwork: async (token, user, owner, repo, storyId, data, branch) => {
         assert.equal(owner, "pixelcrafter");
         assert.equal(repo, "rpg-items");
+        assert.equal(storyId, "opening");
         assert.equal(branch, "master");
         capturedCommitMessage = `feat(artwork): add ${data.name}`;
 
@@ -311,7 +342,7 @@ describe("Artwork API Integration Tests", () => {
 
     const app = createApp({ artworkService: mockService });
     const res = await request(app)
-      .post("/api/v1/albums/pixelcrafter/rpg-items/artworks")
+      .post("/api/v1/albums/pixelcrafter/rpg-items/stories/opening/artworks")
       .set("Cookie", [`${config.session.cookieName}=${authCookie}`])
       .send({
         name: "iron-pickaxe",
@@ -327,7 +358,8 @@ describe("Artwork API Integration Tests", () => {
 
   it("fetches single artwork JSON and file SHA", async () => {
     const mockService = {
-      getArtwork: async (token, owner, repo, artworkId, branch) => {
+      getArtwork: async (token, owner, repo, storyId, artworkId, branch) => {
+        assert.equal(storyId, "opening");
         assert.equal(artworkId, "golden-apple");
         return {
           artwork: {
@@ -350,7 +382,7 @@ describe("Artwork API Integration Tests", () => {
 
     const app = createApp({ artworkService: mockService });
     const res = await request(app)
-      .get("/api/v1/albums/pixelcrafter/rpg-items/artworks/golden-apple")
+      .get("/api/v1/albums/pixelcrafter/rpg-items/stories/opening/artworks/golden-apple")
       .set("Cookie", [`${config.session.cookieName}=${authCookie}`]);
 
     assert.equal(res.status, 200);
@@ -363,7 +395,8 @@ describe("Artwork API Integration Tests", () => {
     cells[0] = "#e63946";
 
     const mockService = {
-      saveArtwork: async (token, user, owner, repo, artworkId, payload, branch) => {
+      saveArtwork: async (token, user, owner, repo, storyId, artworkId, payload, branch) => {
+        assert.equal(storyId, "opening");
         assert.equal(artworkId, "diamond-sword");
         assert.equal(payload.sha, "expected_sha_123");
         return {
@@ -376,7 +409,7 @@ describe("Artwork API Integration Tests", () => {
 
     const app = createApp({ artworkService: mockService });
     const res = await request(app)
-      .put("/api/v1/albums/pixelcrafter/rpg-items/artworks/diamond-sword")
+      .put("/api/v1/albums/pixelcrafter/rpg-items/stories/opening/artworks/diamond-sword")
       .set("Cookie", [`${config.session.cookieName}=${authCookie}`])
       .send({
         sha: "expected_sha_123",
@@ -413,7 +446,7 @@ describe("Artwork API Integration Tests", () => {
 
     const app = createApp({ artworkService: mockService });
     const res = await request(app)
-      .put("/api/v1/albums/pixelcrafter/rpg-items/artworks/stale-artwork")
+      .put("/api/v1/albums/pixelcrafter/rpg-items/stories/opening/artworks/stale-artwork")
       .set("Cookie", [`${config.session.cookieName}=${authCookie}`])
       .send({
         sha: "old_sha_mismatch",
@@ -440,11 +473,11 @@ describe("Artwork API Integration Tests", () => {
     let deletedId = null;
 
     const mockService = {
-      deleteArtwork: async (token, user, owner, repo, artworkId, sha, branch) => {
+      deleteArtwork: async (token, user, owner, repo, storyId, artworkId, sha, branch) => {
         deletedId = artworkId;
         return { success: true, artworkId };
       },
-      getArtworkHistory: async (token, owner, repo, artworkId, branch) => {
+      getArtworkHistory: async (token, owner, repo, storyId, artworkId, branch) => {
         return [
           {
             sha: "commit_1",
@@ -461,7 +494,7 @@ describe("Artwork API Integration Tests", () => {
 
     // History
     const historyRes = await request(app)
-      .get("/api/v1/albums/pixelcrafter/rpg-items/artworks/shield/commits")
+      .get("/api/v1/albums/pixelcrafter/rpg-items/stories/opening/artworks/shield/commits")
       .set("Cookie", [`${config.session.cookieName}=${authCookie}`]);
 
     assert.equal(historyRes.status, 200);
@@ -470,7 +503,7 @@ describe("Artwork API Integration Tests", () => {
 
     // Delete
     const deleteRes = await request(app)
-      .delete("/api/v1/albums/pixelcrafter/rpg-items/artworks/shield")
+      .delete("/api/v1/albums/pixelcrafter/rpg-items/stories/opening/artworks/shield")
       .set("Cookie", [`${config.session.cookieName}=${authCookie}`])
       .send({ sha: "sha_to_delete" });
 

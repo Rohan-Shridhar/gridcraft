@@ -5,432 +5,523 @@ import {
   slugifyRepoName,
 } from "../validators/albumValidator.js";
 import { APP_VERSION } from "../config/version.js";
+import { githubRequest } from "../utils/githubClient.js";
+import { appStore } from "./appStore.js";
 
-const GITHUB_API_URL = "https://api.github.com";
-const GITHUB_API_HEADERS = {
-  Accept: "application/vnd.github+json",
-  "User-Agent": `GridCraft/${APP_VERSION}`,
-  "X-GitHub-Api-Version": "2022-11-28",
-};
+export const ARTWORKS_REPOSITORY = "gridcraft-artworks";
+
+function albumPath(slug) {
+  return slug;
+}
+
+function mapAlbumToApi(album) {
+  const branch = album.defaultBranch || "master";
+  const htmlUrl = `https://github.com/${album.owner}/${ARTWORKS_REPOSITORY}/tree/${encodeURIComponent(branch)}/${albumPath(album.slug)}`;
+  return {
+    id: album.id,
+    name: album.name,
+    slug: album.slug,
+    fullName: `${album.owner}/${ARTWORKS_REPOSITORY}/${albumPath(album.slug)}`,
+    owner: album.owner,
+    ownerAvatar: album.ownerAvatar || null,
+    description: album.description,
+    isPrivate: false,
+    defaultBranch: branch,
+    htmlUrl,
+    updatedAt: album.updatedAt,
+    createdAt: album.createdAt,
+    isGridCraftAlbum: true,
+    fork: Boolean(album.parent),
+    parent: album.parent
+      ? {
+          owner: album.parent.owner,
+          name: album.parent.slug,
+          slug: album.parent.slug,
+          fullName:           `${album.parent.owner}/${ARTWORKS_REPOSITORY}/${albumPath(album.parent.slug)}`,
+          htmlUrl: `https://github.com/${album.parent.owner}/${ARTWORKS_REPOSITORY}/tree/${encodeURIComponent(album.defaultBranch || "master")}/${albumPath(album.parent.slug)}`,
+        }
+      : null,
+  };
+}
 
 export class AlbumService {
-  constructor(fetchFn = globalThis.fetch) {
+  constructor(fetchFn = globalThis.fetch, store = appStore) {
     this.fetch = fetchFn;
+    this.store = store;
   }
 
   async #request(endpoint, accessToken, options = {}) {
-    const url = endpoint.startsWith("http") ? endpoint : `${GITHUB_API_URL}${endpoint}`;
-    const headers = {
-      ...GITHUB_API_HEADERS,
-      Authorization: `Bearer ${accessToken}`,
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
-    };
+    return githubRequest(this.fetch, endpoint, accessToken, options);
+  }
 
-    const response = await this.fetch(url, { ...options, headers });
-
-    if (response.status === 204) {
-      return null;
-    }
-
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      const err = new Error(data?.message || `GitHub API request failed with status ${response.status}`);
-      err.status = response.status;
-      err.githubData = data;
-      throw err;
-    }
-
+  async #getRepository(accessToken, owner) {
+    const { data } = await this.#request(
+      `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}`,
+      accessToken
+    );
     return data;
   }
 
-  async listAlbums(accessToken, { page = 1, perPage = 30 } = {}) {
-    const repos = await this.#request(
-      `/user/repos?type=all&sort=updated&per_page=${perPage}&page=${page}`,
-      accessToken
-    );
-
-    // Filter or tag GridCraft albums
-    const albums = repos.map((repo) => {
-      const topics = repo.topics || [];
-      const isGridCraft =
-        topics.includes("gridcraft-album") ||
-        topics.includes("gridcraft") ||
-        repo.description?.toLowerCase().includes("gridcraft");
-
-      return {
-        id: repo.id,
-        name: repo.name,
-        fullName: repo.full_name,
-        owner: repo.owner.login,
-        ownerAvatar: repo.owner.avatar_url,
-        description: repo.description || "",
-        isPrivate: repo.private,
-        defaultBranch: repo.default_branch,
-        htmlUrl: repo.html_url,
-        updatedAt: repo.updated_at,
-        createdAt: repo.created_at,
-        isGridCraftAlbum: isGridCraft,
-        permissions: repo.permissions || {},
-        fork: repo.fork,
-      };
-    });
-
-    return {
-      albums,
-      page,
-      perPage,
-      total: albums.length,
-    };
-  }
-
-  async createAlbum(accessToken, user, inputData) {
-    const validated = CreateAlbumSchema.parse(inputData);
-    const repoName = slugifyRepoName(validated.name);
-
-    if (!repoName) {
-      const err = new Error("Invalid repository name.");
-      err.status = 400;
-      throw err;
+  async #ensureRepository(accessToken, user) {
+    let repository;
+    try {
+      repository = await this.#getRepository(accessToken, user.login);
+    } catch (error) {
+      if (error.status !== 404) throw error;
     }
 
-    // 1. Create GitHub repository under authenticated user's account
-    let repo;
+    if (!repository) {
+      try {
+        const { data } = await this.#request("/user/repos", accessToken, {
+          method: "POST",
+          body: JSON.stringify({
+            name: ARTWORKS_REPOSITORY,
+            description: "GridCraft albums, stories, and pixel artworks",
+            private: false,
+            auto_init: true,
+          }),
+          retry: false,
+        });
+        repository = data;
+      } catch (error) {
+        if (error.status !== 422) throw error;
+        repository = await this.#getRepository(accessToken, user.login);
+      }
+    }
+
+    if (repository.private) {
+      const error = new Error(
+        `Make ${user.login}/${ARTWORKS_REPOSITORY} public before creating shared GridCraft albums.`
+      );
+      error.status = 409;
+      throw error;
+    }
+
+    const rootPath = ".gridcraft/catalog.json";
+    const defaultBranch = repository.default_branch || "master";
     try {
-      repo = await this.#request("/user/repos", accessToken, {
-        method: "POST",
-        body: JSON.stringify({
-          name: repoName,
-          description: validated.description || "GridCraft pixel art album",
-          private: !!validated.isPrivate,
-          auto_init: true, // Creates initial commit so branches exist
-        }),
-      });
-    } catch (err) {
-      if (err.status === 422) {
-        const error = new Error(`Repository "${repoName}" already exists or name is unavailable.`);
-        error.status = 409;
+      await this.#readFile(accessToken, user.login, rootPath, defaultBranch);
+    } catch (error) {
+      if (error.status !== 404) throw error;
+      await this.#writeFile(
+        accessToken,
+        user.login,
+        rootPath,
+        JSON.stringify({ format: "gridcraft-artworks", schemaVersion: 1 }, null, 2),
+        "chore: initialize GridCraft artwork library",
+        defaultBranch
+      );
+    }
+    this.store.upsertUser(user);
+    this.store.setUserDefaultBranch(user.id, defaultBranch);
+    return repository;
+  }
+
+  async #syncUserAlbums(accessToken, user, repository) {
+    const branch = repository.default_branch || "master";
+    const { data: tree } = await this.#request(
+      `/repos/${encodeURIComponent(user.login)}/${ARTWORKS_REPOSITORY}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+      accessToken
+    );
+    if (tree.truncated) {
+      const error = new Error("The artwork library is too large to safely index.");
+      error.status = 422;
+      throw error;
+    }
+
+    this.store.upsertUser(user);
+    this.store.setUserDefaultBranch(user.id, branch);
+    const manifests = (tree.tree || []).filter(
+      (item) => item.type === "blob" && /^[^/]+\/album\.json$/.test(item.path)
+    );
+    for (const item of manifests) {
+      const slug = item.path.split("/")[0];
+      const file = await this.#readFile(accessToken, user.login, item.path, branch);
+      const manifest = AlbumManifestSchema.parse(
+        JSON.parse(Buffer.from(file.content, "base64").toString("utf8"))
+      );
+      if (manifest.id !== slug) {
+        const error = new Error(`Album manifest id does not match its folder: ${item.path}`);
+        error.status = 422;
         throw error;
       }
-      throw err;
-    }
-
-    const owner = repo.owner.login;
-    let currentDefaultBranch = repo.default_branch || "main";
-
-    // 2. Ensure default branch is "master"
-    if (currentDefaultBranch !== "master") {
-      try {
-        await this.#request(`/repos/${owner}/${repoName}/branches/${currentDefaultBranch}/rename`, accessToken, {
-          method: "POST",
-          body: JSON.stringify({ new_name: "master" }),
-        });
-      } catch (renameErr) {
-        // Fallback: If branch rename API fails, attempt to create master ref and update repo default branch
-        try {
-          const refData = await this.#request(`/repos/${owner}/${repoName}/git/ref/heads/${currentDefaultBranch}`, accessToken);
-          const sha = refData.object.sha;
-          await this.#request(`/repos/${owner}/${repoName}/git/refs`, accessToken, {
-            method: "POST",
-            body: JSON.stringify({ ref: "refs/heads/master", sha }),
-          });
-          await this.#request(`/repos/${owner}/${repoName}`, accessToken, {
-            method: "PATCH",
-            body: JSON.stringify({ default_branch: "master" }),
-          });
-        } catch {
-          console.warn("Could not rename or switch default branch to master:", renameErr.message);
-        }
-      }
-
-      // Verify default branch is indeed "master"
-      const verifiedRepo = await this.#request(`/repos/${owner}/${repoName}`, accessToken);
-      if (verifiedRepo.default_branch !== "master") {
-        const err = new Error(
-          `Failed to set default branch to "master". Repository initial branch remained "${verifiedRepo.default_branch}".`
-        );
-        err.status = 502;
-        throw err;
-      }
-      repo = verifiedRepo;
-    }
-
-    // 3. Set topics: ["gridcraft", "gridcraft-album"]
-    try {
-      await this.#request(`/repos/${owner}/${repoName}/topics`, accessToken, {
-        method: "PUT",
-        body: JSON.stringify({ names: ["gridcraft", "gridcraft-album"] }),
-      });
-    } catch (topicErr) {
-      console.warn("Setting repository topics non-fatal error:", topicErr.message);
-    }
-
-    // 4. Construct album manifest
-    const manifest = {
-      format: "gridcraft-album",
-      schemaVersion: 1,
-      id: repoName,
-      name: validated.name,
-      description: validated.description || "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdWith: {
-        name: "GridCraft",
-        version: APP_VERSION,
-      },
-    };
-
-    AlbumManifestSchema.parse(manifest);
-
-    // 5. Commit initial album manifest and directory structures
-    const commitFile = async (filePath, content, message) => {
-      const encoded = Buffer.from(content, "utf8").toString("base64");
-      return this.#request(`/repos/${owner}/${repoName}/contents/${filePath}`, accessToken, {
-        method: "PUT",
-        body: JSON.stringify({
-          message,
-          content: encoded,
-          branch: "master",
-        }),
-      });
-    };
-
-    const readmeContent =
-      validated.readme ||
-      `# ${validated.name}\n\n${validated.description || "A pixel art album created with GridCraft."}\n\n## Repository Structure\n- \`.gridcraft/album.json\`: Album manifest\n- \`artworks/\`: Pixel art canvas files\n- \`stories/\`: Story animations and playlists\n\nCreated with [GridCraft](https://github.com/Rohan-Shridhar/gridcraft).\n`;
-
-    // Commit files in master branch
-    await commitFile(
-      ".gridcraft/album.json",
-      JSON.stringify(manifest, null, 2),
-      "chore(gridcraft): initialize album manifest"
-    );
-
-    await commitFile(
-      "artworks/.gitkeep",
-      "",
-      "chore(gridcraft): initialize artworks directory"
-    );
-
-    await commitFile(
-      "stories/.gitkeep",
-      "",
-      "chore(gridcraft): initialize stories directory"
-    );
-
-    // Update README if default was created during auto_init
-    try {
-      const existingReadme = await this.#request(
-        `/repos/${owner}/${repoName}/contents/README.md?ref=master`,
-        accessToken
-      ).catch(() => null);
-
-      const encodedReadme = Buffer.from(readmeContent, "utf8").toString("base64");
-      await this.#request(`/repos/${owner}/${repoName}/contents/README.md`, accessToken, {
-        method: "PUT",
-        body: JSON.stringify({
-          message: "docs(gridcraft): initialize album documentation",
-          content: encodedReadme,
-          branch: "master",
-          ...(existingReadme?.sha ? { sha: existingReadme.sha } : {}),
-        }),
-      });
-    } catch (readmeErr) {
-      console.warn("Non-fatal README update error:", readmeErr.message);
-    }
-
-    return {
-      repo: {
-        id: repo.id,
-        name: repo.name,
-        fullName: repo.full_name,
-        owner: repo.owner.login,
-        ownerAvatar: repo.owner.avatar_url,
-        description: repo.description,
-        isPrivate: repo.private,
-        defaultBranch: "master",
-        htmlUrl: repo.html_url,
-        updatedAt: repo.updated_at,
-        createdAt: repo.created_at,
-      },
-      manifest,
-    };
-  }
-
-  async getAlbum(accessToken, owner, repoName) {
-    const repo = await this.#request(`/repos/${owner}/${repoName}`, accessToken);
-
-    let manifest = null;
-    let isGridCraftAlbum = false;
-
-    try {
-      const file = await this.#request(
-        `/repos/${owner}/${repoName}/contents/.gridcraft/album.json?ref=master`,
-        accessToken
-      );
-      if (file && file.content) {
-        const rawJson = Buffer.from(file.content, "base64").toString("utf8");
-        const parsed = JSON.parse(rawJson);
-        manifest = AlbumManifestSchema.parse(parsed);
-        isGridCraftAlbum = true;
-      }
-    } catch {
-      // Not a GridCraft album or manifest missing
-    }
-
-    return {
-      repo: {
-        id: repo.id,
-        name: repo.name,
-        fullName: repo.full_name,
-        owner: repo.owner.login,
-        ownerAvatar: repo.owner.avatar_url,
-        description: repo.description || "",
-        isPrivate: repo.private,
-        defaultBranch: repo.default_branch,
-        htmlUrl: repo.html_url,
-        updatedAt: repo.updated_at,
-        createdAt: repo.created_at,
-        permissions: repo.permissions || {},
-        fork: repo.fork,
-        parent: repo.parent
-          ? {
-              fullName: repo.parent.full_name,
-              owner: repo.parent.owner?.login,
-              name: repo.parent.name,
-              htmlUrl: repo.parent.html_url,
-              defaultBranch: repo.parent.default_branch,
-            }
-          : null,
-        source: repo.source
-          ? {
-              fullName: repo.source.full_name,
-              owner: repo.source.owner?.login,
-              name: repo.source.name,
-              htmlUrl: repo.source.html_url,
-              defaultBranch: repo.source.default_branch,
-            }
-          : null,
-        topics: repo.topics || [],
-      },
-      manifest,
-      isGridCraftAlbum,
-    };
-  }
-
-  async updateAlbum(accessToken, owner, repoName, inputData) {
-    const validated = UpdateAlbumSchema.parse(inputData);
-
-    const updatePayload = {};
-    if (validated.description !== undefined) {
-      updatePayload.description = validated.description;
-    }
-    if (validated.isPrivate !== undefined) {
-      updatePayload.private = validated.isPrivate;
-    }
-
-    let updatedRepo = null;
-    if (Object.keys(updatePayload).length > 0) {
-      updatedRepo = await this.#request(`/repos/${owner}/${repoName}`, accessToken, {
-        method: "PATCH",
-        body: JSON.stringify(updatePayload),
+      const parentAlbumId = manifest.parent
+        ? this.store.getAlbum(manifest.parent.owner, manifest.parent.slug)?.id || null
+        : null;
+      this.store.upsertAlbum(user, {
+        slug,
+        name: manifest.name,
+        description: manifest.description,
+        createdAt: manifest.createdAt,
+        updatedAt: manifest.updatedAt,
+        parentAlbumId,
       });
     }
-
-    return this.getAlbum(accessToken, owner, repoName);
   }
 
-  async deleteAlbum(accessToken, owner, repoName, confirmName) {
-    if (confirmName !== repoName) {
-      const err = new Error(`Confirmation name "${confirmName}" does not match repository name "${repoName}".`);
-      err.status = 400;
-      throw err;
-    }
-
-    await this.#request(`/repos/${owner}/${repoName}`, accessToken, {
-      method: "DELETE",
-    });
-
-    return { success: true, message: `Album ${owner}/${repoName} deleted.` };
-  }
-
-  async listCommits(accessToken, owner, repoName, branch = "master") {
-    const commits = await this.#request(
-      `/repos/${owner}/${repoName}/commits?sha=${branch}&per_page=20`,
+  async #readFile(accessToken, owner, filePath, branch = "master") {
+    const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
+    const { data } = await this.#request(
+      `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`,
       accessToken
     );
-
-    return (commits || []).map((c) => ({
-      sha: c.sha,
-      shortSha: c.sha.slice(0, 7),
-      message: c.commit.message,
-      author: c.commit.author.name,
-      authorLogin: c.author?.login || c.commit.author.name,
-      authorAvatar: c.author?.avatar_url || null,
-      date: c.commit.author.date,
-      htmlUrl: c.html_url,
-    }));
+    return data;
   }
 
-  async getTree(accessToken, owner, repoName, branch = "master") {
-    try {
-      const treeData = await this.#request(
-        `/repos/${owner}/${repoName}/git/trees/${branch}?recursive=1`,
-        accessToken
-      );
-
-      return (treeData.tree || []).map((item) => ({
-        path: item.path,
-        mode: item.mode,
-        type: item.type, // 'blob' or 'tree'
-        sha: item.sha,
-        size: item.size,
-      }));
-    } catch (err) {
-      console.warn("Tree fetch failed:", err.message);
-      return [];
-    }
-  }
-
-  async initializeExistingRepo(accessToken, user, owner, repoName) {
-    const albumData = await this.getAlbum(accessToken, owner, repoName);
-    if (albumData.isGridCraftAlbum && albumData.manifest) {
-      return albumData;
-    }
-
-    const manifest = {
-      format: "gridcraft-album",
-      schemaVersion: 1,
-      id: repoName,
-      name: albumData.repo.name,
-      description: albumData.repo.description || "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdWith: {
-        name: "GridCraft",
-        version: APP_VERSION,
-      },
-    };
-
-    AlbumManifestSchema.parse(manifest);
-
-    // Commit .gridcraft/album.json
-    const encoded = Buffer.from(JSON.stringify(manifest, null, 2), "utf8").toString("base64");
-    await this.#request(
-      `/repos/${owner}/${repoName}/contents/.gridcraft/album.json`,
+  async #writeFile(accessToken, owner, filePath, content, message, branch = "master", sha) {
+    const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
+    const { data } = await this.#request(
+      `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/contents/${encodedPath}`,
       accessToken,
       {
         method: "PUT",
         body: JSON.stringify({
-          message: "chore(gridcraft): initialize album manifest",
-          content: encoded,
-          branch: albumData.repo.defaultBranch || "master",
+          message,
+          content: Buffer.from(content, "utf8").toString("base64"),
+          branch,
+          ...(sha ? { sha } : {}),
         }),
       }
     );
+    return data;
+  }
 
-    return this.getAlbum(accessToken, owner, repoName);
+  #requireOwner(user, owner) {
+    if (user?.login?.toLowerCase() !== owner.toLowerCase()) {
+      const error = new Error("Only the owner can change files in this album.");
+      error.status = 403;
+      error.code = "FORBIDDEN";
+      throw error;
+    }
+  }
+
+  async listAlbums(accessToken, { page = 1, perPage = 30, user } = {}) {
+    if (user?.id && user.login) {
+      const repository = await this.#ensureRepository(accessToken, user);
+      await this.#syncUserAlbums(accessToken, user, repository);
+    }
+    const result = this.store.listAlbums({ page, perPage });
+    const albums = result.albums.map(mapAlbumToApi);
+    return { ...result, albums };
+  }
+
+  async createAlbum(accessToken, user, inputData) {
+    const validated = CreateAlbumSchema.parse(inputData);
+    const slug = slugifyRepoName(validated.name);
+    if (!slug) {
+      const error = new Error("Invalid album name.");
+      error.status = 400;
+      throw error;
+    }
+
+    const repository = await this.#ensureRepository(accessToken, user);
+    await this.#syncUserAlbums(accessToken, user, repository);
+    if (this.store.getAlbum(user.login, slug)) {
+      const error = new Error(`Album "${slug}" already exists.`);
+      error.status = 409;
+      throw error;
+    }
+
+    const now = new Date().toISOString();
+    const manifest = AlbumManifestSchema.parse({
+      format: "gridcraft-album",
+      schemaVersion: 1,
+      id: slug,
+      name: validated.name,
+      description: validated.description,
+      createdAt: now,
+      updatedAt: now,
+      createdWith: { name: "GridCraft", version: APP_VERSION },
+    });
+    await this.#writeFile(
+      accessToken,
+      user.login,
+      `${albumPath(slug)}/album.json`,
+      JSON.stringify(manifest, null, 2),
+      `feat(album): add ${slug}`,
+      repository.default_branch || "master"
+    );
+    const album = this.store.createAlbum(user, {
+      slug,
+      name: validated.name,
+      description: validated.description,
+    });
+    return {
+      repo: mapAlbumToApi(album),
+      manifest,
+    };
+  }
+
+  async forkAlbum(accessToken, user, owner, slug) {
+    const source = this.store.getAlbum(owner, slug);
+    if (!source) {
+      const error = new Error("Album was not found in GridCraft.");
+      error.status = 404;
+      throw error;
+    }
+    let forkSlug = source.slug;
+    let suffix = 2;
+    while (this.store.getAlbum(user.login, forkSlug)) {
+      forkSlug = `${source.slug}-${suffix}`;
+      suffix += 1;
+    }
+
+    const destinationRepo = await this.#ensureRepository(accessToken, user);
+    const sourceRepo = await this.#getRepository(accessToken, source.owner);
+    const branch = sourceRepo.default_branch || "master";
+    const { data: tree } = await this.#request(
+      `/repos/${encodeURIComponent(source.owner)}/${ARTWORKS_REPOSITORY}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+      accessToken
+    );
+    if (tree.truncated) {
+      const error = new Error("The source artwork library is too large to safely fork.");
+      error.status = 422;
+      throw error;
+    }
+    const sourcePrefix = `${albumPath(source.slug)}/`;
+    const files = (tree.tree || []).filter(
+      (item) => item.type === "blob" && item.path.startsWith(sourcePrefix)
+    );
+    let manifest;
+    const copies = [];
+    for (const item of files) {
+      const relativePath = item.path.slice(sourcePrefix.length);
+      const { data: file } = await this.#request(
+        `/repos/${encodeURIComponent(source.owner)}/${ARTWORKS_REPOSITORY}/git/blobs/${encodeURIComponent(item.sha)}`,
+        accessToken
+      );
+      if (file.encoding !== "base64" || typeof file.content !== "string") {
+        const error = new Error(`Source artwork file could not be read: ${item.path}`);
+        error.status = 422;
+        throw error;
+      }
+      let content = Buffer.from(file.content.replace(/\s/g, ""), "base64").toString("utf8");
+      if (relativePath === "album.json") {
+        manifest = AlbumManifestSchema.parse(JSON.parse(content));
+        manifest = AlbumManifestSchema.parse({
+          ...manifest,
+          id: forkSlug,
+          name: `${source.name} (fork)`.slice(0, 100),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          parent: { owner: source.owner, slug: source.slug },
+        });
+        content = JSON.stringify(manifest, null, 2);
+      }
+      copies.push({ path: `${albumPath(forkSlug)}/${relativePath}`, content });
+    }
+
+    if (!manifest) {
+      const error = new Error("Source album is missing its album manifest.");
+      error.status = 422;
+      throw error;
+    }
+    const writtenFiles = [];
+    try {
+      for (const copy of copies) {
+        const result = await this.#writeFile(
+          accessToken,
+          user.login,
+          copy.path,
+          copy.content,
+          `fork(album): copy ${source.owner}/${source.slug}`,
+          destinationRepo.default_branch || "master"
+        );
+        writtenFiles.push({ path: copy.path, sha: result.content.sha });
+      }
+    } catch (error) {
+      const cleanupErrors = [];
+      for (const file of writtenFiles.reverse()) {
+        try {
+          const encodedPath = file.path.split("/").map(encodeURIComponent).join("/");
+          await this.#request(
+            `/repos/${encodeURIComponent(user.login)}/${ARTWORKS_REPOSITORY}/contents/${encodedPath}`,
+            accessToken,
+            {
+              method: "DELETE",
+              body: JSON.stringify({
+                message: `cleanup(fork): remove incomplete ${forkSlug}`,
+                sha: file.sha,
+                branch: destinationRepo.default_branch || "master",
+              }),
+            }
+          );
+        } catch (cleanupError) {
+          cleanupErrors.push(cleanupError.message);
+        }
+      }
+      if (cleanupErrors.length) {
+        error.message = `${error.message} Partial fork cleanup failed: ${cleanupErrors.join("; ")}`;
+        error.partialWriteCleanupFailed = true;
+      }
+      throw error;
+    }
+    const album = this.store.createAlbum(user, {
+      slug: forkSlug,
+      name: manifest.name,
+      description: manifest.description,
+      parentAlbumId: source.id,
+    });
+    return { repo: mapAlbumToApi(album), manifest };
+  }
+
+  async getAlbum(accessToken, owner, slug) {
+    let album = this.store.getAlbum(owner, slug);
+    let rootRepo;
+    if (!album) {
+      rootRepo = await this.#getRepository(accessToken, owner);
+      if (rootRepo.owner?.id && rootRepo.owner?.login) {
+        await this.#syncUserAlbums(
+          accessToken,
+          {
+            id: rootRepo.owner.id,
+            login: rootRepo.owner.login,
+            name: rootRepo.owner.name || rootRepo.owner.login,
+            avatarUrl: rootRepo.owner.avatar_url,
+            htmlUrl: rootRepo.owner.html_url,
+          },
+          rootRepo
+        );
+        album = this.store.getAlbum(owner, slug);
+      }
+    }
+    if (!album) {
+      const error = new Error("Album was not found in GridCraft.");
+      error.status = 404;
+      throw error;
+    }
+    rootRepo ||= await this.#getRepository(accessToken, owner);
+    this.store.setUserDefaultBranch(album.ownerId, rootRepo.default_branch || "master");
+    const file = await this.#readFile(accessToken, owner, `${albumPath(album.slug)}/album.json`, rootRepo.default_branch || "master");
+    const manifest = AlbumManifestSchema.parse(
+      JSON.parse(Buffer.from(file.content, "base64").toString("utf8"))
+    );
+    return {
+      repo: {
+        ...mapAlbumToApi(album),
+        defaultBranch: rootRepo.default_branch || "master",
+        ownerAvatar: rootRepo.owner?.avatar_url || null,
+        permissions: rootRepo.permissions || {},
+        fork: Boolean(album.parent),
+        parent: album.parent,
+        topics: ["gridcraft"],
+      },
+      manifest,
+      isGridCraftAlbum: true,
+    };
+  }
+
+  async updateAlbum(accessToken, user, owner, slug, inputData) {
+    this.#requireOwner(user, owner);
+    const validated = UpdateAlbumSchema.parse(inputData);
+    const album = this.store.getAlbum(owner, slug);
+    if (!album) {
+      const error = new Error("Album was not found in GridCraft.");
+      error.status = 404;
+      throw error;
+    }
+    const filePath = `${albumPath(album.slug)}/album.json`;
+    const rootRepo = await this.#getRepository(accessToken, owner);
+    const branch = rootRepo.default_branch || "master";
+    const file = await this.#readFile(accessToken, owner, filePath, branch);
+    const currentManifest = AlbumManifestSchema.parse(
+      JSON.parse(Buffer.from(file.content, "base64").toString("utf8"))
+    );
+    const manifest = AlbumManifestSchema.parse({
+      ...currentManifest,
+      name: validated.name || currentManifest.name,
+      description: validated.description ?? currentManifest.description,
+      updatedAt: new Date().toISOString(),
+    });
+    await this.#writeFile(
+      accessToken,
+      owner,
+      filePath,
+      JSON.stringify(manifest, null, 2),
+      `update(album): ${album.slug}`,
+      branch,
+      file.sha
+    );
+    const updatedAlbum = this.store.updateAlbum(album.id, {
+      name: manifest.name,
+      description: manifest.description,
+    });
+    return {
+      repo: mapAlbumToApi(updatedAlbum),
+      manifest,
+      isGridCraftAlbum: true,
+    };
+  }
+
+  async deleteAlbum(accessToken, user, owner, slug, confirmName) {
+    this.#requireOwner(user, owner);
+    const album = this.store.getAlbum(owner, slug);
+    if (!album) {
+      const error = new Error("Album was not found in GridCraft.");
+      error.status = 404;
+      throw error;
+    }
+    if (confirmName !== slug && confirmName !== album.name) {
+      const error = new Error("Confirmation name does not match the album.");
+      error.status = 400;
+      throw error;
+    }
+    const rootRepo = await this.#getRepository(accessToken, owner);
+    const branch = rootRepo.default_branch || "master";
+    const tree = await this.getTree(accessToken, owner, slug, branch);
+    for (const item of tree.sort((left, right) => right.path.length - left.path.length)) {
+      if (item.type !== "blob") continue;
+      const file = await this.#readFile(accessToken, owner, item.path, branch);
+      const encodedPath = item.path.split("/").map(encodeURIComponent).join("/");
+      await this.#request(`/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/contents/${encodedPath}`, accessToken, {
+        method: "DELETE",
+        body: JSON.stringify({
+          message: `delete(album): remove ${slug}`,
+          sha: file.sha,
+          branch,
+        }),
+      });
+    }
+    this.store.deleteAlbum(album.id);
+    return { success: true, message: `Album ${slug} and its GitHub files were deleted.` };
+  }
+
+  async listCommits(accessToken, owner, slug, branch = "master") {
+    const { data } = await this.#request(
+      `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/commits?path=${encodeURIComponent(albumPath(slug))}&sha=${encodeURIComponent(branch)}&per_page=20`,
+      accessToken
+    );
+    return (data || []).map((commit) => ({
+      sha: commit.sha,
+      shortSha: commit.sha.slice(0, 7),
+      message: commit.commit.message,
+      author: commit.commit.author?.name,
+      authorLogin: commit.author?.login || commit.commit.author?.name,
+      authorAvatar: commit.author?.avatar_url || null,
+      date: commit.commit.author?.date,
+      htmlUrl: commit.html_url,
+    }));
+  }
+
+  async getTree(accessToken, owner, slug, branch = "master") {
+    const { data } = await this.#request(
+      `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+      accessToken
+    );
+    const prefix = `${albumPath(slug)}/`;
+    return (data.tree || [])
+      .filter((item) => item.path.startsWith(prefix))
+      .map((item) => ({
+        path: item.path,
+        mode: item.mode,
+        type: item.type,
+        sha: item.sha,
+        size: item.size,
+      }));
+  }
+
+  async initializeExistingRepo(accessToken, user) {
+    return this.#ensureRepository(accessToken, user);
   }
 }
 

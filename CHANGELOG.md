@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0] - 2026-11-11
+
+### Changed
+- Replaced the repository-per-album model with one `gridcraft-artworks` repository per signed-in creator; albums, Stories, and artwork files are nested folders/files in that library.
+- Moved GridCraft issues and pull requests, including comments and reviews, into GridCraft-managed SQLite records rather than GitHub Issues/Pull Requests.
+- Changed album forks to copy an album folder and its contents into the current user's artwork repository.
+- Added a persistent SQLite album index and synchronized it against the user's library.
+- Updated the API and documentation to describe the shared artwork-library model.
+
 ## [3.11.0] - 2026-11-11
 
 ### Added

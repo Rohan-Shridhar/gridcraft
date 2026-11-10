@@ -75,15 +75,17 @@ PNG. The export removes grid lines and spacing, and preserves transparency.
 
 ## Save artwork to an album
 
-Sign in with GitHub, open the dashboard, and select an album. The **Artworks**
-tab lists that repository's artwork files. Choose **New Artwork** to set its
-name, description, and grid size, then open it to edit on the pixel canvas.
+Sign in with GitHub to initialize your `gridcraft-artworks` library. Each album
+is a folder at the repository root; each Story is a folder inside an album,
+and each artwork is a JSON file inside its Story folder. Open an album and
+choose a Story to browse and edit its artwork on the pixel canvas.
 
 Canvas changes stay local until you select **Save to GitHub**. A save creates a
-versioned commit in the album and updates the artwork's file version. If someone
-else changed that file in the meantime, GridCraft stops the save. Compare the
-remote version, reload it (discarding local edits), or save your local drawing
-under a new artwork name; remote changes are never silently overwritten.
+versioned commit in the shared artwork library and updates the artwork's file
+version. If someone else changed that file in the meantime, GridCraft stops the
+save. Compare the remote version, reload it (discarding local edits), or save
+your local drawing under a new artwork name; remote changes are never silently
+overwritten.
 
 Use **Rename** to move an artwork to a new file name or **Delete** to remove it
 from the album after confirmation. The editor also shows recent commits for the
@@ -118,44 +120,26 @@ Use the branch selector in an album or artwork editor to switch branches. Album
 artworks and Stories are loaded from the selected branch, and new saves target
 that branch. The **Branches** tab supports creating a branch from the current
 branch, renaming or deleting eligible branches, comparing GitHub's actual
-comparison, and viewing commit history. The `master` default branch is marked
+comparison, and viewing commit history. The library's default branch is marked
 and cannot be deleted. Switching away from unsaved artwork or Story changes
 asks before discarding them.
 
-## Manage GitHub Issues
+## Issues and pull requests
 
-Open the **Issues** tab in an album to view open or closed issues. Filter by
-author, assignee, label, and search text; use pagination to browse results.
-Create issues with Markdown bodies, view and safely rendered comments, add a
-comment, edit title/body, and close or reopen an issue. **Open on GitHub**
-provides access to additional GitHub-native actions and permissions.
+The **Issues** and **Pull Requests** tabs are GridCraft collaboration features,
+not GitHub Issues or Pull Requests. GridCraft stores their titles, descriptions,
+comments, reviews, and state in its application database. Issues can be filtered,
+created, edited by their author or album owner, commented on, and closed or
+reopened. Pull requests compare artwork and Story files between albums; the
+base album owner can merge a request if the files have not changed since it was
+opened. GitHub does not receive a corresponding issue or pull request.
 
-## Review and contribute with pull requests
+## Fork an album
 
-Open an album's **Pull Requests** tab to browse open, closed, or all pull
-requests. Select one to inspect its GitHub status and mergeability, author,
-branches, commits, changed files, conversation, and reviews. Add a conversation
-comment or submit a comment, approval, or change-request review when GitHub
-allows it. **Open on GitHub** links to the original pull request.
-
-Choose **New pull request** to compare branches in the album or a listed fork.
-The album's default branch (normally `master`) is selected as the base. A merge
-is available only when GitHub reports the request as mergeable and your account
-has repository write permission. GridCraft asks for confirmation before sending
-the merge request to GitHub; conflicts and permission failures are shown rather
-than treated as a successful merge.
-
-## Fork an album and contribute upstream
-
-Select **Fork album** on an accessible repository to ask GitHub to create a
-native fork in your account. GridCraft shows progress while GitHub provisions
-the fork and then opens it. The fork page identifies its upstream repository.
-Branches, artwork, and Stories in your fork are ordinary GitHub data and remain
-subject to GitHub permissions and organization policies.
-
-On a fork, choose **Pull Requests** → **Contribute upstream** to propose a
-branch from the fork to the upstream album. GitHub creates the pull request;
-GridCraft does not copy files to simulate a fork or merge changes automatically.
+Choose **Fork album** to copy the album folder and all of its contents into your
+own `gridcraft-artworks` repository. The copy appears as a separate album in
+your dashboard and retains its source relationship in GridCraft. This is a
+folder copy, not a GitHub repository fork.
 
 ## Other controls
 

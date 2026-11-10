@@ -39,7 +39,7 @@ export class PullRequestController {
       if (!token) return;
       const { owner, repo, number } = req.params;
       const commentsPage = Math.max(1, parseInt(req.query.page || "1", 10));
-      const data = await this.service.getPull(token, owner, repo, number, commentsPage);
+      const data = await this.service.getPull(token, owner, repo, req.user, number, commentsPage);
       return res.json(data);
     } catch (err) {
       next(err);
@@ -51,7 +51,7 @@ export class PullRequestController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo } = req.params;
-      const result = await this.service.createPull(token, owner, repo, req.body);
+      const result = await this.service.createPull(token, owner, repo, req.user, req.body);
       return res.status(201).json(result);
     } catch (err) {
       next(err);
@@ -63,7 +63,7 @@ export class PullRequestController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, number } = req.params;
-      const result = await this.service.updatePull(token, owner, repo, number, req.body);
+      const result = await this.service.updatePull(token, owner, repo, req.user, number, req.body);
       return res.json(result);
     } catch (err) {
       next(err);
@@ -75,7 +75,7 @@ export class PullRequestController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, number } = req.params;
-      const result = await this.service.submitReview(token, owner, repo, number, req.body);
+      const result = await this.service.submitReview(token, owner, repo, req.user, number, req.body);
       return res.status(201).json(result);
     } catch (err) {
       next(err);
@@ -87,7 +87,7 @@ export class PullRequestController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, number } = req.params;
-      const result = await this.service.commentOnPull(token, owner, repo, number, req.body?.body);
+      const result = await this.service.commentOnPull(token, owner, repo, req.user, number, req.body?.body);
       return res.status(201).json(result);
     } catch (err) {
       next(err);
@@ -99,7 +99,7 @@ export class PullRequestController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, number } = req.params;
-      const result = await this.service.mergePull(token, owner, repo, number, req.body);
+      const result = await this.service.mergePull(token, owner, repo, req.user, number, req.body);
       return res.json(result);
     } catch (err) {
       next(err);

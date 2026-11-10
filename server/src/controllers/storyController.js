@@ -1,6 +1,11 @@
 import { storyService } from "../services/storyService.js";
 import { getSessionAccessToken } from "../middleware/auth.js";
-import { resolveBranch } from "../utils/githubClient.js";
+import { resolveBranch, resolveLibraryBranch } from "../utils/githubClient.js";
+
+async function branchFor(service, token, owner, req) {
+  if (!service.fetch) return resolveBranch(req) || "master";
+  return resolveLibraryBranch(service.fetch, token, owner, resolveBranch(req));
+}
 
 function requireToken(req, res) {
   const token = getSessionAccessToken(req);
@@ -23,7 +28,8 @@ export class StoryController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo } = req.params;
-      const stories = await this.service.listStories(token, owner, repo, resolveBranch(req));
+      const branch = await branchFor(this.service, token, owner, req);
+      const stories = await this.service.listStories(token, owner, repo, branch);
       return res.json({ stories });
     } catch (err) {
       next(err);
@@ -35,7 +41,8 @@ export class StoryController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, storyId } = req.params;
-      const data = await this.service.getStory(token, owner, repo, storyId, resolveBranch(req));
+      const branch = await branchFor(this.service, token, owner, req);
+      const data = await this.service.getStory(token, owner, repo, storyId, branch);
       return res.json(data);
     } catch (err) {
       next(err);
@@ -47,13 +54,14 @@ export class StoryController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo } = req.params;
+      const branch = await branchFor(this.service, token, owner, req);
       const result = await this.service.createStory(
         token,
         req.user,
         owner,
         repo,
         req.body,
-        resolveBranch(req)
+        branch
       );
       return res.status(201).json(result);
     } catch (err) {
@@ -66,6 +74,7 @@ export class StoryController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, storyId } = req.params;
+      const branch = await branchFor(this.service, token, owner, req);
       const result = await this.service.saveStory(
         token,
         req.user,
@@ -73,7 +82,7 @@ export class StoryController {
         repo,
         storyId,
         req.body,
-        resolveBranch(req)
+        branch
       );
       return res.json(result);
     } catch (err) {
@@ -86,6 +95,7 @@ export class StoryController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, storyId } = req.params;
+      const branch = await branchFor(this.service, token, owner, req);
       const result = await this.service.deleteStory(
         token,
         req.user,
@@ -93,7 +103,7 @@ export class StoryController {
         repo,
         storyId,
         req.body?.sha,
-        resolveBranch(req)
+        branch
       );
       return res.json(result);
     } catch (err) {
@@ -106,6 +116,7 @@ export class StoryController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, storyId } = req.params;
+      const branch = await branchFor(this.service, token, owner, req);
       const result = await this.service.addFrame(
         token,
         req.user,
@@ -114,7 +125,7 @@ export class StoryController {
         storyId,
         req.body,
         req.body?.sha,
-        resolveBranch(req)
+        branch
       );
       return res.json(result);
     } catch (err) {
@@ -127,6 +138,7 @@ export class StoryController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, storyId } = req.params;
+      const branch = await branchFor(this.service, token, owner, req);
       const result = await this.service.reorderFrames(
         token,
         req.user,
@@ -135,7 +147,7 @@ export class StoryController {
         storyId,
         req.body?.frameIds || req.body?.order || [],
         req.body?.sha,
-        resolveBranch(req)
+        branch
       );
       return res.json(result);
     } catch (err) {
