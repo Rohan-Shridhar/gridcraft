@@ -8,7 +8,7 @@ import {
 const GITHUB_API_URL = "https://api.github.com";
 const GITHUB_API_HEADERS = {
   Accept: "application/vnd.github+json",
-  "User-Agent": "GridCraft/3.5.0",
+  "User-Agent": "GridCraft/4.0.0",
   "X-GitHub-Api-Version": "2022-11-28",
 };
 
@@ -176,7 +176,7 @@ export class AlbumService {
       updatedAt: new Date().toISOString(),
       createdWith: {
         name: "GridCraft",
-        version: "3.5.0",
+        version: "4.0.0",
       },
     };
 
@@ -390,7 +390,7 @@ export class AlbumService {
       updatedAt: new Date().toISOString(),
       createdWith: {
         name: "GridCraft",
-        version: "3.5.0",
+        version: "4.0.0",
       },
     };
 

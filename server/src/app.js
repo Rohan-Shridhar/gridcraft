@@ -2,19 +2,39 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { config } from "./config/env.js";
+import { APP_NAME, APP_VERSION } from "./config/version.js";
 import { requestLogger } from "./middleware/logger.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
-import { loadSession } from "./middleware/auth.js";
+import { loadSession, requireAuth } from "./middleware/auth.js";
 import authRoutes, { createAuthRoutes } from "./routes/authRoutes.js";
 import { AuthController } from "./controllers/authController.js";
 import albumRoutes, { createAlbumRoutes } from "./routes/albumRoutes.js";
 import { AlbumController } from "./controllers/albumController.js";
+import { ArtworkController } from "./controllers/artworkController.js";
+import { StoryController } from "./controllers/storyController.js";
+import { BranchController } from "./controllers/branchController.js";
+import { IssueController } from "./controllers/issueController.js";
+import { PullRequestController } from "./controllers/pullRequestController.js";
+import { ForkController } from "./controllers/forkController.js";
+import { forkController as defaultForkController } from "./controllers/forkController.js";
 
 export function createApp({
   authService,
   authController,
   albumService,
   albumController,
+  artworkService,
+  artworkController,
+  storyService,
+  storyController,
+  branchService,
+  branchController,
+  issueService,
+  issueController,
+  pullService,
+  pullController,
+  forkService,
+  forkController,
 } = {}) {
   const app = express();
 
@@ -25,14 +45,24 @@ export function createApp({
     resolvedAuthRoutes = createAuthRoutes(new AuthController(authService));
   }
 
+  const extras = {
+    artworkCtrl: artworkController || (artworkService ? new ArtworkController(artworkService) : undefined),
+    storyCtrl: storyController || (storyService ? new StoryController(storyService) : undefined),
+    branchCtrl: branchController || (branchService ? new BranchController(branchService) : undefined),
+    issueCtrl: issueController || (issueService ? new IssueController(issueService) : undefined),
+    pullCtrl: pullController || (pullService ? new PullRequestController(pullService) : undefined),
+    forkCtrl: forkController || (forkService ? new ForkController(forkService) : undefined),
+  };
+
+  const hasExtras = Object.values(extras).some(Boolean);
   let resolvedAlbumRoutes = albumRoutes;
-  if (albumController) {
-    resolvedAlbumRoutes = createAlbumRoutes(albumController);
-  } else if (albumService) {
-    resolvedAlbumRoutes = createAlbumRoutes(new AlbumController(albumService));
+  if (albumController || albumService || hasExtras) {
+    const ctrl = albumController || new AlbumController(albumService);
+    resolvedAlbumRoutes = createAlbumRoutes(ctrl, extras);
   }
 
-  // Cross-Origin Resource Sharing
+  const resolvedForkController = extras.forkCtrl || defaultForkController;
+
   const allowedOrigins = [
     config.frontendUrl,
     "http://localhost:5173",
@@ -42,7 +72,6 @@ export function createApp({
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps, curl, server-to-server)
         if (!origin || allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
@@ -53,19 +82,16 @@ export function createApp({
   );
 
   app.use(cookieParser());
-  app.use(express.json());
+  app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: true }));
   app.use(requestLogger);
-
-  // Attach session user to req if session cookie exists
   app.use(loadSession);
 
-  // Health check routes
   const healthCheck = (req, res) => {
     res.json({
       status: "ok",
-      version: "3.4.0",
-      app: "GridCraft",
+      version: APP_VERSION,
+      app: APP_NAME,
       githubApp: config.github.appName,
       timestamp: new Date().toISOString(),
     });
@@ -74,14 +100,11 @@ export function createApp({
   app.get("/health", healthCheck);
   app.get("/api/v1/health", healthCheck);
 
-  // Mount API v1 routes
   app.use("/api/v1/auth", resolvedAuthRoutes);
   app.use("/api/v1/albums", resolvedAlbumRoutes);
+  app.get("/api/v1/forks", requireAuth, resolvedForkController.listUserForks);
 
-  // Fallthrough 404 handler
   app.use(notFoundHandler);
-
-  // Global centralized error handler
   app.use(errorHandler);
 
   return app;

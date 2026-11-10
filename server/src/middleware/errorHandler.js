@@ -13,13 +13,17 @@ export function errorHandler(err, req, res, next) {
   // Never log raw sensitive errors with tokens
   console.error(`[ERROR] ${req.method} ${req.path}:`, err.message || err);
 
-  const statusCode = err.status || err.statusCode || 500;
-  const errorCode = err.code || (statusCode === 500 ? "INTERNAL_SERVER_ERROR" : "REQUEST_FAILED");
+  const isZod = err?.name === "ZodError" || Array.isArray(err?.issues);
+  const statusCode = isZod ? 400 : err.status || err.statusCode || 500;
+  const errorCode = isZod
+    ? "VALIDATION_ERROR"
+    : err.code || (statusCode === 500 ? "INTERNAL_SERVER_ERROR" : "REQUEST_FAILED");
+  const zodMessage = isZod ? err.issues?.[0]?.message : null;
 
   res.status(statusCode).json({
     error: {
       code: errorCode,
-      message: err.userMessage || err.message || "An unexpected error occurred.",
+      message: zodMessage || err.userMessage || err.message || "An unexpected error occurred.",
       ...(config.nodeEnv === "test" && err.details ? { details: err.details } : {}),
     },
   });

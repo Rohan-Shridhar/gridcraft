@@ -22,7 +22,7 @@ export class GitHubAuthService {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "User-Agent": "GridCraft/3.4.0",
+        "User-Agent": "GridCraft/4.0.0",
       },
       body: JSON.stringify({
         client_id: this.config.github.clientId,
@@ -58,7 +58,7 @@ export class GitHubAuthService {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/vnd.github+json",
-        "User-Agent": "GridCraft/3.4.0",
+        "User-Agent": "GridCraft/4.0.0",
         "X-GitHub-Api-Version": "2022-11-28",
       },
     });
@@ -96,7 +96,7 @@ export class GitHubAuthService {
           headers: {
             Authorization: `Basic ${auth}`,
             Accept: "application/vnd.github+json",
-            "User-Agent": "GridCraft/3.4.0",
+            "User-Agent": "GridCraft/4.0.0",
             "X-GitHub-Api-Version": "2022-11-28",
             "Content-Type": "application/json",
           },
