@@ -4,8 +4,12 @@
   "description": "![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)\r ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)",
   "main": "index.js",
   "scripts": {
-    "test": "node --test src/utils/*.test.mjs",
-    "dev": "vite",
+    "test": "node --test src/utils/*.test.mjs server/tests/crypto.test.mjs",
+    "dev": "concurrently -n \"server,client\" -c \"blue,green\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "node server/src/server.js",
+    "test:client": "node --test src/utils/*.test.mjs",
+    "test:server": "node --test server/tests/*.test.mjs",
     "build": "vite build",
     "preview": "vite preview"
   },
