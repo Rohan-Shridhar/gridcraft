@@ -1,8 +1,56 @@
-export function DashboardShell({ user, onOpenEditor }) {
+import { useState, useEffect, useCallback } from "react";
+import apiClient from "../services/apiClient.js";
+import CreateAlbumModal from "./CreateAlbumModal.jsx";
+
+export function DashboardShell({ user, onOpenEditor, onSelectAlbum, showToast }) {
+  const [albums, setAlbums] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [page, setPage] = useState(1);
+  const perPage = 30;
+
+  const loadAlbums = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await apiClient.listAlbums(page, perPage);
+      setAlbums(res.albums || []);
+    } catch (err) {
+      console.error("Failed to load albums:", err);
+      setError(err.message || "Could not retrieve albums from GitHub.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page]);
+
+  useEffect(() => {
+    loadAlbums();
+  }, [loadAlbums]);
+
+  const handleAlbumCreated = async (payload) => {
+    const res = await apiClient.createAlbum(payload);
+    await loadAlbums();
+    if (res?.repo?.name) {
+      onSelectAlbum(res.repo.owner, res.repo.name);
+    }
+  };
+
+  const filteredAlbums = albums.filter((a) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      a.name.toLowerCase().includes(term) ||
+      (a.description && a.description.toLowerCase().includes(term))
+    );
+  });
+
   if (!user) return null;
 
   return (
     <section className="dashboard-shell" aria-label="Creator Dashboard">
+      {/* Dashboard Top Header */}
       <div className="dashboard-header">
         <div className="dashboard-welcome">
           <img
@@ -21,47 +69,162 @@ export function DashboardShell({ user, onOpenEditor }) {
           </div>
         </div>
 
-        <button className="dashboard-cta-btn" onClick={onOpenEditor}>
-          <i className="fa-solid fa-paint-brush"></i>
-          <span>Open Pixel Editor</span>
-        </button>
-      </div>
-
-      <div className="dashboard-section-heading">
-        <h3>Albums (Repositories)</h3>
-        <span className="badge-roadmap">Coming in v3.5.0</span>
-      </div>
-
-      <div className="dashboard-empty-card">
-        <div className="empty-card-icon">
-          <i className="fa-regular fa-folder-open"></i>
-        </div>
-        <h4>No Albums Yet</h4>
-        <p>
-          In GridCraft <strong>v3.5.0</strong>, every album you create will be a real GitHub repository
-          under your GitHub account, storing pixel artworks and stories with full version control.
-        </p>
-        <div className="empty-card-actions">
-          <button className="btn-secondary" onClick={onOpenEditor}>
-            <i className="fa-solid fa-palette"></i> Create Art in Editor
+        <div className="dashboard-header-actions">
+          <button className="dashboard-cta-btn" onClick={() => setShowCreateModal(true)}>
+            <i className="fa-solid fa-plus"></i>
+            <span>Create Album</span>
+          </button>
+          <button className="btn-secondary" onClick={onOpenEditor} title="Open standalone pixel editor">
+            <i className="fa-solid fa-paint-brush"></i>
+            <span>Pixel Editor</span>
           </button>
         </div>
       </div>
 
+      {/* Albums Section Heading & Filter Bar */}
+      <div className="dashboard-section-bar">
+        <div className="section-title-wrap">
+          <h3>Your Albums</h3>
+          <span className="badge-count">{albums.length}</span>
+        </div>
+
+        <div className="dashboard-filter-wrap">
+          <div className="search-input-wrap">
+            <i className="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              type="text"
+              placeholder="Filter albums..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="dashboard-search-input"
+            />
+            {searchTerm && (
+              <button className="clear-search-btn" onClick={() => setSearchTerm("")}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+          </div>
+
+          <button
+            className="btn-refresh"
+            onClick={loadAlbums}
+            disabled={isLoading}
+            title="Refresh from GitHub"
+          >
+            <i className={`fa-solid fa-arrows-rotate ${isLoading ? "fa-spin" : ""}`}></i>
+          </button>
+        </div>
+      </div>
+
+      {/* Albums Content */}
+      {isLoading ? (
+        <div className="dashboard-loading-card">
+          <i className="fa-solid fa-spinner fa-spin"></i>
+          <p>Fetching your albums from GitHub...</p>
+        </div>
+      ) : error ? (
+        <div className="dashboard-error-card">
+          <i className="fa-solid fa-circle-exclamation error-icon"></i>
+          <h4>Failed to Load Albums</h4>
+          <p>{error}</p>
+          <button className="btn-secondary" onClick={loadAlbums}>
+            <i className="fa-solid fa-arrows-rotate"></i> Try Again
+          </button>
+        </div>
+      ) : filteredAlbums.length === 0 ? (
+        <div className="dashboard-empty-card">
+          <div className="empty-card-icon">
+            <i className="fa-regular fa-folder-open"></i>
+          </div>
+          <h4>{searchTerm ? "No Matching Albums" : "No Albums Yet"}</h4>
+          <p>
+            {searchTerm
+              ? `No albums match "${searchTerm}".`
+              : "Albums in GridCraft are real GitHub repositories initialized with master as the default branch. Create your first album to begin!"}
+          </p>
+          <button className="dashboard-cta-btn" onClick={() => setShowCreateModal(true)}>
+            <i className="fa-solid fa-plus"></i> Create First Album
+          </button>
+        </div>
+      ) : (
+        <div className="albums-grid">
+          {filteredAlbums.map((album) => (
+            <div key={album.id} className="album-card">
+              <div className="album-card-header">
+                <div className="album-card-title-wrap">
+                  <h4 className="album-card-name" onClick={() => onSelectAlbum(album.owner, album.name)}>
+                    {album.name}
+                  </h4>
+                  <div className="album-badges-row">
+                    <span className={`badge-visibility-small ${album.isPrivate ? "private" : "public"}`}>
+                      <i className={`fa-solid ${album.isPrivate ? "fa-lock" : "fa-globe"}`}></i>
+                      {album.isPrivate ? "Private" : "Public"}
+                    </span>
+                    <span className="badge-branch-small">
+                      <i className="fa-solid fa-code-branch"></i>
+                      {album.defaultBranch || "master"}
+                    </span>
+                  </div>
+                </div>
+
+                <a
+                  href={album.htmlUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="album-github-icon"
+                  title="View on GitHub"
+                >
+                  <i className="fa-brands fa-github"></i>
+                </a>
+              </div>
+
+              <p className="album-card-desc">
+                {album.description || "No description provided."}
+              </p>
+
+              <div className="album-card-footer">
+                <span className="album-updated-time">
+                  Updated {new Date(album.updatedAt).toLocaleDateString()}
+                </span>
+
+                <button
+                  className="btn-open-album"
+                  onClick={() => onSelectAlbum(album.owner, album.name)}
+                >
+                  <span>Open Album</span>
+                  <i className="fa-solid fa-arrow-right"></i>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Roadmapped Meta Information */}
       <div className="dashboard-meta-grid">
         <div className="meta-card">
-          <h5><i className="fa-solid fa-shield-halved"></i> GitHub Authentication</h5>
+          <h5><i className="fa-solid fa-shield-halved"></i> GitHub Repositories as Source of Truth</h5>
           <p>
-            Your session is verified directly with GitHub. No personal access tokens or keys are stored in your browser.
+            Every album is stored in GitHub. GridCraft does not store your artwork in a closed database.
           </p>
         </div>
         <div className="meta-card">
-          <h5><i className="fa-solid fa-code-branch"></i> Git-Native Roadmap</h5>
+          <h5><i className="fa-solid fa-code-branch"></i> Master Default Branch Enforced</h5>
           <p>
-            Next milestone (v3.5.0) introduces album repository creation, followed by Git-backed artwork files (v3.6.0) and animated Stories (v3.7.0).
+            Albums initialize with <code>master</code> as the verified default branch, compliant with the GridCraft platform standard.
           </p>
         </div>
       </div>
+
+      {/* Create Album Modal */}
+      {showCreateModal && (
+        <CreateAlbumModal
+          user={user}
+          onClose={() => setShowCreateModal(false)}
+          onAlbumCreated={handleAlbumCreated}
+          showToast={showToast}
+        />
+      )}
     </section>
   );
 }

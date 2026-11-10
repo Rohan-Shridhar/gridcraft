@@ -6,6 +6,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.5.0] - 2026-11-10
+
+### Added
+- **Albums as Real GitHub Repositories**:
+  - `POST /api/v1/albums`: Creates a real GitHub repository under the authenticated user's account with `auto_init: true`.
+  - **`master` Default Branch Enforcement**: Automatically detects the initial branch, renames it to `master` via GitHub's branch rename API, updates default branch, and verifies `default_branch === "master"` before confirming creation.
+  - **Album Repository Structure Initialized**:
+    - `.gridcraft/album.json` (Validated schema v1 manifest).
+    - `artworks/.gitkeep` (Prepared directory for artwork JSON files arriving in v3.6.0).
+    - `stories/.gitkeep` (Prepared directory for story animations arriving in v3.7.0).
+    - `README.md` (Explaining the GridCraft album organization and folder structure).
+  - Applied GitHub topics `["gridcraft", "gridcraft-album"]`.
+- **Albums API Endpoints**:
+  - `GET /api/v1/albums`: List albums accessible to the authenticated creator with pagination and metadata.
+  - `GET /api/v1/albums/:owner/:repo`: Fetches repository metadata, permissions, and base64-decoded `.gridcraft/album.json` manifest.
+  - `PATCH /api/v1/albums/:owner/:repo`: Updates repository description or visibility and syncs manifest metadata.
+  - `DELETE /api/v1/albums/:owner/:repo`: Safely deletes a GitHub repository, requiring explicit repository name confirmation.
+  - `GET /api/v1/albums/:owner/:repo/commits`: Fetches recent commit history on the default `master` branch.
+  - `GET /api/v1/albums/:owner/:repo/tree`: Fetches the git tree structure recursively.
+  - `POST /api/v1/albums/:owner/:repo/initialize`: Allows connecting/initializing an existing GitHub repository as a GridCraft album.
+- **Frontend Creator Dashboard & Navigation**:
+  - Live albums listing in `src/components/DashboardShell.jsx` with search filter, refresh action, and empty/error states.
+  - Interactive **Create Album** modal in `src/components/CreateAlbumModal.jsx` featuring real-time slug preview (`github.com/{username}/{slug}`), public/private visibility selection, and descriptive helpers.
+  - Album Detail page in `src/components/AlbumDetail.jsx` with breadcrumbs, repository badges, GitHub external link, and 7 structured tabs:
+    - Overview: Manifest card, folder structure tree, and recent commits.
+    - Artworks, Stories, Branches, Issues, Pull Requests: Clearly labeled roadmap badges showing future release milestones.
+    - Settings: Danger zone allowing safe album repository deletion from GitHub.
+  - URL routing synchronization supporting `/dashboard` and `/albums/:owner/:repo`.
+- **Automated Test Coverage**:
+  - 10 new tests in `server/tests/album.test.mjs` verifying repository name slugification, schema validation, unauthenticated rejection, repository creation with `master` default branch enforcement, duplicate name handling (409 Conflict), album fetching, and safe deletion confirmation.
+
+### Preserved
+- 100% of existing editor functionality intact (canvas, grid sizes, tools, shortcuts, undo/redo, image import, PNG export, and Snaps storyboard).
+
+---
+
 ## [3.4.0] - 2026-11-10
 
 ### Added

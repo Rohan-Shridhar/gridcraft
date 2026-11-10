@@ -10,6 +10,7 @@ import ErrorPage from './ErrorPage.jsx';
 import SnapsPanel from './components/SnapsPanel.jsx';
 import PresentationMode from './components/PresentationMode.jsx';
 import DashboardShell from './components/DashboardShell.jsx';
+import AlbumDetail from './components/AlbumDetail.jsx';
 import useSnaps from './hooks/useSnaps.js';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 
@@ -28,11 +29,47 @@ const getGridGap = (gridSize, showGrid) => {
   return 2;
 };
 
+function parseRoute(pathname) {
+  if (pathname === "/dashboard") {
+    return { view: "dashboard", album: null };
+  }
+  const match = pathname.match(/^\/albums\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)/);
+  if (match) {
+    return { view: "album-detail", album: { owner: match[1], repo: match[2] } };
+  }
+  if (pathname === "/" || pathname === "/editor") {
+    return { view: "editor", album: null };
+  }
+  return { view: "404", album: null };
+}
+
 function AppContent({ showToast, toast }) {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
-  const [activeView, setActiveView] = useState(() => {
-    return window.location.pathname === "/dashboard" ? "dashboard" : "editor";
-  });
+  const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
+
+  const activeView = route.view;
+  const selectedAlbum = route.album;
+
+  const navigateTo = useCallback((view, album = null) => {
+    let targetPath = "/";
+    if (view === "dashboard") {
+      targetPath = "/dashboard";
+    } else if (view === "album-detail" && album) {
+      targetPath = `/albums/${album.owner}/${album.repo}`;
+    }
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, "", targetPath);
+    }
+    setRoute({ view, album });
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setRoute(parseRoute(window.location.pathname));
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
   const [cells, setCells] = useState(
@@ -62,22 +99,6 @@ function AppContent({ showToast, toast }) {
   };
 
   const fileInputRef = useRef(null);
-
-  // Sync browser path with activeView
-  useEffect(() => {
-    const targetPath = activeView === "dashboard" ? "/dashboard" : "/";
-    if (window.location.pathname !== targetPath) {
-      window.history.pushState(null, "", targetPath);
-    }
-  }, [activeView]);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      setActiveView(window.location.pathname === "/dashboard" ? "dashboard" : "editor");
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
 
   const handleKeyPress = useCallback((event) => {
     if (document.querySelector(".presentation-overlay")) return;
@@ -410,8 +431,7 @@ function AppContent({ showToast, toast }) {
     return `Switch to ${size}×${size}`;
   };
 
-  const path = window.location.pathname;
-  if (path !== "/" && path !== "/dashboard" && path !== "/editor") {
+  if (activeView === "404") {
     return <ErrorPage />;
   }
 
@@ -426,14 +446,30 @@ function AppContent({ showToast, toast }) {
         onLogin={login}
         onLogout={logout}
         activeView={activeView}
-        setActiveView={setActiveView}
+        setActiveView={navigateTo}
       />
 
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
       {activeView === "dashboard" && isAuthenticated ? (
         <>
-          <DashboardShell user={user} onOpenEditor={() => setActiveView("editor")} />
+          <DashboardShell
+            user={user}
+            onOpenEditor={() => navigateTo("editor")}
+            onSelectAlbum={(owner, repo) => navigateTo("album-detail", { owner, repo })}
+            showToast={showToast}
+          />
+          <Footer />
+        </>
+      ) : activeView === "album-detail" && selectedAlbum ? (
+        <>
+          <AlbumDetail
+            owner={selectedAlbum.owner}
+            repoName={selectedAlbum.repo}
+            onBackToDashboard={() => navigateTo("dashboard")}
+            onOpenEditor={() => navigateTo("editor")}
+            showToast={showToast}
+          />
           <Footer />
         </>
       ) : (

@@ -2,20 +2,22 @@
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)
 
-**Current release:** `v3.4.0`\
+**Current release:** `v3.5.0`\
 **Platform Direction:** A GitHub-inspired platform for creating, organizing, versioning, sharing, and collaborating on pixel art.
 
-GridCraft is evolving into a full-stack, GitHub-native creative platform where an album is a GitHub repository, an artwork is a versioned JSON file, a Story is an animated sequence of artworks, and branches, issues, and pull requests bring Git collaboration to pixel artists.
+GridCraft is a full-stack, GitHub-native creative platform where an album is a GitHub repository, an artwork is a versioned JSON file, a Story is an animated sequence of artworks, and branches, issues, and pull requests bring Git collaboration to pixel artists.
 
 ---
 
-## What's New in v3.4.0 ✨
+## What's New in v3.5.0 ✨
 
-- **Full-Stack Backend**: Node.js + Express backend service running on port 4000.
-- **GitHub App Authentication**: Sign in with GitHub using the `gridcraft-auth` GitHub App with CSRF protection and secure session management.
-- **Creator Dashboard Shell**: Welcoming dashboard view displaying your GitHub identity and previewing the upcoming Git-backed albums system (v3.5.0).
-- **Zero Token Leakage**: Access tokens are encrypted at rest with AES-256-GCM and stored only in HttpOnly SameSite cookies; zero secrets reach the client browser or git history.
-- **Preserved Pixel Editor**: All classic drawing tools, 16/32/64/128 grids, undo/redo, PNG export, image import, and Snaps storyboard functionality remain 100% functional.
+- **Albums as Real GitHub Repositories**: Create and manage albums that map 1:1 to GitHub repositories under your account.
+- **`master` Default Branch Enforced**: Every new album is initialized or renamed to verify `master` as its default branch.
+- **Album Structure Initialized**: Automatically sets up `.gridcraft/album.json` manifest, `artworks/`, `stories/`, and `README.md`.
+- **Creator Dashboard & Explorer**: Live album listing, search filter, and detailed album repository overview with commit history and folder tree.
+- **Safe Repository Operations**: Public/Private visibility toggling and protected deletion requiring explicit confirmation.
+- **Full-Stack GitHub Integration**: Communicates directly through the `gridcraft-auth` GitHub App with zero tokens in client storage.
+- **Preserved Pixel Editor**: All drawing tools, grid sizes, undo/redo, image import, PNG export, and Snaps storyboard system remain completely functional.
 
 ---
 

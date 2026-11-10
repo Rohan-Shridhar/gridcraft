@@ -14,6 +14,10 @@ async function request(endpoint, options = {}) {
     ...options,
   };
 
+  if (options.body && typeof options.body === "object") {
+    config.body = JSON.stringify(options.body);
+  }
+
   const response = await fetch(endpoint, config);
 
   let data = null;
@@ -57,6 +61,55 @@ export const apiClient = {
 
   getLoginUrl() {
     return "/api/v1/auth/github";
+  },
+
+  // Albums API
+  async listAlbums(page = 1, perPage = 30) {
+    return request(`/api/v1/albums?page=${page}&per_page=${perPage}`);
+  },
+
+  async createAlbum(payload) {
+    return request("/api/v1/albums", {
+      method: "POST",
+      body: payload,
+    });
+  },
+
+  async getAlbum(owner, repo) {
+    return request(`/api/v1/albums/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`);
+  },
+
+  async updateAlbum(owner, repo, payload) {
+    return request(`/api/v1/albums/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`, {
+      method: "PATCH",
+      body: payload,
+    });
+  },
+
+  async deleteAlbum(owner, repo, confirmName) {
+    return request(`/api/v1/albums/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`, {
+      method: "DELETE",
+      body: { confirmName },
+    });
+  },
+
+  async getAlbumCommits(owner, repo, branch = "master") {
+    return request(
+      `/api/v1/albums/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?branch=${encodeURIComponent(branch)}`
+    );
+  },
+
+  async getAlbumTree(owner, repo, branch = "master") {
+    return request(
+      `/api/v1/albums/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/tree?branch=${encodeURIComponent(branch)}`
+    );
+  },
+
+  async initializeExistingRepo(owner, repo) {
+    return request(
+      `/api/v1/albums/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/initialize`,
+      { method: "POST" }
+    );
   },
 };
 
