@@ -2,7 +2,7 @@
 
 ## Product and Engineering Roadmap
 
-**Current release:** `v3.3.0`\
+**Current release:** `v3.9.0`\
 **Roadmap target:** `v4.0.0`\
 **Product direction:** A GitHub-inspired platform for creating,
 organizing, versioning, sharing, and collaborating on pixel art.\

@@ -1,9 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import apiClient from "../services/apiClient.js";
 import ArtworksTab from "./ArtworksTab.jsx";
+import StoriesTab from "./StoriesTab.jsx";
+import BranchesTab from "./BranchesTab.jsx";
+import IssuesTab from "./IssuesTab.jsx";
+import BranchSelector from "./BranchSelector.jsx";
 
-export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, showToast }) {
+export function AlbumDetail({ owner, repoName, branch = "master", localSnaps = [], onStoryDirtyChange, onBranchChange, onBackToDashboard, onOpenEditor, showToast }) {
   const [activeTab, setActiveTab] = useState("overview");
+  const [storyDirty, setStoryDirty] = useState(false);
   const [albumData, setAlbumData] = useState(null);
   const [commits, setCommits] = useState([]);
   const [tree, setTree] = useState([]);
@@ -14,6 +19,20 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteInputName, setDeleteInputName] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const selectTab = (nextTab) => {
+    if (nextTab === activeTab) return;
+    if (storyDirty && !window.confirm("Leave Stories and discard your unsaved changes?")) return;
+    setActiveTab(nextTab);
+  };
+  const backToDashboard = () => {
+    if (storyDirty && !window.confirm("Leave Stories and discard your unsaved changes?")) return;
+    onBackToDashboard();
+  };
+  const reportStoryDirty = useCallback((dirty) => {
+    setStoryDirty(dirty);
+    onStoryDirtyChange?.(dirty);
+  }, [onStoryDirtyChange]);
 
   useEffect(() => {
     let isMounted = true;
@@ -27,11 +46,11 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
         setAlbumData(data);
 
         // Fetch commits and tree in background
-        apiClient.getAlbumCommits(owner, repoName, "master").then((res) => {
+        apiClient.getAlbumCommits(owner, repoName, branch).then((res) => {
           if (isMounted) setCommits(res.commits || []);
         }).catch(() => {});
 
-        apiClient.getAlbumTree(owner, repoName, "master").then((res) => {
+        apiClient.getAlbumTree(owner, repoName, branch).then((res) => {
           if (isMounted) setTree(res.tree || []);
         }).catch(() => {});
       } catch (err) {
@@ -47,7 +66,7 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
     return () => {
       isMounted = false;
     };
-  }, [owner, repoName]);
+  }, [owner, repoName, branch]);
 
   const handleDeleteAlbum = async (e) => {
     e.preventDefault();
@@ -97,7 +116,7 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
     <div className="album-detail-container">
       {/* Top Breadcrumb & Controls */}
       <div className="album-breadcrumb-bar">
-        <button className="btn-back-breadcrumb" onClick={onBackToDashboard}>
+        <button className="btn-back-breadcrumb" onClick={backToDashboard}>
           <i className="fa-solid fa-arrow-left"></i>
           <span>Dashboard</span>
         </button>
@@ -130,8 +149,9 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
 
               <span className="badge-branch">
                 <i className="fa-solid fa-code-branch"></i>
-                master
+                {branch}
               </span>
+              <BranchSelector owner={owner} repoName={repoName} branch={branch} onChange={onBranchChange} showToast={showToast} />
 
               {isGridCraftAlbum && (
                 <span className="badge-verified" title="Verified GridCraft Album structure">
@@ -160,7 +180,7 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
       <div className="album-tabs-nav" role="tablist">
         <button
           className={`tab-btn ${activeTab === "overview" ? "active" : ""}`}
-          onClick={() => setActiveTab("overview")}
+          onClick={() => selectTab("overview")}
           role="tab"
           aria-selected={activeTab === "overview"}
         >
@@ -170,7 +190,7 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
 
         <button
           className={`tab-btn ${activeTab === "artworks" ? "active" : ""}`}
-          onClick={() => setActiveTab("artworks")}
+          onClick={() => selectTab("artworks")}
           role="tab"
           aria-selected={activeTab === "artworks"}
         >
@@ -180,40 +200,37 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
 
         <button
           className={`tab-btn ${activeTab === "stories" ? "active" : ""}`}
-          onClick={() => setActiveTab("stories")}
+          onClick={() => selectTab("stories")}
           role="tab"
           aria-selected={activeTab === "stories"}
         >
           <i className="fa-solid fa-film"></i>
           <span>Stories</span>
-          <span className="tab-pill-roadmap">v3.7.0</span>
         </button>
 
         <button
           className={`tab-btn ${activeTab === "branches" ? "active" : ""}`}
-          onClick={() => setActiveTab("branches")}
+          onClick={() => selectTab("branches")}
           role="tab"
           aria-selected={activeTab === "branches"}
         >
           <i className="fa-solid fa-code-branch"></i>
           <span>Branches</span>
-          <span className="tab-pill-roadmap">v3.8.0</span>
         </button>
 
         <button
           className={`tab-btn ${activeTab === "issues" ? "active" : ""}`}
-          onClick={() => setActiveTab("issues")}
+          onClick={() => selectTab("issues")}
           role="tab"
           aria-selected={activeTab === "issues"}
         >
           <i className="fa-regular fa-circle-dot"></i>
           <span>Issues</span>
-          <span className="tab-pill-roadmap">v3.9.0</span>
         </button>
 
         <button
           className={`tab-btn ${activeTab === "pulls" ? "active" : ""}`}
-          onClick={() => setActiveTab("pulls")}
+          onClick={() => selectTab("pulls")}
           role="tab"
           aria-selected={activeTab === "pulls"}
         >
@@ -224,7 +241,7 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
 
         <button
           className={`tab-btn ${activeTab === "settings" ? "active" : ""}`}
-          onClick={() => setActiveTab("settings")}
+          onClick={() => selectTab("settings")}
           role="tab"
           aria-selected={activeTab === "settings"}
         >
@@ -253,7 +270,7 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
                   </div>
                   <div className="manifest-row">
                     <span>Created With</span>
-                    <code>{manifest?.createdWith?.name || "GridCraft"} v{manifest?.createdWith?.version || "3.6.0"}</code>
+                    <code>{manifest?.createdWith?.name || "GridCraft"} v{manifest?.createdWith?.version || "3.9.0"}</code>
                   </div>
                   <div className="manifest-row">
                     <span>Default Branch</span>
@@ -287,7 +304,7 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
 
             {/* Recent Commits */}
             <div className="overview-section">
-              <h4><i className="fa-solid fa-clock-rotate-left"></i> Recent Commits on <code>master</code></h4>
+              <h4><i className="fa-solid fa-clock-rotate-left"></i> Recent Commits on <code>{branch}</code></h4>
               {commits.length === 0 ? (
                 <p className="empty-subtext">No commits found yet.</p>
               ) : (
@@ -314,50 +331,25 @@ export function AlbumDetail({ owner, repoName, onBackToDashboard, onOpenEditor, 
           <ArtworksTab
             owner={owner}
             repoName={repoName}
-            onOpenEditor={onOpenEditor}
+            branch={branch}
+            onOpenEditor={(artworkId) => onOpenEditor(artworkId, branch)}
             showToast={showToast}
           />
         )}
 
-        {/* TAB 3: STORIES (Coming in v3.7.0) */}
+        {/* TAB 3: STORIES */}
         {activeTab === "stories" && (
-          <div className="tab-pane-placeholder">
-            <div className="placeholder-icon">
-              <i className="fa-solid fa-film"></i>
-            </div>
-            <h3>Stories Arriving in v3.7.0</h3>
-            <p>
-              In <strong>v3.7.0</strong>, albums will house Stories: ordered sequences of artworks playable
-              as animations and exportable as high-quality GIFs, replacing the local-only Snaps system.
-            </p>
-          </div>
+          <StoriesTab owner={owner} repoName={repoName} branch={branch} localSnaps={localSnaps} onDirtyChange={reportStoryDirty} showToast={showToast} />
         )}
 
-        {/* TAB 4: BRANCHES (Coming in v3.8.0) */}
+        {/* TAB 4: BRANCHES */}
         {activeTab === "branches" && (
-          <div className="tab-pane-placeholder">
-            <div className="placeholder-icon">
-              <i className="fa-solid fa-code-branch"></i>
-            </div>
-            <h3>Git Branching Arriving in v3.8.0</h3>
-            <p>
-              Currently, the album is initialized with <strong>master</strong> as the verified default branch.
-              In <strong>v3.8.0</strong>, creators will be able to branch, switch, compare, and merge artwork branches.
-            </p>
-          </div>
+          <BranchesTab owner={owner} repoName={repoName} branch={branch} onSelectBranch={onBranchChange} showToast={showToast} />
         )}
 
-        {/* TAB 5: ISSUES (Coming in v3.9.0) */}
+        {/* TAB 5: ISSUES */}
         {activeTab === "issues" && (
-          <div className="tab-pane-placeholder">
-            <div className="placeholder-icon">
-              <i className="fa-regular fa-circle-dot"></i>
-            </div>
-            <h3>GitHub Issues Arriving in v3.9.0</h3>
-            <p>
-              In <strong>v3.9.0</strong>, track feedback, tasks, and ideas through native GitHub Issues directly within GridCraft.
-            </p>
-          </div>
+          <IssuesTab owner={owner} repoName={repoName} showToast={showToast} />
         )}
 
         {/* TAB 6: PULL REQUESTS (Coming in v3.10.0) */}

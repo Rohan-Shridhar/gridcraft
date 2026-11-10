@@ -30,18 +30,29 @@ export class StoryService {
     if (!Array.isArray(entries)) return [];
     const folders = entries.filter((item) => item.type === "dir");
 
-    const stories = await Promise.all(
+    return Promise.all(
       folders.map(async (folder) => {
-        try {
-          const detail = await this.getStory(accessToken, owner, repoName, folder.name, branch);
-          return { ...detail.story, sha: detail.sha };
-        } catch {
-          return null;
+        const detail = await this.getStory(accessToken, owner, repoName, folder.name, branch);
+        return { ...detail.story, sha: detail.sha };
+      })
+    );
+  }
+
+  async #validateFrameArtworks(accessToken, owner, repoName, frames, branch) {
+    await Promise.all(
+      frames.map(async (frame) => {
+        const result = await this.#request(
+          `/repos/${owner}/${repoName}/contents/${frame.artworkPath}?ref=${encodeURIComponent(branch)}`,
+          accessToken
+        );
+        if (!result?.content) {
+          const err = new Error(`Referenced artwork "${frame.artworkId}" has no readable content.`);
+          err.status = 422;
+          err.code = "VALIDATION_ERROR";
+          throw err;
         }
       })
     );
-
-    return stories.filter(Boolean);
   }
 
   async getStory(accessToken, owner, repoName, storyId, branch = "master") {
@@ -64,6 +75,7 @@ export class StoryService {
       throw err;
     }
     const now = new Date().toISOString();
+    await this.#validateFrameArtworks(accessToken, owner, repoName, input.frames, branch);
     const story = StorySchema.parse({
       format: "gridcraft-story",
       schemaVersion: 1,
@@ -91,32 +103,24 @@ export class StoryService {
       }
     );
 
-    const readme = Buffer.from(
-      `# ${story.name}\n\n${story.description || "A GridCraft story."}\n`,
-      "utf8"
-    ).toString("base64");
-    try {
-      await this.#request(
-        `/repos/${owner}/${repoName}/contents/stories/${storyId}/README.md`,
-        accessToken,
-        {
-          method: "PUT",
-          body: JSON.stringify({
-            message: `chore(story): add ${storyId} readme`,
-            content: readme,
-            branch,
-          }),
-        }
-      );
-    } catch {
-      // README is optional
-    }
-
     return { story, sha: result.content.sha, commitSha: result.commit.sha };
   }
 
   async saveStory(accessToken, user, owner, repoName, storyId, body = {}, branch = "master") {
     const cleanId = sanitizeStoryId(storyId);
+    if (!body.sha) {
+      const err = new Error("Current story SHA is required to save changes safely.");
+      err.status = 400;
+      err.code = "VALIDATION_ERROR";
+      throw err;
+    }
+    const current = await this.getStory(accessToken, owner, repoName, cleanId, branch);
+    if (body.sha !== current.sha) {
+      const err = new Error("The remote story changed. Reload it before saving.");
+      err.status = 409;
+      err.code = "CONFLICT";
+      throw err;
+    }
     const input = body.story || body;
     const updated = StorySchema.parse({
       ...input,
@@ -125,6 +129,7 @@ export class StoryService {
       id: cleanId,
       updatedAt: new Date().toISOString(),
     });
+    await this.#validateFrameArtworks(accessToken, owner, repoName, updated.frames, branch);
     const encoded = Buffer.from(JSON.stringify(updated, null, 2), "utf8").toString("base64");
     const result = await this.#request(
       `/repos/${owner}/${repoName}/contents/${this.#path(cleanId)}`,
@@ -135,7 +140,7 @@ export class StoryService {
           message: body.commitMessage || `update(story): refine ${cleanId}`,
           content: encoded,
           branch,
-          ...(body.sha ? { sha: body.sha } : {}),
+          sha: body.sha,
         }),
       }
     );
@@ -144,16 +149,17 @@ export class StoryService {
 
   async deleteStory(accessToken, user, owner, repoName, storyId, sha, branch = "master") {
     const cleanId = sanitizeStoryId(storyId);
-    let fileSha = sha;
-    if (!fileSha) {
-      const current = await this.getStory(accessToken, owner, repoName, cleanId, branch);
-      fileSha = current.sha;
+    if (!sha) {
+      const err = new Error("Current story SHA is required to delete this story safely.");
+      err.status = 400;
+      err.code = "VALIDATION_ERROR";
+      throw err;
     }
     await this.#request(`/repos/${owner}/${repoName}/contents/${this.#path(cleanId)}`, accessToken, {
       method: "DELETE",
       body: JSON.stringify({
         message: `delete(story): remove ${cleanId}`,
-        sha: fileSha,
+        sha,
         branch,
       }),
     });

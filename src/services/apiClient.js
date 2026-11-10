@@ -207,6 +207,10 @@ export const apiClient = {
     );
   },
 
+  async listBranchCommits(owner, repo, branch = "master", page = 1) {
+    return request(withBranch(albumPath(owner, repo, "/branches/commits"), branch) + `&page=${page}`);
+  },
+
   async listIssues(owner, repo, params = {}) {
     const query = new URLSearchParams({
       state: params.state || "open",
@@ -216,11 +220,12 @@ export const apiClient = {
     if (params.author) query.set("author", params.author);
     if (params.assignee) query.set("assignee", params.assignee);
     if (params.labels) query.set("labels", params.labels);
+    if (params.q) query.set("q", params.q);
     return request(albumPath(owner, repo, `/issues?${query.toString()}`));
   },
 
-  async getIssue(owner, repo, number) {
-    return request(albumPath(owner, repo, `/issues/${number}`));
+  async getIssue(owner, repo, number, commentsPage = 1) {
+    return request(albumPath(owner, repo, `/issues/${number}?page=${commentsPage}`));
   },
 
   async createIssue(owner, repo, payload) {

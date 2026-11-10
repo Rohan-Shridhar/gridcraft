@@ -1,4 +1,5 @@
 const GRID_SIZES = [16, 32, 64, 128];
+const HEX_COLOR = /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i;
 
 export function sanitizeArtworkId(input) {
   if (!input || typeof input !== "string") return "";
@@ -24,10 +25,16 @@ export function snapsToMigrationPlan(snaps, { storyName = "Migrated Snaps", albu
       snap &&
       GRID_SIZES.includes(snap.gridSize) &&
       Array.isArray(snap.cells) &&
-      snap.cells.length === snap.gridSize * snap.gridSize
+      snap.cells.length === snap.gridSize * snap.gridSize &&
+      snap.cells.every((color) => color === null || (typeof color === "string" && HEX_COLOR.test(color))) &&
+      (snap.backgroundColor === "transparent" || (typeof snap.backgroundColor === "string" && HEX_COLOR.test(snap.backgroundColor))) &&
+      (snap.caption === undefined || (typeof snap.caption === "string" && snap.caption.length <= 120)) &&
+      (snap.notes === undefined || (typeof snap.notes === "string" && snap.notes.length <= 1000)) &&
+      (snap.durationMs === undefined || (Number.isFinite(snap.durationMs) && snap.durationMs >= 500 && snap.durationMs <= 10000))
   );
 
   const usedIds = new Set();
+  let truncatedMetadataCount = 0;
   const artworks = valid.map((snap, index) => {
     const base = sanitizeArtworkId(snap.title || `snap-${index + 1}`) || `snap-${index + 1}`;
     let id = base;
@@ -38,12 +45,14 @@ export function snapsToMigrationPlan(snaps, { storyName = "Migrated Snaps", albu
     }
     usedIds.add(id);
     const now = snap.createdAt || new Date().toISOString();
+    const rawDescription = [snap.caption, snap.notes].filter(Boolean).join("\n");
+    if (rawDescription.length > 500) truncatedMetadataCount += 1;
     return {
       format: "gridcraft-artwork",
       schemaVersion: 1,
       id,
       name: snap.title || `Snap ${index + 1}`,
-      description: [snap.caption, snap.notes].filter(Boolean).join("\n"),
+      description: rawDescription.slice(0, 500),
       gridSize: snap.gridSize,
       width: snap.gridSize,
       height: snap.gridSize,
@@ -76,5 +85,5 @@ export function snapsToMigrationPlan(snaps, { storyName = "Migrated Snaps", albu
     updatedAt: now,
   };
 
-  return { artworks, story };
+  return { artworks, story, skippedCount: (snaps || []).length - valid.length, truncatedMetadataCount };
 }

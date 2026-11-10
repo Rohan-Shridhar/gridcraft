@@ -8,6 +8,7 @@ export function createBranchRoutes(controller = defaultController) {
   router.get("/", controller.listBranches);
   router.post("/", controller.createBranch);
   router.get("/compare", controller.compare);
+  router.get("/commits", controller.listCommits);
   router.get("/:branch", controller.getBranch);
   router.patch("/:branch", controller.renameBranch);
   router.delete("/:branch", controller.deleteBranch);

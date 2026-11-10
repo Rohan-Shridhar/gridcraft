@@ -1,4 +1,4 @@
-# GridCraft Backend API Documentation (v3.6.0)
+# GridCraft Backend API Documentation (v3.9.0)
 
 Base URL: `/api/v1`
 
@@ -13,7 +13,7 @@ Returns the operational health and version of the backend service.
 ```json
 {
   "status": "ok",
-  "version": "3.6.0",
+  "version": "3.9.0",
   "app": "GridCraft",
   "githubApp": "gridcraft-auth",
   "timestamp": "2026-11-10T11:00:00.000Z"
@@ -153,7 +153,7 @@ Creates a new GitHub repository under the authenticated user's account, enforces
     "updatedAt": "2026-11-10T11:00:00.000Z",
     "createdWith": {
       "name": "GridCraft",
-      "version": "3.6.0"
+      "version": "3.9.0"
     }
   }
 }
@@ -222,7 +222,7 @@ Permanently deletes the album's GitHub repository. Requires confirming the exact
 ---
 
 ### `GET /api/v1/albums/:owner/:repo/commits`
-Lists recent commits on the default `master` branch.
+Lists recent commits on the selected branch.
 
 **Query Parameters:**
 - `branch` (optional, default: `"master"`): Branch to query.
@@ -230,7 +230,8 @@ Lists recent commits on the default `master` branch.
 ---
 
 ### `GET /api/v1/albums/:owner/:repo/tree`
-Returns the recursive git tree for the repository on `master`.
+Returns the recursive git tree for the repository. Accepts the optional
+`branch` query parameter (default: `master`).
 
 ---
 
@@ -304,6 +305,60 @@ Deletes an artwork file. Requires `{ "sha": "current-file-sha" }`.
 ### `GET /api/v1/albums/:owner/:repo/artworks/:artworkId/commits`
 Lists recent commits for the artwork file. Accepts the optional `branch` query
 parameter, defaulting to `master`.
+
+---
+
+## Stories
+
+Stories are stored as manifests under `stories/<storyId>/story.json`. All
+endpoints accept an optional `branch` query parameter (default: `master`).
+Frames reference existing artwork files; pixel data is not duplicated.
+
+- `GET /api/v1/albums/:owner/:repo/stories` — list Stories.
+- `POST /api/v1/albums/:owner/:repo/stories` — create a Story with `name`,
+  optional `description`, `loop`, `defaultFrameDurationMs`, and `frames`.
+- `GET /api/v1/albums/:owner/:repo/stories/:storyId` — read a Story and its
+  current file SHA.
+- `PUT /api/v1/albums/:owner/:repo/stories/:storyId` — save `{ "story": {},
+  "sha": "current-file-sha" }`; a stale SHA is rejected.
+- `DELETE /api/v1/albums/:owner/:repo/stories/:storyId` — delete with the
+  current `{ "sha": "..." }`.
+
+Each frame has an `artworkId`, matching `artworkPath` (`artworks/<id>.json`),
+and integer `durationMs`. Referenced artwork files are checked before a Story
+is written.
+
+## Branches
+
+- `GET /api/v1/albums/:owner/:repo/branches?page=1&per_page=30` — paginated
+  branches, actual default branch, protection flags, and a GitHub pagination
+  link.
+- `POST /api/v1/albums/:owner/:repo/branches` — create from `{ "name": "...",
+  "from": "master" }`.
+- `GET /api/v1/albums/:owner/:repo/branches/:branch` — branch and latest commit
+  details.
+- `PATCH /api/v1/albums/:owner/:repo/branches/:branch` — rename with
+  `{ "newName": "..." }`.
+- `DELETE /api/v1/albums/:owner/:repo/branches/:branch` — delete an eligible
+  branch; the default branch cannot be deleted.
+- `GET /api/v1/albums/:owner/:repo/compare?base=master&head=feature` — return
+  GitHub's comparison status, commits, and changed files.
+- `GET /api/v1/albums/:owner/:repo/branches/commits?branch=master&page=1` —
+  list commits on a branch.
+
+## Issues
+
+- `GET /api/v1/albums/:owner/:repo/issues` — list issues with `state`, `author`,
+  `assignee`, comma-separated `labels`, text `q`, `page`, and `per_page`
+  filters. Text searches use GitHub's Search API. Pull requests are excluded.
+- `POST /api/v1/albums/:owner/:repo/issues` — create with `title`, optional
+  Markdown `body`, `labels`, and `assignees`.
+- `GET /api/v1/albums/:owner/:repo/issues/:number?page=1` — issue detail and a
+  paginated comments page.
+- `PATCH /api/v1/albums/:owner/:repo/issues/:number` — update `title`, `body`,
+  and/or `state` (`open` or `closed`).
+- `POST /api/v1/albums/:owner/:repo/issues/:number/comments` — add a comment
+  with `{ "body": "..." }`.
 
 ---
 

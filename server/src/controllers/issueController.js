@@ -42,7 +42,7 @@ export class IssueController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, number } = req.params;
-      const data = await this.service.getIssue(token, owner, repo, number);
+      const data = await this.service.getIssue(token, owner, repo, number, Math.max(1, parseInt(req.query.page || "1", 10)));
       return res.json(data);
     } catch (err) {
       next(err);

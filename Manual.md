@@ -90,30 +90,45 @@ from the album after confirmation. The editor also shows recent commits for the
 artwork. Album artwork retains the same image import, PNG export, drawing tools,
 undo/redo, transparency, and background-color controls as the standalone editor.
 
-## Save and present snapshots
+## Create Stories in an album
 
-Use **+ New Snap** in the Snaps panel to capture the current canvas. Snapshots
-include the pixel colors, transparency, grid size, background, and slide
-metadata. They are saved in this browser and restored when GridCraft is reopened.
-The storage is local to the browser; clearing site data or switching browsers
-does not transfer snapshots.
+Sign in and open an album, then choose **Stories**. Create a Story, select
+artworks from that album, and add them as ordered frames. Drag frames to reorder
+them, or use the move buttons. Set each frame's duration, the default duration,
+and whether playback loops. Use the timeline and playback controls to preview.
+Select **Save Story** to commit its manifest to the album. Artwork pixels remain
+in the artwork files; a Story stores only artwork references and timing.
 
-Select a snap to rename it, add an optional caption or notes, set its presentation
-duration, or include it in or exclude it from the presentation. Reorder slides
-with drag and drop or the move buttons. **Present** plays included slides in
-their listed order.
+Choose **Export GIF** to download a real animated GIF. Frames must use the same
+grid size. Export is limited to 120 frames and 1,048,576 source pixels total to
+avoid excessive browser memory use.
 
-Use a selected snap's image buttons to download it as SVG or PNG. **Export All**
-downloads the full storyboard and metadata as a JSON backup; **Import** appends
-snapshots from a GridCraft JSON export. Imports are validated, limited to 25 MB
-and 100 snapshots, and do not run imported content. If saved data cannot be
-recovered, export the recovered snaps before choosing to replace the unreadable
-browser data.
+### Migrate old local Snaps
 
-Set **Frame duration** and choose **Export WebM** to create an animation from
-the included slides. WebM export uses the browser's built-in media recorder and
-is limited to 40 slides and two minutes per export. WebM support depends on the
-browser.
+Existing browser Snaps are preserved for migration. In an album's Stories tab,
+download a JSON backup first, then choose **Migrate to Story**. GridCraft creates
+an artwork for each valid Snap and a Story in the original order, carrying over
+titles, captions/notes, and durations. Migration does not delete local Snap
+data. If a GitHub request fails partway through, GridCraft reports how many
+artworks were already created; the browser data remains unchanged.
+
+## Work with branches
+
+Use the branch selector in an album or artwork editor to switch branches. Album
+artworks and Stories are loaded from the selected branch, and new saves target
+that branch. The **Branches** tab supports creating a branch from the current
+branch, renaming or deleting eligible branches, comparing GitHub's actual
+comparison, and viewing commit history. The `master` default branch is marked
+and cannot be deleted. Switching away from unsaved artwork or Story changes
+asks before discarding them.
+
+## Manage GitHub Issues
+
+Open the **Issues** tab in an album to view open or closed issues. Filter by
+author, assignee, label, and search text; use pagination to browse results.
+Create issues with Markdown bodies, view and safely rendered comments, add a
+comment, edit title/body, and close or reopen an issue. **Open on GitHub**
+provides access to additional GitHub-native actions and permissions.
 
 ## Other controls
 

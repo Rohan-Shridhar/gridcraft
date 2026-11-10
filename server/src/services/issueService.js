@@ -54,19 +54,45 @@ export class IssueService {
     const state = query.state || "open";
     const page = query.page || 1;
     const perPage = query.perPage || 20;
-    const search = query.q ? `&q=${encodeURIComponent(query.q)}` : "";
+    const needle = query.q?.trim();
+    if (needle) {
+      const terms = [needle, `repo:${owner}/${repoName}`, "is:issue"];
+      if (state !== "all") terms.push(`state:${state}`);
+      if (query.author) terms.push(`author:${query.author}`);
+      if (query.assignee) terms.push(`assignee:${query.assignee}`);
+      if (query.labels) {
+        terms.push(...query.labels.split(",").map((label) => label.trim()).filter(Boolean).map((label) => `label:${JSON.stringify(label)}`));
+      }
+      const params = new URLSearchParams({
+        q: terms.join(" "),
+        page: String(page),
+        per_page: String(perPage),
+        sort: "updated",
+        order: "desc",
+      });
+      const { data, headers } = await this.#request(`/search/issues?${params}`, accessToken);
+      return {
+        issues: (data.items || []).filter((item) => !item.pull_request).map(mapIssue),
+        page,
+        perPage,
+        link: headers.get("link"),
+      };
+    }
+
     const creator = query.author ? `&creator=${encodeURIComponent(query.author)}` : "";
     const assignee = query.assignee ? `&assignee=${encodeURIComponent(query.assignee)}` : "";
     const labels = query.labels ? `&labels=${encodeURIComponent(query.labels)}` : "";
     const { data, headers } = await this.#request(
-      `/repos/${owner}/${repoName}/issues?state=${encodeURIComponent(state)}&page=${page}&per_page=${perPage}${creator}${assignee}${labels}${search}`,
+      `/repos/${owner}/${repoName}/issues?state=${encodeURIComponent(state)}&page=${page}&per_page=${perPage}${creator}${assignee}${labels}`,
       accessToken
     );
-    const issues = (data || []).filter((item) => !item.pull_request).map(mapIssue);
+    const issues = (data || [])
+      .filter((item) => !item.pull_request)
+      .map(mapIssue);
     return { issues, page, perPage, link: headers.get("link") };
   }
 
-  async getIssue(accessToken, owner, repoName, number) {
+  async getIssue(accessToken, owner, repoName, number, commentsPage = 1) {
     const { data } = await this.#request(`/repos/${owner}/${repoName}/issues/${number}`, accessToken);
     if (data.pull_request) {
       const err = new Error("That number belongs to a pull request, not an issue.");
@@ -74,11 +100,13 @@ export class IssueService {
       throw err;
     }
     const commentsRes = await this.#request(
-      `/repos/${owner}/${repoName}/issues/${number}/comments?per_page=50`,
+      `/repos/${owner}/${repoName}/issues/${number}/comments?per_page=50&page=${commentsPage}`,
       accessToken
     );
     return {
       issue: mapIssue(data),
+      commentsPage,
+      commentsLink: commentsRes.headers.get("link"),
       comments: (commentsRes.data || []).map((comment) => ({
         id: comment.id,
         body: comment.body,

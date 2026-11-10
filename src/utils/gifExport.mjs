@@ -1,4 +1,6 @@
-import { GIFEncoder, quantize, applyPalette } from "gifenc";
+import gifenc from "gifenc";
+
+const { GIFEncoder, quantize, applyPalette } = gifenc;
 
 export const MAX_GIF_PIXELS = 128 * 128 * 64;
 export const MAX_GIF_FRAMES = 120;
@@ -74,7 +76,7 @@ export function encodeStoryGif(frames, { loop = true, scale = 8, onProgress } = 
     const indexMap = applyPalette(rgba, palette);
     gif.writeFrame(indexMap, width, height, {
       palette,
-      delay: Math.max(2, Math.round((frame.durationMs || 150) / 10)),
+      delay: Math.max(20, Math.round(frame.durationMs || 150)),
       repeat: index === 0 ? (loop ? 0 : -1) : undefined,
       transparent: true,
       transparentIndex: 0,

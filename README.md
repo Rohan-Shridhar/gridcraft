@@ -2,24 +2,20 @@
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)
 
-**Current release:** `v3.6.0`\
+**Current release:** `v3.9.0`\
 **Platform Direction:** A GitHub-inspired platform for creating, organizing, versioning, sharing, and collaborating on pixel art.
 
 GridCraft is a full-stack, GitHub-native creative platform where an album is a GitHub repository, an artwork is a versioned JSON file, a Story is an animated sequence of artworks, and branches, issues, and pull requests bring Git collaboration to pixel artists.
 
 ---
 
-## What's New in v3.6.0 ✨
+## What's New in v3.7.0–v3.9.0 ✨
 
-- **GitHub-Backed Artworks**: Create, edit, rename, and delete artwork JSON files in an album, with thumbnails, explicit saves, commit history, and SHA-based conflict protection.
-- **Preserved Canvas Tools**: Album artworks use the existing editor tools, grid sizes, undo/redo, image import, PNG export, transparency, and background colors.
-- **Albums as Real GitHub Repositories**: Create and manage albums that map 1:1 to GitHub repositories under your account.
-- **`master` Default Branch Enforced**: Every new album is initialized or renamed to verify `master` as its default branch.
-- **Album Structure Initialized**: Automatically sets up `.gridcraft/album.json` manifest, `artworks/`, `stories/`, and `README.md`.
-- **Creator Dashboard & Explorer**: Live album listing, search filter, and detailed album repository overview with commit history and folder tree.
-- **Safe Repository Operations**: Public/Private visibility toggling and protected deletion requiring explicit confirmation.
-- **Full-Stack GitHub Integration**: Communicates directly through the `gridcraft-auth` GitHub App with zero tokens in client storage.
-- **Preserved Pixel Editor**: All drawing tools, grid sizes, undo/redo, image import, PNG export, and Snaps storyboard system remain completely functional.
+- **Album Stories**: Build ordered, timed artwork sequences, preview playback, and export real animated GIFs. Local Snaps can be backed up and migrated into an album; migration does not remove browser data.
+- **Git Branch Workflows**: Browse, create, rename, delete, compare, and switch real GitHub branches. Artwork and Story reads/writes follow the selected branch, and unsaved edits are guarded.
+- **GitHub Issues**: Filter and paginate issues, create and edit them, comment, close/reopen, and safely render Markdown, all through GitHub.
+- **GitHub-Backed Artworks**: Explicit saves, history, rename/delete, and SHA-based stale-write protection.
+- **`master` Default Branch**: New albums initialize with `master`; default branches cannot be deleted from GridCraft.
 
 ---
 
@@ -30,7 +26,9 @@ GridCraft is a full-stack, GitHub-native creative platform where an album is a G
 - **Full RGB Color Support** - Choose any color using an intuitive RGB color picker
 - **Drawing Tools** - Paint brush, eraser, flood fill, transparent fill, and clear canvas
 - **History & Undo/Redo** - Keep up to 15 history steps
-- **Snaps Storyboard & Presentation** - Save multiple frames, preview slideshows, and export as WebM (evolving to album-owned Stories in v3.7.0)
+- **Album Stories** - Create and play sequences of repository artworks, set timing/looping, and export animated GIFs
+- **Branch collaboration** - Keep alternate artwork versions in real GitHub branches
+- **GitHub Issues** - Track feedback and tasks in the repository
 - **Export & Import** - Download artwork as PNG or import images/SVGs onto the canvas
 - **Dual Themes** - Dark and light mode toggle
 

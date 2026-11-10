@@ -20,6 +20,7 @@ export default function useArtworkEditor() {
   const [owner, setOwner] = useState(null);
   const [repoName, setRepoName] = useState(null);
   const [artworkId, setArtworkId] = useState(null);
+  const [branch, setBranch] = useState("master");
   const [artworkMeta, setArtworkMeta] = useState(null); // { name, description, gridSize, backgroundColor, createdAt }
 
   const [cells, setCells] = useState([]);
@@ -40,15 +41,16 @@ export default function useArtworkEditor() {
   // Keeps last good cells in case user wants to discard after conflict
   const lastSavedArtworkRef = useRef(null);
 
-  const loadArtwork = useCallback(async (ownerArg, repoArg, idArg) => {
+  const loadArtwork = useCallback(async (ownerArg, repoArg, idArg, branchArg = "master") => {
     setOwner(ownerArg);
     setRepoName(repoArg);
     setArtworkId(idArg);
+    setBranch(branchArg);
     setIsLoading(true);
     setLoadError(null);
 
     try {
-      const res = await apiClient.getArtwork(ownerArg, repoArg, idArg);
+      const res = await apiClient.getArtwork(ownerArg, repoArg, idArg, branchArg);
       const aw = res.artwork;
       shaRef.current = res.sha;
       lastSavedArtworkRef.current = aw;
@@ -170,7 +172,7 @@ export default function useArtworkEditor() {
         backgroundColor,
         cells,
       };
-      const res = await apiClient.saveArtwork(owner, repoName, artworkId, payload);
+      const res = await apiClient.saveArtwork(owner, repoName, artworkId, payload, branch);
       shaRef.current = res.sha;
       lastSavedArtworkRef.current = res.artwork;
       setIsDirty(false);
@@ -184,20 +186,20 @@ export default function useArtworkEditor() {
       }
       throw err;
     }
-  }, [owner, repoName, artworkId, artworkMeta, gridSize, backgroundColor, cells]);
+  }, [owner, repoName, artworkId, artworkMeta, gridSize, backgroundColor, cells, branch]);
 
   // Reload fresh copy from GitHub (used after conflict → "Reload Remote")
   const reloadFromRemote = useCallback(async () => {
     if (!owner || !repoName || !artworkId) return;
-    await loadArtwork(owner, repoName, artworkId);
-  }, [owner, repoName, artworkId, loadArtwork]);
+    await loadArtwork(owner, repoName, artworkId, branch);
+  }, [owner, repoName, artworkId, branch, loadArtwork]);
 
   const inspectRemote = useCallback(async () => {
     if (!owner || !repoName || !artworkId) return null;
-    const result = await apiClient.getArtwork(owner, repoName, artworkId);
+    const result = await apiClient.getArtwork(owner, repoName, artworkId, branch);
     setRemoteArtwork(result.artwork);
     return result.artwork;
-  }, [owner, repoName, artworkId]);
+  }, [owner, repoName, artworkId, branch]);
 
   const saveAsNew = useCallback(async (name) => {
     if (!owner || !repoName || !artworkMeta) return;
@@ -207,7 +209,7 @@ export default function useArtworkEditor() {
       gridSize,
       backgroundColor,
       cells,
-    });
+    }, branch);
     const artwork = result.artwork;
     setArtworkId(artwork.id);
     setArtworkMeta({
@@ -226,7 +228,7 @@ export default function useArtworkEditor() {
     setHistory([]);
     setFuture([]);
     return artwork;
-  }, [owner, repoName, artworkMeta, gridSize, backgroundColor, cells]);
+  }, [owner, repoName, artworkMeta, gridSize, backgroundColor, cells, branch]);
 
   const rename = useCallback(async (newName) => {
     if (!owner || !repoName || !artworkId || !shaRef.current) return;
@@ -234,7 +236,7 @@ export default function useArtworkEditor() {
       const result = await apiClient.renameArtwork(owner, repoName, artworkId, {
         newName,
         sha: shaRef.current,
-      });
+      }, branch);
       setArtworkId(result.artworkId);
       shaRef.current = result.sha;
       lastSavedArtworkRef.current = result.artwork;
@@ -250,7 +252,7 @@ export default function useArtworkEditor() {
       if (error.status === 409) setSaveState("conflict");
       throw error;
     }
-  }, [owner, repoName, artworkId]);
+  }, [owner, repoName, artworkId, branch]);
 
   const discardChanges = useCallback(() => {
     const saved = lastSavedArtworkRef.current;
@@ -279,6 +281,7 @@ export default function useArtworkEditor() {
     owner,
     repoName,
     artworkId,
+    branch,
     artworkMeta,
     // canvas state
     cells,

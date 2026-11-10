@@ -9,7 +9,7 @@ import ArtworkThumbnail from "./ArtworkThumbnail.jsx";
  *   onOpenEditor(artworkId) — called when user opens an artwork for editing
  *   showToast(msg, type)
  */
-export default function ArtworksTab({ owner, repoName, onOpenEditor, showToast }) {
+export default function ArtworksTab({ owner, repoName, branch = "master", onOpenEditor, showToast }) {
   const [artworks, setArtworks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,14 +20,14 @@ export default function ArtworksTab({ owner, repoName, onOpenEditor, showToast }
     try {
       setIsLoading(true);
       setError(null);
-      const res = await apiClient.listArtworks(owner, repoName);
+      const res = await apiClient.listArtworks(owner, repoName, branch);
       setArtworks(res.artworks || []);
     } catch (err) {
       setError(err.message || "Failed to load artworks.");
     } finally {
       setIsLoading(false);
     }
-  }, [owner, repoName]);
+  }, [owner, repoName, branch]);
 
   useEffect(() => {
     loadArtworks();
@@ -38,7 +38,7 @@ export default function ArtworksTab({ owner, repoName, onOpenEditor, showToast }
       if (!window.confirm(`Delete artwork "${artwork.name}"? This cannot be undone.`)) return;
       setDeletingId(artwork.id);
       try {
-        await apiClient.deleteArtwork(owner, repoName, artwork.id, artwork.sha);
+        await apiClient.deleteArtwork(owner, repoName, artwork.id, artwork.sha, branch);
         setArtworks((prev) => prev.filter((a) => a.id !== artwork.id));
         showToast(`Artwork "${artwork.name}" deleted`, "success");
       } catch (err) {
@@ -47,7 +47,7 @@ export default function ArtworksTab({ owner, repoName, onOpenEditor, showToast }
         setDeletingId(null);
       }
     },
-    [owner, repoName, showToast]
+    [owner, repoName, branch, showToast]
   );
 
   const handleCreated = useCallback(
@@ -124,6 +124,7 @@ export default function ArtworksTab({ owner, repoName, onOpenEditor, showToast }
         <NewArtworkModal
           owner={owner}
           repoName={repoName}
+          branch={branch}
           onCreated={handleCreated}
           onClose={() => setShowNewModal(false)}
           showToast={showToast}
@@ -186,7 +187,7 @@ function slugify(str) {
     .slice(0, 100);
 }
 
-function NewArtworkModal({ owner, repoName, onCreated, onClose, showToast }) {
+function NewArtworkModal({ owner, repoName, branch, onCreated, onClose, showToast }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [gridSize, setGridSize] = useState(16);
@@ -203,7 +204,7 @@ function NewArtworkModal({ owner, repoName, onCreated, onClose, showToast }) {
         name: name.trim(),
         description: description.trim(),
         gridSize,
-      });
+      }, branch);
       onCreated(res.artwork);
       showToast(`Artwork "${res.artwork.name}" created`, "success");
     } catch (err) {

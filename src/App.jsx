@@ -7,8 +7,6 @@ import Tools from './Tools.jsx';
 import Footer from './Footer.jsx';
 import Contributors from './Contributors.jsx';
 import ErrorPage from './ErrorPage.jsx';
-import SnapsPanel from './components/SnapsPanel.jsx';
-import PresentationMode from './components/PresentationMode.jsx';
 import DashboardShell from './components/DashboardShell.jsx';
 import AlbumDetail from './components/AlbumDetail.jsx';
 import ArtworkEditor from './components/ArtworkEditor.jsx';
@@ -31,8 +29,9 @@ const getGridGap = (gridSize, showGrid) => {
 };
 
 function parseRoute(pathname) {
+  const branch = new URLSearchParams(window.location.search).get("branch") || "master";
   if (pathname === "/dashboard") {
-    return { view: "dashboard", album: null };
+    return { view: "dashboard", album: null, branch };
   }
   const artworkMatch = pathname.match(/^\/albums\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)\/artworks\/([a-zA-Z0-9-]+)$/);
   if (artworkMatch) {
@@ -40,28 +39,31 @@ function parseRoute(pathname) {
       view: "artwork-editor",
       album: { owner: artworkMatch[1], repo: artworkMatch[2] },
       artworkId: artworkMatch[3],
+      branch,
     };
   }
   const match = pathname.match(/^\/albums\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)/);
   if (match) {
-    return { view: "album-detail", album: { owner: match[1], repo: match[2] }, artworkId: null };
+    return { view: "album-detail", album: { owner: match[1], repo: match[2] }, artworkId: null, branch };
   }
   if (pathname === "/" || pathname === "/editor") {
-    return { view: "editor", album: null };
+    return { view: "editor", album: null, branch };
   }
-  return { view: "404", album: null, artworkId: null };
+  return { view: "404", album: null, artworkId: null, branch };
 }
 
 function AppContent({ showToast, toast }) {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
   const [artworkDirty, setArtworkDirty] = useState(false);
+  const [storyDirty, setStoryDirty] = useState(false);
 
   const activeView = route.view;
   const selectedAlbum = route.album;
   const selectedArtworkId = route.artworkId;
+  const selectedBranch = route.branch || "master";
 
-  const navigateTo = useCallback((view, album = null, artworkId = null, replace = false) => {
+  const navigateTo = useCallback((view, album = null, artworkId = null, replace = false, branch = "master") => {
     let targetPath = "/";
     if (view === "dashboard") {
       targetPath = "/dashboard";
@@ -70,40 +72,50 @@ function AppContent({ showToast, toast }) {
     } else if (view === "artwork-editor" && album && artworkId) {
       targetPath = `/albums/${album.owner}/${album.repo}/artworks/${encodeURIComponent(artworkId)}`;
     }
-    if (window.location.pathname !== targetPath) {
+    if ((view === "album-detail" || view === "artwork-editor") && branch !== "master") {
+      targetPath += `?branch=${encodeURIComponent(branch)}`;
+    }
+    if (`${window.location.pathname}${window.location.search}` !== targetPath) {
       if (replace) {
         window.history.replaceState(null, "", targetPath);
       } else {
         window.history.pushState(null, "", targetPath);
       }
     }
-    setRoute({ view, album, artworkId });
+    setRoute({ view, album, artworkId, branch });
   }, []);
+  const changeSelectedBranch = useCallback((branch) => {
+    if ((activeView === "artwork-editor" && artworkDirty) || storyDirty) {
+      if (!window.confirm("Switch branches and discard your unsaved changes?")) return;
+    }
+    navigateTo(activeView, selectedAlbum, selectedArtworkId, false, branch);
+  }, [activeView, artworkDirty, storyDirty, navigateTo, selectedAlbum, selectedArtworkId]);
   const navigateFromHeader = useCallback((view) => {
     if (
-      activeView === "artwork-editor" &&
-      artworkDirty &&
-      !window.confirm("Leave the artwork editor? Any unsaved changes will be lost.")
+      ((activeView === "artwork-editor" && artworkDirty) || storyDirty) &&
+      !window.confirm("Leave this page? Any unsaved changes will be lost.")
     ) return;
     navigateTo(view);
-  }, [activeView, artworkDirty, navigateTo]);
+  }, [activeView, artworkDirty, storyDirty, navigateTo]);
   const logoutFromHeader = useCallback(() => {
     if (
-      activeView === "artwork-editor" &&
-      artworkDirty &&
-      !window.confirm("Sign out and leave the artwork editor? Any unsaved changes will be lost.")
+      ((activeView === "artwork-editor" && artworkDirty) || storyDirty) &&
+      !window.confirm("Sign out and leave this page? Any unsaved changes will be lost.")
     ) return;
     logout();
-  }, [activeView, artworkDirty, logout]);
+  }, [activeView, artworkDirty, storyDirty, logout]);
 
   useEffect(() => {
     const handlePopState = () => {
       const nextRoute = parseRoute(window.location.pathname);
-      if (route.view === "artwork-editor" && artworkDirty) {
-        const leave = window.confirm("Leave the artwork editor? Any unsaved changes will be lost.");
+      if ((route.view === "artwork-editor" && artworkDirty) || storyDirty) {
+        const leave = window.confirm("Leave this page? Any unsaved changes will be lost.");
         if (!leave) {
-          const currentPath = `/albums/${route.album.owner}/${route.album.repo}/artworks/${encodeURIComponent(route.artworkId)}`;
-          window.history.pushState(null, "", currentPath);
+          const currentPath = route.view === "artwork-editor"
+            ? `/albums/${route.album.owner}/${route.album.repo}/artworks/${encodeURIComponent(route.artworkId)}`
+            : `/albums/${route.album.owner}/${route.album.repo}`;
+          const branchQuery = route.branch && route.branch !== "master" ? `?branch=${encodeURIComponent(route.branch)}` : "";
+          window.history.pushState(null, "", `${currentPath}${branchQuery}`);
           return;
         }
       }
@@ -111,7 +123,7 @@ function AppContent({ showToast, toast }) {
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [route, artworkDirty]);
+  }, [route, artworkDirty, storyDirty]);
 
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
   const [cells, setCells] = useState(
@@ -509,9 +521,13 @@ function AppContent({ showToast, toast }) {
           <AlbumDetail
             owner={selectedAlbum.owner}
             repoName={selectedAlbum.repo}
+            branch={selectedBranch}
+            localSnaps={snaps.snaps}
+            onStoryDirtyChange={setStoryDirty}
+            onBranchChange={changeSelectedBranch}
             onBackToDashboard={() => navigateTo("dashboard")}
             onOpenEditor={(artworkId) =>
-              navigateTo("artwork-editor", selectedAlbum, artworkId)
+              navigateTo("artwork-editor", selectedAlbum, artworkId, false, selectedBranch)
             }
             showToast={showToast}
           />
@@ -524,10 +540,12 @@ function AppContent({ showToast, toast }) {
             owner={selectedAlbum.owner}
             repoName={selectedAlbum.repo}
             artworkId={selectedArtworkId}
+            branch={selectedBranch}
+            onBranchChange={changeSelectedBranch}
             onDirtyChange={setArtworkDirty}
-            onBack={() => navigateTo("album-detail", selectedAlbum)}
+            onBack={() => navigateTo("album-detail", selectedAlbum, null, false, selectedBranch)}
             onArtworkChanged={(nextArtworkId) =>
-              navigateTo("artwork-editor", selectedAlbum, nextArtworkId, true)
+              navigateTo("artwork-editor", selectedAlbum, nextArtworkId, true, selectedBranch)
             }
             showToast={showToast}
           />
@@ -553,7 +571,6 @@ function AppContent({ showToast, toast }) {
               <h2>Pixel editor</h2>
             </div>
             <div className="editor-workspace">
-              <SnapsPanel {...snaps} showToast={showToast} />
               <main className="canvas-workspace" aria-label="Canvas editor">
                 <Grid
                   cells={cells}
@@ -626,14 +643,6 @@ function AppContent({ showToast, toast }) {
             <Contributors />
           </div>
           <Footer />
-          {snaps.isPlaying && (
-            <PresentationMode
-              snaps={snaps.presentationSnaps}
-              startingSnapId={snaps.presentationStartSnapId}
-              onUpdateSnap={snaps.updateSnap}
-              onExit={snaps.stopPresentation}
-            />
-          )}
         </>
       )}
     </>

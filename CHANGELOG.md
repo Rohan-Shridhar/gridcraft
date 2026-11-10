@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.9.0] - 2026-11-10
+
+### Added
+- Added a GitHub Issues experience with state/author/assignee/label/search filters, pagination, issue details, comments, creation/editing, close/reopen, and safe Markdown rendering.
+- Added issue and comment pagination and GitHub Search API integration for text searches; pull requests are excluded from issue results.
+
+## [3.8.0] - 2026-11-10
+
+### Added
+- Added a branch selector with URL persistence and branch-aware artwork and Story loading/saving.
+- Added paginated branch listing, create/rename/delete actions, GitHub branch comparisons, changed-file summaries, and commit history.
+- Added dirty-edit confirmation when switching branches and protection against deleting the default branch.
+
+## [3.7.0] - 2026-11-10
+
+### Added
+- Added album-owned Stories referencing artwork files, with editable ordered frames, per-frame/default timing, loop controls, playback, and real GIF export.
+- Added Snap JSON backup and Snap-to-Story migration while preserving local Snap data.
+- Added decoded-GIF tests for frame count, dimensions, order, and delays, and removed the standalone Snap and presentation UI.
+
 ## [3.6.0] - 2026-11-10
 
 ### Added
@@ -19,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated version metadata and the manual/API documentation for v3.6.0.
 
 ### Preserved
-- Standalone editor behavior and the existing Snaps storyboard remain available.
+- Standalone editor behavior remains available. Local Snap data is retained for backup and migration into Stories.
 
 ---
 
