@@ -9,7 +9,9 @@ import Contributors from './Contributors.jsx';
 import ErrorPage from './ErrorPage.jsx';
 import SnapsPanel from './components/SnapsPanel.jsx';
 import PresentationMode from './components/PresentationMode.jsx';
+import DashboardShell from './components/DashboardShell.jsx';
 import useSnaps from './hooks/useSnaps.js';
+import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 
 const GRID_SIZES = [16, 32, 64, 128];
 const DEFAULT_GRID_SIZE = 16;
@@ -26,7 +28,12 @@ const getGridGap = (gridSize, showGrid) => {
   return 2;
 };
 
-function App(){
+function AppContent({ showToast, toast }) {
+  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const [activeView, setActiveView] = useState(() => {
+    return window.location.pathname === "/dashboard" ? "dashboard" : "editor";
+  });
+
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
   const [cells, setCells] = useState(
     Array(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE).fill(EMPTY_CELL)
@@ -39,21 +46,38 @@ function App(){
   const [isEraser, setIsEraser] = useState(false);
   const [isFill, setIsFill] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
-  const [toast, setToast] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 768 || window.innerHeight < 768);
+  const [isSmallScreen, setIsSmallScreen] = useState(
+    window.innerWidth < 768 || window.innerHeight < 768
+  );
 
-  //dual theme; light and dark
+  // Dual theme: light and dark
   const [isDarkTheme, setIsDarkTheme] = useState(true);
 
   const toggleTheme = () => {
-    setIsDarkTheme(prev => {
-      document.body.classList.toggle('light-theme', prev);
+    setIsDarkTheme((prev) => {
+      document.body.classList.toggle("light-theme", prev);
       return !prev;
     });
   };
 
   const fileInputRef = useRef(null);
+
+  // Sync browser path with activeView
+  useEffect(() => {
+    const targetPath = activeView === "dashboard" ? "/dashboard" : "/";
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, "", targetPath);
+    }
+  }, [activeView]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setActiveView(window.location.pathname === "/dashboard" ? "dashboard" : "editor");
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const handleKeyPress = useCallback((event) => {
     if (document.querySelector(".presentation-overlay")) return;
@@ -69,8 +93,7 @@ function App(){
     const eventKey = event.key.toLowerCase();
     const previewToastMsg = "Can't edit while preview";
 
-    // Undo/redo navigate history rather than edit the canvas, so they stay
-    // available in preview mode — checked before the preview gate below.
+    // Undo/redo navigate history rather than edit the canvas
     if (eventKey === "z" && event.ctrlKey) {
       if (history.length) {
         undo();
@@ -107,20 +130,18 @@ function App(){
           showToast("Eraser tool selected", "success");
         }
         return newValue;
-      })
+      });
       setIsFill(false);
-    }
-    else if (eventKey === "b") {
+    } else if (eventKey === "b") {
       setIsFill((prev) => {
         const newValue = !prev;
         if (newValue) {
           showToast("Fill tool selected", "success");
         }
         return newValue;
-      })
+      });
       setIsEraser(false);
-    }
-    else if (eventKey === "a") {
+    } else if (eventKey === "a") {
       setIsEraser(false);
       setIsFill(false);
       showToast("Paint brush tool selected", "success");
@@ -135,10 +156,9 @@ function App(){
   }, [history, future, showGrid]);
 
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyPress);
-
+    document.addEventListener("keydown", handleKeyPress);
     return () => {
-      document.removeEventListener('keydown', handleKeyPress);
+      document.removeEventListener("keydown", handleKeyPress);
     };
   }, [handleKeyPress]);
 
@@ -152,8 +172,6 @@ function App(){
       if (navigator.userAgentData) {
         return navigator.userAgentData.mobile;
       }
-
-      // Fallback for browsers that don't support userAgentData.mobile
       return /Mobi|Android/i.test(navigator.userAgent);
     };
 
@@ -172,21 +190,6 @@ function App(){
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("resize", handleResize);
     };
-  }, []);
-
-
-  const toastTimeoutRef = useRef(null);
-
-  const showToast = useCallback((msg, type = "error") => {
-    setToast({ msg, type });
-
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-
-    toastTimeoutRef.current = setTimeout(() => {
-      setToast(null);
-    }, 3000);
   }, []);
 
   const applySnapshot = useCallback((snap) => {
@@ -213,7 +216,8 @@ function App(){
       !window.confirm(
         "Changing grid size will clear your current drawing. Continue?"
       )
-    ) return;
+    )
+      return;
 
     setGridSize(newSize);
     setShowGrid(newSize < 32);
@@ -245,13 +249,9 @@ function App(){
       newCells[idx] = fillColor;
       visited.add(idx);
 
-      // Left (only if not on left edge)
       if (col > 0) stack.push(idx - 1);
-      // Right (only if not on right edge)
       if (col < gridSize - 1) stack.push(idx + 1);
-      // Up
       if (row > 0) stack.push(idx - gridSize);
-      // Down
       if (row < gridSize - 1) stack.push(idx + gridSize);
     }
 
@@ -313,7 +313,7 @@ function App(){
   };
 
   const fillBackground = () => {
-    const newCells = cells.map(c => c === EMPTY_CELL ? selectedColor : c);
+    const newCells = cells.map((c) => (c === EMPTY_CELL ? selectedColor : c));
     setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
     setFuture([]);
     setCells(newCells);
@@ -411,110 +411,159 @@ function App(){
   };
 
   const path = window.location.pathname;
-
-  if (path !== "/") {
+  if (path !== "/" && path !== "/dashboard" && path !== "/editor") {
     return <ErrorPage />;
   }
 
   return (
     <>
-      <Header isDarkTheme={isDarkTheme} toggleTheme={toggleTheme} />
-
-      <Menu
-        downloadImage={downloadImage}
-        onImport={triggerImport}
-        isExporting={isExporting}
-      />
-      <input
-        type="file"
-        accept="image/*,.svg,image/svg+xml"
-        ref={fileInputRef}
-        style={{ display: "none" }}
-        onChange={importImage}
+      <Header
+        isDarkTheme={isDarkTheme}
+        toggleTheme={toggleTheme}
+        user={user}
+        isAuthenticated={isAuthenticated}
+        isLoading={isLoading}
+        onLogin={login}
+        onLogout={logout}
+        activeView={activeView}
+        setActiveView={setActiveView}
       />
 
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
-      <section className="editor-section" id="editor">
-        <div className="section-heading">
-          <h2>Pixel editor</h2>
-        </div>
-        <div className="editor-workspace">
-          <SnapsPanel {...snaps} showToast={showToast} />
-          <main className="canvas-workspace" aria-label="Canvas editor">
-          <Grid
-            cells={cells}
-            gridSize={gridSize}
-            showGrid={showGrid}
-            isFill={isFill}
-            isEraser={isEraser}
-            paintCell={paintCell}
-            gridGap={getGridGap(gridSize, showGrid)}
-            backgroundColor={backgroundColor}
+      {activeView === "dashboard" && isAuthenticated ? (
+        <>
+          <DashboardShell user={user} onOpenEditor={() => setActiveView("editor")} />
+          <Footer />
+        </>
+      ) : (
+        <>
+          <Menu
+            downloadImage={downloadImage}
+            onImport={triggerImport}
+            isExporting={isExporting}
+          />
+          <input
+            type="file"
+            accept="image/*,.svg,image/svg+xml"
+            ref={fileInputRef}
+            style={{ display: "none" }}
+            onChange={importImage}
           />
 
-          <div className="grid-size-selector">
-            <span className="grid-size-label">Grid:</span>
-            {GRID_SIZES.map((size) => (
-              <button
-                key={size}
-                className={`grid-size-btn${gridSize === size ? " grid-size-btn--active" : ""
-                  }${isPreview ? " grid-size-btn--disabled" : ""}`}
-                onClick={() => changeGridSize(size)}
-                disabled={isPreview || gridSize === size}
-                aria-pressed={gridSize === size}
-                title={getGridSizeTitle(size)}
-              >
-                {size}×{size}
-              </button>
-            ))}
-            <button
-              className={`grid-size-btn${!showGrid ? " grid-size-btn--active" : ""}`}
-              onClick={() => setShowGrid((s) => {
-                const next = !s;
-                showToast(next ? "Preview disabled" : "Preview enabled", next ? "success" : "error");
-                return next;
-              })}
-              title="Toggle grid lines"
-            >
-              <i className="fa-solid fa-eye"></i>
-            </button>
+          <section className="editor-section" id="editor">
+            <div className="section-heading">
+              <h2>Pixel editor</h2>
+            </div>
+            <div className="editor-workspace">
+              <SnapsPanel {...snaps} showToast={showToast} />
+              <main className="canvas-workspace" aria-label="Canvas editor">
+                <Grid
+                  cells={cells}
+                  gridSize={gridSize}
+                  showGrid={showGrid}
+                  isFill={isFill}
+                  isEraser={isEraser}
+                  paintCell={paintCell}
+                  gridGap={getGridGap(gridSize, showGrid)}
+                  backgroundColor={backgroundColor}
+                />
+
+                <div className="grid-size-selector">
+                  <span className="grid-size-label">Grid:</span>
+                  {GRID_SIZES.map((size) => (
+                    <button
+                      key={size}
+                      className={`grid-size-btn${
+                        gridSize === size ? " grid-size-btn--active" : ""
+                      }${isPreview ? " grid-size-btn--disabled" : ""}`}
+                      onClick={() => changeGridSize(size)}
+                      disabled={isPreview || gridSize === size}
+                      aria-pressed={gridSize === size}
+                      title={getGridSizeTitle(size)}
+                    >
+                      {size}×{size}
+                    </button>
+                  ))}
+                  <button
+                    className={`grid-size-btn${!showGrid ? " grid-size-btn--active" : ""}`}
+                    onClick={() =>
+                      setShowGrid((s) => {
+                        const next = !s;
+                        showToast(
+                          next ? "Preview disabled" : "Preview enabled",
+                          next ? "success" : "error"
+                        );
+                        return next;
+                      })
+                    }
+                    title="Toggle grid lines"
+                  >
+                    <i className="fa-solid fa-eye"></i>
+                  </button>
+                </div>
+
+                <Tools
+                  undo={undo}
+                  redo={redo}
+                  canUndo={history.length > 0}
+                  canRedo={future.length > 0}
+                  selectedColor={selectedColor}
+                  setSelectedColor={setSelectedColor}
+                  isEraser={isEraser}
+                  setIsEraser={setIsEraser}
+                  isFill={isFill}
+                  setIsFill={setIsFill}
+                  backgroundColor={backgroundColor}
+                  setBackgroundColor={setBackgroundColor}
+                  fillBackground={fillBackground}
+                  clearAll={clearAll}
+                  showToast={showToast}
+                  isPreview={isPreview}
+                />
+              </main>
+            </div>
+          </section>
+
+          <div id="community">
+            <Contributors />
           </div>
-
-          <Tools
-            undo={undo}
-            redo={redo}
-            canUndo={history.length > 0}
-            canRedo={future.length > 0}
-            selectedColor={selectedColor}
-            setSelectedColor={setSelectedColor}
-            isEraser={isEraser}
-            setIsEraser={setIsEraser}
-            isFill={isFill}
-            setIsFill={setIsFill}
-            backgroundColor={backgroundColor}
-            setBackgroundColor={setBackgroundColor}
-            fillBackground={fillBackground}
-            clearAll={clearAll}
-            showToast={showToast}
-            isPreview={isPreview}
-          />
-          </main>
-        </div>
-      </section>
-
-      <div id="community"><Contributors /></div>
-      <Footer />
-      {snaps.isPlaying && (
-        <PresentationMode
-          snaps={snaps.presentationSnaps}
-          startingSnapId={snaps.presentationStartSnapId}
-          onUpdateSnap={snaps.updateSnap}
-          onExit={snaps.stopPresentation}
-        />
+          <Footer />
+          {snaps.isPlaying && (
+            <PresentationMode
+              snaps={snaps.presentationSnaps}
+              startingSnapId={snaps.presentationStartSnapId}
+              onUpdateSnap={snaps.updateSnap}
+              onExit={snaps.stopPresentation}
+            />
+          )}
+        </>
       )}
     </>
   );
-};
+}
+
+function App() {
+  const [toast, setToast] = useState(null);
+  const toastTimeoutRef = useRef(null);
+
+  const showToast = useCallback((msg, type = "error") => {
+    setToast({ msg, type });
+
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  }, []);
+
+  return (
+    <AuthProvider showToast={showToast}>
+      <AppContent showToast={showToast} toast={toast} />
+    </AuthProvider>
+  );
+}
 
 export default App;

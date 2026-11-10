@@ -2377,3 +2377,495 @@ body.light-theme .grid-size-btn:hover:not(:disabled) {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
 }
+
+/* ==========================================================================
+   v3.4.0 GitHub Authentication & Dashboard Shell Styles
+   ========================================================================== */
+
+.site-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nav-text-btn {
+  background: transparent;
+  border: none;
+  color: var(--footer-text-color);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.nav-text-btn:hover {
+  color: var(--text-color);
+}
+
+.nav-text-btn.active {
+  color: var(--text-color);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* GitHub Login Button */
+.btn-github-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #24292f;
+  color: #ffffff;
+  border: 1px solid #444c56;
+  border-radius: 6px;
+  padding: 0.45rem 0.85rem;
+  font-family: "Minecraft", monospace, sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-github-login:hover {
+  background-color: #2f363d;
+  transform: translateY(-1px);
+}
+
+.btn-github-login i {
+  font-size: 1rem;
+}
+
+body.light-theme .btn-github-login {
+  background-color: #24292e;
+  color: #ffffff;
+  border-color: #1b1f23;
+}
+
+body.light-theme .btn-github-login:hover {
+  background-color: #1b1f23;
+}
+
+.auth-loading-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--text-color);
+}
+
+/* Account Menu */
+.account-menu-container {
+  position: relative;
+}
+
+.account-badge-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--header-bg-color);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 0.25rem 0.7rem 0.25rem 0.35rem;
+  color: var(--text-color);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+body.light-theme .account-badge-btn {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.account-badge-btn:hover {
+  border-color: var(--text-color);
+}
+
+.account-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--text-color);
+}
+
+.account-username {
+  font-weight: 600;
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-chevron {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+/* Dropdown Menu */
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background-color: var(--menu-bg-color);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  padding: 0.5rem 0;
+  color: var(--menu-text-color);
+  font-family: "Minecraft", monospace, sans-serif;
+  animation: fadeInDown 0.15s ease-out;
+}
+
+body.light-theme .account-dropdown {
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.account-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+}
+
+.dropdown-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--text-color);
+}
+
+.dropdown-user-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dropdown-user-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-user-login {
+  font-size: 0.78rem;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0.4rem 0;
+}
+
+body.light-theme .dropdown-divider {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.dropdown-links {
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 1rem;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: var(--menu-text-color);
+  font-family: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background-color 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+body.light-theme .dropdown-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dropdown-item i {
+  width: 16px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.external-icon {
+  margin-left: auto;
+  font-size: 0.7rem !important;
+  opacity: 0.6;
+}
+
+.dropdown-item-danger {
+  color: #ff5c5c;
+}
+
+.dropdown-item-danger:hover {
+  background-color: rgba(255, 92, 92, 0.12);
+}
+
+/* Secondary Hero CTA */
+.hero-cta-secondary {
+  background: transparent;
+  border: 1px solid var(--text-color);
+  color: var(--text-color);
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.hero-cta-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+body.light-theme .hero-cta-secondary:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   Dashboard Shell Styles
+   ========================================================================== */
+
+.dashboard-shell {
+  width: min(100% - 2rem, 1100px);
+  margin: 2rem auto 4rem auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  font-family: "Minecraft", monospace, sans-serif;
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  background-color: var(--menu-bg-color);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+body.light-theme .dashboard-header {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-welcome {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.dashboard-welcome-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid var(--text-color);
+  object-fit: cover;
+}
+
+.dashboard-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.dashboard-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--footer-text-color);
+}
+
+.dashboard-subtitle code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+body.light-theme .dashboard-subtitle code {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-user-link {
+  color: var(--text-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dashboard-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--text-color);
+  color: var(--bg-color);
+  border: none;
+  border-radius: 6px;
+  padding: 0.65rem 1.25rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.dashboard-cta-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.dashboard-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.dashboard-section-heading h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.badge-roadmap {
+  background: rgba(99, 102, 241, 0.2);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-radius: 12px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Empty Card */
+.dashboard-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background-color: var(--menu-bg-color);
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+body.light-theme .dashboard-empty-card {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.empty-card-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.dashboard-empty-card h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.15rem;
+}
+
+.dashboard-empty-card p {
+  max-width: 540px;
+  margin: 0 0 1.5rem 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--footer-text-color);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--text-color);
+  border: 1px solid var(--text-color);
+  border-radius: 6px;
+  padding: 0.55rem 1.1rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+body.light-theme .btn-secondary:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Meta Grid */
+.dashboard-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.meta-card {
+  padding: 1.25rem;
+  background-color: var(--menu-bg-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+body.light-theme .meta-card {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.meta-card h5 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.meta-card p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--footer-text-color);
+}
