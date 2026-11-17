@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { createGridPointerHandlers } from "./utils/gridPointer.mjs";
 
 function Grid({
   cells,
@@ -10,8 +11,15 @@ function Grid({
   paintCell,
   backgroundColor,
 }) {
-  const [isMouseDown, setIsMouseDown] = useState(false);
+  const stroke = useRef({ pointerId: null, lastCell: null });
   const [hoveredCell, setHoveredCell] = useState(null);
+
+  const pointerHandlers = createGridPointerHandlers(stroke.current, {
+    showGrid,
+    isFill,
+    paintCell,
+    onHover: setHoveredCell,
+  });
 
   const coordinates = Array.from({ length: gridSize }, (_, index) => index + 1);
   const coordinateStep =
@@ -36,10 +44,6 @@ function Grid({
         "--grid-box-count": gridSize,
         "--grid-gap": `${gridGap}px`,
         position: "relative",
-      }}
-      onMouseLeave={() => {
-        setIsMouseDown(false);
-        setHoveredCell(null);
       }}
     >
       <span
@@ -70,9 +74,7 @@ function Grid({
                 ? " coordinate-label--visible"
                 : ""
             }${
-              hoveredColumn === coordinate
-                ? " coordinate-label--active"
-                : ""
+              hoveredColumn === coordinate ? " coordinate-label--active" : ""
             }`}
           >
             {coordinate}
@@ -82,9 +84,9 @@ function Grid({
 
       <div
         className="grid-cont"
-        onMouseUp={() => setIsMouseDown(false)}
+        {...pointerHandlers}
         id="pixel-grid"
-        style={{ backgroundColor }}
+        style={{ backgroundColor, touchAction: showGrid ? "none" : "auto" }}
       >
         {cells.map((color, index) => (
           <div
@@ -97,24 +99,12 @@ function Grid({
               cursor: !showGrid
                 ? "not-allowed"
                 : isEraser
-                  ? "url(/cursors/eraser.png), auto"
-                  : isFill
-                    ? "url(/cursors/bucket.png), auto"
-                    : "url(/cursors/paintbrush.png), auto",
+                ? "url(/cursors/eraser.png), auto"
+                : isFill
+                ? "url(/cursors/bucket.png), auto"
+                : "url(/cursors/paintbrush.png), auto",
             }}
-            onMouseDown={() => {
-              if (showGrid) {
-                paintCell(index);
-                setIsMouseDown(true);
-              }
-            }}
-            onMouseEnter={() => {
-              setHoveredCell(index);
-              if (showGrid && isMouseDown && !isFill) {
-                paintCell(index);
-              }
-            }}
-            onMouseUp={() => setIsMouseDown(false)}
+            data-cell-index={index}
           />
         ))}
       </div>
@@ -127,9 +117,7 @@ function Grid({
               isCoordinateVisible(coordinate)
                 ? " coordinate-label--visible"
                 : ""
-            }${
-              hoveredRow === coordinate ? " coordinate-label--active" : ""
-            }`}
+            }${hoveredRow === coordinate ? " coordinate-label--active" : ""}`}
           >
             {coordinate}
           </span>

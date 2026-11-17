@@ -18,7 +18,8 @@ this browser when local storage is available.
 
 ## Draw on the canvas
 
-Click a cell to color it, or click and drag to paint several cells. The canvas
+Click or tap a cell to color it, or drag with a mouse, pen, or finger to paint
+several cells. Fill runs once per press, and drawing stays disabled in preview. The canvas
 starts at 16×16. Choose a color with the color picker in the tools bar, then
 draw with the paint brush.
 
