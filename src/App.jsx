@@ -265,17 +265,6 @@ function AppContent({ showToast, toast }) {
       e.returnValue = "";
     };
 
-    const isMobile = () => {
-      if (navigator.userAgentData) {
-        return navigator.userAgentData.mobile;
-      }
-      return /Mobi|Android/i.test(navigator.userAgent);
-    };
-
-    if (isMobile()) {
-      showToast("Switch to desktop");
-    }
-
     const handleResize = () => {
       setIsSmallScreen(window.innerWidth < 768 || window.innerHeight < 768);
     };
