@@ -95,7 +95,7 @@ function Tools({
                     showToast("Undo", "success");
                 }}
                 disabled={!canUndo}
-                title={canUndo ? "Undo (Ctrl+Z)" : "Nothing to undo"}
+                title={canUndo ? "Undo (Ctrl/Cmd+Z)" : "Nothing to undo"}
             >
                 <i className="fa-solid fa-rotate-left"></i>
             </button>
@@ -108,7 +108,7 @@ function Tools({
                     showToast("Redo", "success");
                 }}
                 disabled={!canRedo}
-                title={canRedo ? "Redo (Ctrl+Y)" : "Nothing to redo"}
+                title={canRedo ? "Redo (Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y)" : "Nothing to redo"}
             >
                 <i className="fa-solid fa-rotate-right"></i>
             </button>

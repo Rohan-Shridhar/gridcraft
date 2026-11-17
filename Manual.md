@@ -51,8 +51,8 @@ GridCraft keeps up to 15 recent canvas changes for undo and redo.
 
 | Action | Shortcut |
 | --- | --- |
-| Undo | `Ctrl + Z` |
-| Redo | `Ctrl + Y` |
+| Undo | `Ctrl/Cmd + Z` |
+| Redo | `Ctrl/Cmd + Shift + Z` or `Ctrl/Cmd + Y` |
 | Paint brush | `A` |
 | Eraser | `E` |
 | Fill tool | `B` |
