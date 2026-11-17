@@ -295,6 +295,7 @@ function AppContent({ showToast, toast }) {
     if (newSize === gridSize) return;
 
     if (
+      cells.some((cell) => cell !== EMPTY_CELL) &&
       !window.confirm(
         "Changing grid size will clear your current drawing. Continue?"
       )

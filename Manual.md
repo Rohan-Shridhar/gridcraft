@@ -27,7 +27,8 @@ Use the grid buttons below the canvas to choose a size:
 | 64×64 | Detailed pixel art |
 | 128×128 | Large, detailed drawings |
 
-Changing the grid size asks for confirmation and clears the current drawing.
+If any cells are painted, changing the grid size asks for confirmation before
+clearing the drawing. A blank canvas resizes immediately.
 Grid lines are shown on the 16×16 grid; the larger grids open without grid lines.
 Use the eye button below the canvas to toggle grid lines and preview the artwork.
 In preview mode, drawing tools and grid-size controls are disabled. Undo and redo
