@@ -37,8 +37,8 @@ Shortcuts work while the drawing grid is visible:
 
 | Action | Shortcut |
 | --- | --- |
-| Undo | `Ctrl + Z` |
-| Redo | `Ctrl + Y` |
+| Undo | `Ctrl/Cmd + Z` |
+| Redo | `Ctrl/Cmd + Shift + Z` or `Ctrl/Cmd + Y` |
 | Paint brush | `A` |
 | Fill enclosed cells | `B` |
 | Fill transparent cells | `C` |

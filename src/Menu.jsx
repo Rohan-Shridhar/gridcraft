@@ -103,8 +103,8 @@ function Menu({ downloadImage, onImport, isExporting = false, disabled = false }
                     >
                         <h2 id="shortcut-help-title" style={{ marginTop: 0, fontFamily: '"Minecraft", "Courier New", monospace' }}>Keyboard shortcuts</h2>
                         <ul style={{ lineHeight: 1.9, paddingLeft: "1.25rem", fontFamily: '"Minecraft", "Courier New", monospace' }}>
-                            <li><strong>Ctrl + Z</strong> — Undo</li>
-                            <li><strong>Ctrl + Y</strong> — Redo</li>
+                            <li><strong>Ctrl/Cmd + Z</strong> — Undo</li>
+                            <li><strong>Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y</strong> — Redo</li>
                             <li><strong>A</strong> — Paint brush</li>
                             <li><strong>E</strong> — Eraser</li>
                             <li><strong>B</strong> — Fill tool</li>

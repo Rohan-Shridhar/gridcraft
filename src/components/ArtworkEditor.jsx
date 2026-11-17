@@ -5,6 +5,7 @@ import Menu from "../Menu.jsx";
 import Tools from "../Tools.jsx";
 import useArtworkEditor from "../hooks/useArtworkEditor.js";
 import apiClient from "../services/apiClient.js";
+import { getHistoryShortcut } from "../utils/historyShortcuts.mjs";
 import EditorSaveBar from "./EditorSaveBar.jsx";
 import ArtworkThumbnail from "./ArtworkThumbnail.jsx";
 
@@ -62,10 +63,11 @@ export default function ArtworkEditor({
     const handleKeyDown = (event) => {
       if (editor.saveState === "saving" || isWorking) return;
       if (event.target instanceof HTMLElement && event.target.matches("input, textarea, select")) return;
-      if (event.ctrlKey && event.key.toLowerCase() === "z") {
+      const historyShortcut = getHistoryShortcut(event);
+      if (historyShortcut === "undo") {
         event.preventDefault();
         editor.undo();
-      } else if (event.ctrlKey && event.key.toLowerCase() === "y") {
+      } else if (historyShortcut === "redo") {
         event.preventDefault();
         editor.redo();
       } else if (event.key.toLowerCase() === "e") {

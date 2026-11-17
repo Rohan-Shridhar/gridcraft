@@ -11,6 +11,7 @@ import DashboardShell from './components/DashboardShell.jsx';
 import AlbumDetail from './components/AlbumDetail.jsx';
 import ArtworkEditor from './components/ArtworkEditor.jsx';
 import useSnaps from './hooks/useSnaps.js';
+import { getHistoryShortcut } from './utils/historyShortcuts.mjs';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 
 const GRID_SIZES = [16, 32, 64, 128];
@@ -172,14 +173,17 @@ function AppContent({ showToast, toast }) {
     const previewToastMsg = "Can't edit while preview";
 
     // Undo/redo navigate history rather than edit the canvas
-    if (eventKey === "z" && event.ctrlKey) {
+    const historyShortcut = getHistoryShortcut(event);
+    if (historyShortcut === "undo") {
+      event.preventDefault();
       if (history.length) {
         undo();
         showToast("Undo", "success");
       }
       return;
     }
-    if (eventKey === "y" && event.ctrlKey) {
+    if (historyShortcut === "redo") {
+      event.preventDefault();
       if (future.length) {
         redo();
         showToast("Redo", "success");
