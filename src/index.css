@@ -2375,6 +2375,24 @@ body.light-theme .grid-size-btn:hover:not(:disabled) {
   max-width: 400px;
 }
 
+.error-home-link {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--footer-link-hover);
+  border-radius: 6px;
+  color: var(--footer-link-hover);
+  font-family: "Minecraft", monospace, sans-serif;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.error-home-link:hover,
+.error-home-link:focus-visible {
+  background-color: var(--footer-link-hover);
+  color: var(--bg-color);
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
