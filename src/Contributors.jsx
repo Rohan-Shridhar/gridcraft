@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { loadContributors } from "./utils/contributors.mjs";
 
 const REPO = "rohan-shridhar/gridcraft";
-const CONTRIBUTORS_API = `https://api.github.com/repos/${REPO}/contributors?per_page=100`;
 const CONTRIBUTORS_PAGE = `https://github.com/${REPO}/graphs/contributors`;
 const MIN_MARQUEE_ITEMS = 8;
 
@@ -46,41 +46,19 @@ function Contributors() {
   );
 
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true;
 
-    async function fetchContributors() {
-      setStatus("loading");
+    loadContributors().then((data) => {
+      if (!active) return;
+      setContributors(data);
+      setStatus(data.length ? "ready" : "empty");
+    }).catch((error) => {
+      if (!active) return;
+      setContributors([]);
+      setStatus(error.rateLimited ? "rate-limited" : "error");
+    });
 
-      try {
-        const response = await fetch(CONTRIBUTORS_API, {
-          signal: controller.signal,
-          headers: { Accept: "application/vnd.github+json" },
-        });
-
-        if (!response.ok) {
-          throw new Error(`GitHub API responded with ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (!Array.isArray(data) || data.length === 0) {
-          setContributors([]);
-          setStatus("empty");
-          return;
-        }
-
-        setContributors(data);
-        setStatus("ready");
-      } catch (error) {
-        if (error.name === "AbortError") return;
-        setContributors([]);
-        setStatus("error");
-      }
-    }
-
-    fetchContributors();
-
-    return () => controller.abort();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -109,9 +87,11 @@ function Contributors() {
         </p>
       )}
 
-      {status === "error" && (
+      {(status === "error" || status === "rate-limited") && (
         <p className="contributors-status contributors-status--error" role="alert">
-          Unable to load contributors.{" "}
+          {status === "rate-limited"
+            ? "GitHub’s request limit was reached. Please try again later."
+            : "Unable to load contributors."}{" "}
           <a href={CONTRIBUTORS_PAGE} target="_blank" rel="noopener noreferrer">
             View on GitHub
           </a>
