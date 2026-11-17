@@ -155,3 +155,9 @@ folder copy, not a GitHub repository fork.
   dark themes.
 - Select the keyboard button in the top menu to view shortcuts.
 - Select the book button in the top menu to open this manual.
+
+## Leave or reload the page
+
+A blank canvas can be left or reloaded without a warning. GridCraft requests a
+confirmation when the local canvas contains pixels or a background color, or when
+an artwork or story has unsaved changes. Save your artwork or story before leaving.

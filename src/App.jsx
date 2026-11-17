@@ -259,21 +259,42 @@ function AppContent({ showToast, toast }) {
     };
   }, [handleKeyPress]);
 
+  const hasUnsavedChanges =
+    (activeView === "artwork-editor" && artworkDirty) ||
+    (activeView === "album-detail" && storyDirty) ||
+    cells.some((cell) => cell !== EMPTY_CELL) ||
+    backgroundColor !== DEFAULT_BACKGROUND_COLOR;
+
   useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      e.preventDefault();
-      e.returnValue = "";
+    if (!hasUnsavedChanges) return;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
     };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const isMobile = () => {
+      if (navigator.userAgentData) {
+        return navigator.userAgentData.mobile;
+      }
+      return /Mobi|Android/i.test(navigator.userAgent);
+    };
+
+    if (isMobile()) {
+      showToast("Switch to desktop");
+    }
 
     const handleResize = () => {
       setIsSmallScreen(window.innerWidth < 768 || window.innerHeight < 768);
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
     window.addEventListener("resize", handleResize);
 
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("resize", handleResize);
     };
   }, []);
