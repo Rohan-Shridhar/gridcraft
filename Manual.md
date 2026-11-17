@@ -10,6 +10,12 @@ Use the live app at [gridcraft-by-me.vercel.app](https://gridcraft-by-me.vercel.
 To run it locally, install the project dependencies with `npm install`, then run
 `npm run dev` and open the local address shown in the terminal.
 
+## Choose a theme
+
+Use the sun or moon button in the header to switch between light and dark themes.
+GridCraft starts with your system color preference and remembers your choice in
+this browser when local storage is available.
+
 ## Draw on the canvas
 
 Click a cell to color it, or click and drag to paint several cells. The canvas

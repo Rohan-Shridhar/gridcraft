@@ -145,14 +145,29 @@ function AppContent({ showToast, toast }) {
     window.innerWidth < 768 || window.innerHeight < 768
   );
 
-  // Dual theme: light and dark
-  const [isDarkTheme, setIsDarkTheme] = useState(true);
+  const [isDarkTheme, setIsDarkTheme] = useState(() => {
+    try {
+      const savedTheme = localStorage.getItem("gridcraft:theme");
+      if (savedTheme === "dark" || savedTheme === "light") {
+        return savedTheme === "dark";
+      }
+    } catch {
+      // Storage may be unavailable in private or restricted browsing contexts.
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+
+  useEffect(() => {
+    document.body.classList.toggle("light-theme", !isDarkTheme);
+    try {
+      localStorage.setItem("gridcraft:theme", isDarkTheme ? "dark" : "light");
+    } catch {
+      // The theme can still change when storage is unavailable.
+    }
+  }, [isDarkTheme]);
 
   const toggleTheme = () => {
-    setIsDarkTheme((prev) => {
-      document.body.classList.toggle("light-theme", prev);
-      return !prev;
-    });
+    setIsDarkTheme((prev) => !prev);
   };
 
   const fileInputRef = useRef(null);
