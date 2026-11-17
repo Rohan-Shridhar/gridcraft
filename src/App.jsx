@@ -259,12 +259,24 @@ function AppContent({ showToast, toast }) {
     };
   }, [handleKeyPress]);
 
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
+  const hasUnsavedChanges =
+    (activeView === "artwork-editor" && artworkDirty) ||
+    (activeView === "album-detail" && storyDirty) ||
+    cells.some((cell) => cell !== EMPTY_CELL) ||
+    backgroundColor !== DEFAULT_BACKGROUND_COLOR;
 
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
     const isMobile = () => {
       if (navigator.userAgentData) {
         return navigator.userAgentData.mobile;
@@ -280,11 +292,9 @@ function AppContent({ showToast, toast }) {
       setIsSmallScreen(window.innerWidth < 768 || window.innerHeight < 768);
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
     window.addEventListener("resize", handleResize);
 
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("resize", handleResize);
     };
   }, []);
