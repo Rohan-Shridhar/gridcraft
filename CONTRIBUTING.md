@@ -1,7 +1,7 @@
 # Contributing to GridCraft 🚀
 
 Thanks for checking out GridCraft!  
-This project is all about building and experimenting with grid-based layouts and utilities.
+GridCraft is a pixel art and collaboration platform. Contributors work on the drawing tools, album and Story workflows, and GitHub-backed artwork libraries, as well as GridCraft's own issues and pull requests.
 
 ---
 
@@ -55,11 +55,35 @@ git checkout -b fix/navbar-overflow
 
 ## ⚙️ Setup
 
+Use Node.js 24 or newer (the backend uses the built-in `node:sqlite` module) and npm. From your fork:
+
 ```bash
 git clone https://github.com/your-username/gridcraft.git
 cd gridcraft
-open index.html
+npm install
+cp .env.example .env
+npm run dev
 ```
+
+In PowerShell, use `Copy-Item .env.example .env` for the copy step. Keep your local `.env` out of commits.
+
+`npm run dev` starts the Vite frontend at `http://localhost:5173` and the Express backend at `http://localhost:4000`. Open the frontend URL; opening `index.html` directly does not run the app. Vite proxies `/api` requests to the backend.
+
+The local drawing canvas works without GitHub credentials. Signing in, saving to GitHub, and using collaboration features require the GitHub App credentials in `.env`; see [GitHub App Setup](docs/GITHUB_APP_SETUP.md). Replace the example security secrets before deploying.
+
+Before submitting changes, run:
+
+```bash
+npm test
+npm run test:server
+npm run build
+```
+
+These run the unit tests, backend integration tests, and production frontend build. If parallel backend tests report `database is locked`, run them serially:
+
+```bash
+node --test --test-concurrency=1 server/tests/*.test.mjs
+``` For frontend-only work, `npm run dev:client` starts Vite separately; authentication and API-backed features still need the backend.
 
 ---
 
@@ -151,7 +175,7 @@ Use this template for the description of every Pull Request. Copy it into the PR
 ## How to Test
 
 <!-- Steps a reviewer can follow to verify the change locally:
-     1. Open `index.html` in a browser
+     1. Run `npm run dev` and open `http://localhost:5173`
      2. ...
      3. Expected: ... -->
 
