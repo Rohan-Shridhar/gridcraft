@@ -646,6 +646,8 @@ function AppContent({ showToast, toast }) {
                         return next;
                       })
                     }
+                    aria-label="Preview mode"
+                    aria-pressed={!showGrid}
                     title="Toggle grid lines"
                   >
                     <i className="fa-solid fa-eye"></i>

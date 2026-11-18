@@ -358,6 +358,7 @@ export default function ArtworkEditor({
                       setShowGrid(size < 32);
                     }
                   }}
+                  aria-pressed={editor.gridSize === size}
                   disabled={editor.gridSize === size || !showGrid}
                 >
                   {size}×{size}
@@ -366,6 +367,8 @@ export default function ArtworkEditor({
               <button
                 className={`grid-size-btn${!showGrid ? " grid-size-btn--active" : ""}`}
                 onClick={() => setShowGrid((value) => !value)}
+                aria-label="Preview mode"
+                aria-pressed={!showGrid}
                 title="Toggle grid lines"
               >
                 <i className="fa-solid fa-eye"></i>
