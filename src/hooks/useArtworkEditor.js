@@ -40,6 +40,22 @@ export default function useArtworkEditor() {
   const shaRef = useRef(null);
   // Keeps last good cells in case user wants to discard after conflict
   const lastSavedArtworkRef = useRef(null);
+  const editRevisionRef = useRef(0);
+  const writeInFlightRef = useRef(false);
+
+  const markDirty = useCallback(() => {
+    editRevisionRef.current += 1;
+    setIsDirty(true);
+    if (!writeInFlightRef.current) setSaveState("unsaved");
+  }, []);
+
+  const finishWrite = useCallback((revision, wasDirty = false) => {
+    const dirty = wasDirty || editRevisionRef.current !== revision;
+    setIsDirty(dirty);
+    setSaveState(dirty ? "unsaved" : "saved");
+    return dirty;
+  }, []);
+
 
   const loadArtwork = useCallback(async (ownerArg, repoArg, storyArg, idArg, branchArg = "master") => {
     setOwner(ownerArg);
@@ -80,53 +96,48 @@ export default function useArtworkEditor() {
   const paintCell = useCallback((index, newColor) => {
     if (cells[index] === newColor) return;
     dispatchHistory({ type: "paint", index, color: newColor });
-    setIsDirty(true);
-    setSaveState("unsaved");
-  }, [cells]);
+    markDirty();
+  }, [cells, markDirty]);
 
   const setCellsBulk = useCallback((newCells) => {
     dispatchHistory({ type: "replace", cells: newCells });
-    setIsDirty(true);
-    setSaveState("unsaved");
-  }, []);
+    markDirty();
+  }, [markDirty]);
 
   const changeGridSize = useCallback((newSize) => {
     if (!SUPPORTED_GRID_SIZES.includes(newSize) || newSize === gridSize) return;
     dispatchHistory({ type: "reset", cells: Array(newSize * newSize).fill(EMPTY_CELL) });
     setGridSize(newSize);
-    setIsDirty(true);
-    setSaveState("unsaved");
-  }, [gridSize]);
+    markDirty();
+  }, [gridSize, markDirty]);
 
   const undo = useCallback(() => {
     if (!history.length) return;
     dispatchHistory({ type: "undo" });
-    setIsDirty(true);
-    setSaveState("unsaved");
-  }, [history]);
+    markDirty();
+  }, [history, markDirty]);
 
   const redo = useCallback(() => {
     if (!future.length) return;
     dispatchHistory({ type: "redo" });
-    setIsDirty(true);
-    setSaveState("unsaved");
-  }, [future]);
+    markDirty();
+  }, [future, markDirty]);
 
   const clearCanvas = useCallback((confirmFn) => {
     if (confirmFn && !confirmFn()) return;
     dispatchHistory({ type: "clear" });
-    setIsDirty(true);
-    setSaveState("unsaved");
-  }, []);
+    markDirty();
+  }, [markDirty]);
 
   const updateBackgroundColor = useCallback((color) => {
     setBackgroundColor(color);
-    setIsDirty(true);
-    setSaveState("unsaved");
-  }, []);
+    markDirty();
+  }, [markDirty]);
 
   const save = useCallback(async () => {
-    if (!owner || !repoName || !artworkId || !artworkMeta) return;
+    if (!owner || !repoName || !artworkId || !artworkMeta || writeInFlightRef.current) return;
+    writeInFlightRef.current = true;
+    const revision = editRevisionRef.current;
     setSaveState("saving");
     try {
       const payload = {
@@ -141,8 +152,7 @@ export default function useArtworkEditor() {
       const res = await apiClient.saveArtwork(owner, repoName, storyId, artworkId, payload, branch);
       shaRef.current = res.sha;
       lastSavedArtworkRef.current = res.artwork;
-      setIsDirty(false);
-      setSaveState("saved");
+      finishWrite(revision);
       setArtworkMeta((m) => ({ ...m, updatedAt: res.artwork.updatedAt }));
     } catch (err) {
       if (err.status === 409) {
@@ -151,8 +161,10 @@ export default function useArtworkEditor() {
         setSaveState("error");
       }
       throw err;
+    } finally {
+      writeInFlightRef.current = false;
     }
-  }, [owner, repoName, storyId, artworkId, artworkMeta, gridSize, backgroundColor, cells, branch]);
+  }, [owner, repoName, storyId, artworkId, artworkMeta, gridSize, backgroundColor, cells, branch, finishWrite]);
 
   // Reload fresh copy from GitHub (used after conflict → "Reload Remote")
   const reloadFromRemote = useCallback(async () => {
@@ -168,35 +180,47 @@ export default function useArtworkEditor() {
   }, [owner, repoName, storyId, artworkId, branch]);
 
   const saveAsNew = useCallback(async (name) => {
-    if (!owner || !repoName || !storyId || !artworkMeta) return;
-    const result = await apiClient.createArtwork(owner, repoName, storyId, {
-      name,
-      description: artworkMeta.description || "",
-      gridSize,
-      backgroundColor,
-      cells,
-    }, branch);
-    const artwork = result.artwork;
-    setArtworkId(artwork.id);
-    setArtworkMeta({
-      name: artwork.name,
-      description: artwork.description || "",
-      gridSize: artwork.gridSize,
-      backgroundColor: artwork.backgroundColor,
-      createdAt: artwork.createdAt,
-      updatedAt: artwork.updatedAt,
-    });
-    shaRef.current = result.sha;
-    lastSavedArtworkRef.current = artwork;
-    setRemoteArtwork(null);
-    setIsDirty(false);
-    setSaveState("saved");
-    dispatchHistory({ type: "resetHistory" });
-    return artwork;
-  }, [owner, repoName, storyId, artworkMeta, gridSize, backgroundColor, cells, branch]);
+    if (!owner || !repoName || !storyId || !artworkMeta || writeInFlightRef.current) return;
+    writeInFlightRef.current = true;
+    const revision = editRevisionRef.current;
+    setSaveState("saving");
+    try {
+      const result = await apiClient.createArtwork(owner, repoName, storyId, {
+        name,
+        description: artworkMeta.description || "",
+        gridSize,
+        backgroundColor,
+        cells,
+      }, branch);
+      const artwork = result.artwork;
+      setArtworkId(artwork.id);
+      setArtworkMeta({
+        name: artwork.name,
+        description: artwork.description || "",
+        gridSize: artwork.gridSize,
+        backgroundColor: artwork.backgroundColor,
+        createdAt: artwork.createdAt,
+        updatedAt: artwork.updatedAt,
+      });
+      shaRef.current = result.sha;
+      lastSavedArtworkRef.current = artwork;
+      setRemoteArtwork(null);
+      const dirty = finishWrite(revision);
+      if (!dirty) dispatchHistory({ type: "resetHistory" });
+      return artwork;
+    } catch (error) {
+      setSaveState("error");
+      throw error;
+    } finally {
+      writeInFlightRef.current = false;
+    }
+  }, [owner, repoName, storyId, artworkMeta, gridSize, backgroundColor, cells, branch, finishWrite]);
 
   const rename = useCallback(async (newName) => {
-    if (!owner || !repoName || !storyId || !artworkId || !shaRef.current) return;
+    if (!owner || !repoName || !storyId || !artworkId || !shaRef.current || writeInFlightRef.current) return;
+    writeInFlightRef.current = true;
+    const revision = editRevisionRef.current;
+    setSaveState("saving");
     try {
       const result = await apiClient.renameArtwork(owner, repoName, storyId, artworkId, {
         newName,
@@ -210,14 +234,15 @@ export default function useArtworkEditor() {
         name: result.artwork.name,
         updatedAt: result.artwork.updatedAt,
       }));
-      setIsDirty(false);
-      setSaveState("saved");
+      finishWrite(revision, isDirty);
       return result.artwork;
     } catch (error) {
-      if (error.status === 409) setSaveState("conflict");
+      setSaveState(error.status === 409 ? "conflict" : "error");
       throw error;
+    } finally {
+      writeInFlightRef.current = false;
     }
-  }, [owner, repoName, storyId, artworkId, branch]);
+  }, [owner, repoName, storyId, artworkId, branch, isDirty, finishWrite]);
 
   const discardChanges = useCallback(() => {
     const saved = lastSavedArtworkRef.current;
