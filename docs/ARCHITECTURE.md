@@ -35,7 +35,10 @@ forest/
 ```
 
 The server indexes album manifests in SQLite so albums can be listed and
-associated with GridCraft collaboration records.
+associated with GridCraft collaboration records. SQLite connections use a
+five-second busy timeout so brief lock contention during schema initialization
+or writes can resolve before returning an error. Database calls remain
+synchronous, and locks that outlast the timeout still fail.
 
 ## Security and session architecture
 
