@@ -4,11 +4,11 @@
   "description": "![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/rohan-shridhar/gridcraft)\r ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/rohan-shridhar/gridcraft)",
   "main": "index.js",
   "scripts": {
-    "test": "node --test src/utils/*.test.mjs server/tests/crypto.test.mjs",
+    "test": "node --test src/utils/*.test.mjs src/hooks/*.test.mjs server/tests/crypto.test.mjs",
     "dev": "concurrently -n \"server,client\" -c \"blue,green\" \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "vite",
     "dev:server": "node server/src/server.js",
-    "test:client": "node --test src/utils/*.test.mjs",
+    "test:client": "node --test src/utils/*.test.mjs src/hooks/*.test.mjs",
     "test:server": "node --test server/tests/*.test.mjs",
     "build": "vite build",
     "preview": "vite preview"
@@ -42,6 +42,7 @@
     "@vitejs/plugin-react": "^6.0.5",
     "concurrently": "^10.0.7",
     "gifuct-js": "^2.1.2",
+    "happy-dom": "21.0.4",
     "supertest": "^7.3.2",
     "vite": "^8.2.0"
   }
