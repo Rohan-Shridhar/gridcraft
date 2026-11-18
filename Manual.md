@@ -10,6 +10,14 @@ Use the live app at [gridcraft-by-me.vercel.app](https://gridcraft-by-me.vercel.
 To run it locally, install the project dependencies with `npm install`, then run
 `npm run dev` and open the local address shown in the terminal.
 
+## Editor and preview
+
+The eye button switches between these views. Return to editing before changing pixels or grid size.
+
+| Pixel editor | Preview |
+| --- | --- |
+| ![Drawing a red pixel heart with the grid and tools visible](docs/screenshots/editor.jpg) | ![Previewing the same artwork without grid lines](docs/screenshots/preview.jpg) |
+
 ## Choose a theme
 
 Use the sun or moon button in the header to switch between light and dark themes.
@@ -170,3 +178,28 @@ folder copy, not a GitHub repository fork.
 A blank canvas can be left or reloaded without a warning. GridCraft requests a
 confirmation when the local canvas contains pixels or a background color, or when
 an artwork or story has unsaved changes. Save your artwork or story before leaving.
+
+## Frequently asked questions
+
+### Do I need a GitHub account to draw?
+
+No. Drawing, image import, preview, and PNG export work without signing in.
+GitHub sign-in is needed for album storage, versioned saves, and collaboration.
+
+### Why are the drawing tools disabled?
+
+The canvas is in preview mode. Select the eye button below it to return to
+editing. Undo and redo remain available when there is history to navigate.
+
+### How do I keep my artwork after leaving the page?
+
+Save album artwork with **Save to GitHub** to preserve editable canvas data.
+For a standalone drawing, export a PNG before leaving. The standalone canvas
+is not automatically saved across reloads, and a PNG does not preserve undo
+history or Story timing.
+
+### Why do my GridCraft issues and pull requests not appear on GitHub?
+
+GridCraft stores collaboration records in its own application database. GitHub
+stores the artwork library's files and commit history; it does not receive a
+matching GitHub issue or pull request.

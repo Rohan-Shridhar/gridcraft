@@ -6,6 +6,22 @@ GridCraft stores each creator's work in one public `gridcraft-artworks` reposito
 
 ---
 
+## Try GridCraft
+
+[Open the live app](https://gridcraft-by-me.vercel.app/) to start drawing without signing in:
+
+1. Open the pixel editor, choose a color, and click or drag across the canvas. You can also import an image.
+2. Use the eye button to switch between editing and preview.
+3. Export a PNG when you are ready. Sign in with GitHub to save editable artwork to an album and use collaboration features.
+
+| Pixel editor | Preview |
+| --- | --- |
+| ![A red pixel heart on the drawing grid with editing controls](docs/screenshots/editor.jpg) | ![The same pixel heart in preview with grid lines hidden](docs/screenshots/preview.jpg) |
+
+See the [user manual and FAQ](Manual.md) for drawing tools, saving, and troubleshooting.
+
+---
+
 ## Storage and collaboration
 
 - **One artwork library per creator** — signing in initializes `gridcraft-artworks`; albums are folders within that repository.
