@@ -83,7 +83,7 @@ function Tools({
     };
 
     return (
-        <div className="tools-cont">
+        <div className="tools-cont" role="group" aria-label="Drawing tools">
             {/* Undo/redo navigate history rather than edit the canvas, so — unlike
                 every other tool below — they stay enabled in preview mode and are
                 gated only on canUndo/canRedo. */}
@@ -94,6 +94,7 @@ function Tools({
                     undo();
                     showToast("Undo", "success");
                 }}
+                aria-label="Undo"
                 disabled={!canUndo}
                 title={canUndo ? "Undo (Ctrl/Cmd+Z)" : "Nothing to undo"}
             >
@@ -107,6 +108,7 @@ function Tools({
                     redo();
                     showToast("Redo", "success");
                 }}
+                aria-label="Redo"
                 disabled={!canRedo}
                 title={canRedo ? "Redo (Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y)" : "Nothing to redo"}
             >
@@ -116,6 +118,9 @@ function Tools({
             <button
                 className={`tool-btn${isEraser ? ' tool-btn--active' : ''}${isPreview ? ' tool-btn--disabled' : ''}`}
                 onClick={handleToggleEraser}
+                aria-label="Eraser"
+                aria-pressed={isEraser}
+                disabled={isPreview}
                 title={previewTitle ?? "Eraser (E)"}
             >
                 <i className="fa-solid fa-eraser"></i>
@@ -124,6 +129,9 @@ function Tools({
             <button
                 className={`tool-btn${isFill ? ' tool-btn--active' : ''}${isPreview ? ' tool-btn--disabled' : ''}`}
                 onClick={handleToggleFill}
+                aria-label="Fill"
+                aria-pressed={isFill}
+                disabled={isPreview}
                 title={previewTitle ?? "Fill (B)"}
             >
                 <i className="fa-solid fa-fill-drip"></i>
@@ -132,6 +140,9 @@ function Tools({
             <button
                 className={`tool-btn${!isEraser && !isFill && !isPreview ? " tool-btn--active" : ""}${isPreview ? " tool-btn--disabled" : ""}`}
                 onClick={handleBrush}
+                aria-label="Paint brush"
+                aria-pressed={!isEraser && !isFill}
+                disabled={isPreview}
                 title={previewTitle ?? "Paint brush (A)"}
             >
                 <i className="fa-solid fa-brush"></i>
@@ -144,6 +155,8 @@ function Tools({
                     fillBackground();
                     showToast("Background filled", "success");
                 }}
+                aria-label="Fill transparent cells"
+                disabled={isPreview}
                 title={previewTitle ?? "Fill transparent cells (C)"}
             >
                 <i className="fa-brands fa-flipboard"></i>
@@ -158,6 +171,8 @@ function Tools({
                     clearAll();
                     showToast("Canvas cleared", "success");
                 }}
+                aria-label="Clear canvas"
+                disabled={isPreview}
                 title={previewTitle ?? "Clear All (D)"}
             >
                 <i className="fa-solid fa-trash-can"></i>
@@ -171,6 +186,7 @@ function Tools({
                 <input
                     type="color"
                     className="color-input"
+                    disabled={isPreview}
                     value={selectedColor}
                     onClick={(e) => {
                         if (blockIfPreview()) {

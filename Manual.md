@@ -23,6 +23,15 @@ several cells. Fill runs once per press, and drawing stays disabled in preview. 
 starts at 16×16. Choose a color with the color picker in the tools bar, then
 draw with the paint brush.
 
+### Draw with a keyboard
+
+Tab to the canvas, then use the arrow keys to move between cells. Home and End
+move to the start and end of the current row; Control+Home and Control+End move
+to the first and last canvas cells. Press Enter or Space to apply the selected
+brush, eraser, or fill tool. Cell labels expose the row, column, and current
+color. The canvas uses one Tab stop, so Tab can move onward to the toolbar.
+Preview mode exposes the artwork as an image and disables canvas editing.
+
 ## Choose a grid size
 
 Use the grid buttons below the canvas to choose a size:
