@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { artworkHistoryReducer as update, createArtworkHistory } from "./artworkHistory.mjs";
+import {
+  artworkHistoryReducer as update,
+  createArtworkHistory,
+} from "./artworkHistory.mjs";
 
 test("each paint has exactly one undo and redo step", () => {
   let state = createArtworkHistory([null, null]);
@@ -38,7 +41,10 @@ test("replaying a transition does not mutate the input or duplicate history", ()
     assert.deepEqual(painted, original);
   }
   const undone = update(painted, { type: "undo" });
-  assert.deepEqual(update(undone, { type: "redo" }), update(undone, { type: "redo" }));
+  assert.deepEqual(
+    update(undone, { type: "redo" }),
+    update(undone, { type: "redo" })
+  );
   assert.equal(undone.history.length, 0);
   assert.equal(undone.future.length, 1);
 });
@@ -96,4 +102,62 @@ test("loading or resizing resets history while saving preserves the canvas", () 
   const loaded = update(state, { type: "reset", cells });
   cells[0] = "black";
   assert.deepEqual(loaded, { cells: ["blue", null], history: [], future: [] });
+});
+test("flood fill uses the current canvas after a queued paint", () => {
+  let state = createArtworkHistory([null, null, null, null]);
+  state = update(state, { type: "paint", index: 0, color: "red" });
+  state = update(state, { type: "fill", index: 0, color: "blue", gridSize: 2 });
+  assert.deepEqual(state.cells, ["blue", null, null, null]);
+  assert.deepEqual(update(state, { type: "undo" }).cells, [
+    "red",
+    null,
+    null,
+    null,
+  ]);
+  assert.equal(state.history.length, 2);
+});
+
+test("flood fill respects connected regions and row boundaries", () => {
+  const original = [null, "wall", null, null, "wall", null, null, "wall", null];
+  const state = createArtworkHistory(original);
+  const filled = update(state, {
+    type: "fill",
+    index: 3,
+    color: "blue",
+    gridSize: 3,
+  });
+  assert.deepEqual(filled.cells, [
+    "blue",
+    "wall",
+    null,
+    "blue",
+    "wall",
+    null,
+    "blue",
+    "wall",
+    null,
+  ]);
+  assert.deepEqual(update(filled, { type: "undo" }).cells, original);
+  assert.deepEqual(state.cells, original);
+});
+
+test("filling an unchanged region preserves history", () => {
+  const state = createArtworkHistory(Array(9).fill("red"));
+  assert.equal(
+    update(state, { type: "fill", index: 4, color: "red", gridSize: 3 }),
+    state
+  );
+});
+
+test("filling empty cells retains preceding paint and its undo snapshot", () => {
+  let state = createArtworkHistory(["red", null, null, "wall"]);
+  state = update(state, { type: "paint", index: 1, color: "green" });
+  state = update(state, { type: "fillEmpty", color: "blue" });
+  assert.deepEqual(state.cells, ["red", "green", "blue", "wall"]);
+  assert.deepEqual(update(state, { type: "undo" }).cells, [
+    "red",
+    "green",
+    null,
+    "wall",
+  ]);
 });

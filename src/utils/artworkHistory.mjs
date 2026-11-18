@@ -16,6 +16,21 @@ export function artworkHistoryReducer(state, action) {
       cells[action.index] = action.color;
       return replaceCells(state, cells);
     }
+    case "fill": {
+      const cells = floodFill(
+        state.cells,
+        action.index,
+        state.cells[action.index],
+        action.color,
+        action.gridSize
+      );
+      return cells === state.cells ? state : replaceCells(state, cells);
+    }
+    case "fillEmpty":
+      return replaceCells(
+        state,
+        state.cells.map((cell) => (cell === null ? action.color : cell))
+      );
     case "replace":
       return replaceCells(state, [...action.cells]);
     case "clear":
@@ -45,4 +60,32 @@ function replaceCells(state, cells) {
     history: [...state.history.slice(-MAX_HISTORY + 1), state.cells],
     future: [],
   };
+}
+
+function floodFill(cells, index, targetColor, fillColor, gridSize) {
+  if (targetColor === fillColor) return cells;
+  const newCells = [...cells];
+  const stack = [index];
+  const visited = new Set();
+
+  while (stack.length > 0) {
+    const idx = stack.pop();
+    if (visited.has(idx)) continue;
+
+    const row = Math.floor(idx / gridSize);
+    const col = idx % gridSize;
+
+    if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) continue;
+    if (newCells[idx] !== targetColor) continue;
+
+    newCells[idx] = fillColor;
+    visited.add(idx);
+
+    if (col > 0) stack.push(idx - 1);
+    if (col < gridSize - 1) stack.push(idx + 1);
+    if (row > 0) stack.push(idx - gridSize);
+    if (row < gridSize - 1) stack.push(idx + gridSize);
+  }
+
+  return newCells;
 }
