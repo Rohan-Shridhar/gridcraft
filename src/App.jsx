@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useReducer } from 'react';
 import html2canvas from 'html2canvas';
 import Header from './Header.jsx';
 import Menu from './Menu.jsx';
@@ -12,11 +12,11 @@ import AlbumDetail from './components/AlbumDetail.jsx';
 import ArtworkEditor from './components/ArtworkEditor.jsx';
 import useSnaps from './hooks/useSnaps.js';
 import { getHistoryShortcut } from './utils/historyShortcuts.mjs';
+import { artworkHistoryReducer, createArtworkHistory } from './utils/artworkHistory.mjs';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 
 const GRID_SIZES = [16, 32, 64, 128];
 const DEFAULT_GRID_SIZE = 16;
-const MAX_HISTORY = 15;
 const DEFAULT_BACKGROUND_COLOR = "transparent";
 const EMPTY_CELL = null;
 
@@ -129,11 +129,11 @@ function AppContent({ showToast, toast }) {
   }, [route, artworkDirty, storyDirty]);
 
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
-  const [cells, setCells] = useState(
-    Array(DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE).fill(EMPTY_CELL)
+  const [{ cells, history, future }, dispatchCanvas] = useReducer(
+    artworkHistoryReducer,
+    DEFAULT_GRID_SIZE,
+    (size) => createArtworkHistory(Array(size * size).fill(EMPTY_CELL))
   );
-  const [history, setHistory] = useState([]);
-  const [future, setFuture] = useState([]);
 
   const [selectedColor, setSelectedColor] = useState("#e63946");
   const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR);
@@ -301,10 +301,8 @@ function AppContent({ showToast, toast }) {
 
   const applySnapshot = useCallback((snap) => {
     setGridSize(snap.gridSize);
-    setCells([...snap.cells]);
+    dispatchCanvas({ type: "reset", cells: snap.cells });
     setBackgroundColor(snap.backgroundColor);
-    setHistory([]);
-    setFuture([]);
     setShowGrid(snap.gridSize < 32);
   }, []);
 
@@ -329,103 +327,30 @@ function AppContent({ showToast, toast }) {
 
     setGridSize(newSize);
     setShowGrid(newSize < 32);
-    setHistory([]);
-    setFuture([]);
-    setCells(Array(newSize * newSize).fill(EMPTY_CELL));
+    dispatchCanvas({ type: "reset", cells: Array(newSize * newSize).fill(EMPTY_CELL) });
 
     showToast(`Grid set to ${newSize}×${newSize}`, "success");
   };
 
   const triggerImport = () => fileInputRef.current?.click();
 
-  const floodFill = (cells, index, targetColor, fillColor) => {
-    if (targetColor === fillColor) return cells;
-    const newCells = [...cells];
-    const stack = [index];
-    const visited = new Set();
-
-    while (stack.length > 0) {
-      const idx = stack.pop();
-      if (visited.has(idx)) continue;
-
-      const row = Math.floor(idx / gridSize);
-      const col = idx % gridSize;
-
-      if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) continue;
-      if (newCells[idx] !== targetColor) continue;
-
-      newCells[idx] = fillColor;
-      visited.add(idx);
-
-      if (col > 0) stack.push(idx - 1);
-      if (col < gridSize - 1) stack.push(idx + 1);
-      if (row > 0) stack.push(idx - gridSize);
-      if (row < gridSize - 1) stack.push(idx + gridSize);
-    }
-
-    return newCells;
-  };
-
   const paintCell = useCallback(
     (index) => {
       if (!showGrid) return;
-
-      const targetColor = cells[index];
-      const newColor = isEraser ? EMPTY_CELL : selectedColor;
-
-      if (isFill) {
-        if (targetColor === newColor) return;
-        const newCells = floodFill(cells, index, targetColor, newColor);
-        if (newCells === cells) return;
-
-        setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
-        setFuture([]);
-        setCells(newCells);
-        return;
-      }
-
-      if (targetColor === newColor) return;
-
-      const newCells = [...cells];
-      newCells[index] = newColor;
-
-      setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
-      setFuture([]);
-      setCells(newCells);
+      dispatchCanvas({
+        type: isFill ? "fill" : "paint",
+        index,
+        color: isEraser ? EMPTY_CELL : selectedColor,
+        gridSize,
+      });
     },
-    [cells, isEraser, isFill, selectedColor, gridSize, showGrid]
+    [isEraser, isFill, selectedColor, gridSize, showGrid]
   );
 
-  const undo = () => {
-    if (!history.length) return;
-    const prev = history.at(-1);
-
-    setFuture((f) => [cells, ...f.slice(0, MAX_HISTORY - 1)]);
-    setHistory((h) => h.slice(0, -1));
-    setCells(prev);
-  };
-
-  const redo = () => {
-    if (!future.length) return;
-    const next = future[0];
-
-    setHistory((h) => [...h.slice(-MAX_HISTORY + 1), cells]);
-    setFuture((f) => f.slice(1));
-    setCells(next);
-  };
-
-  const clearAll = () => {
-    setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
-    setFuture([]);
-    setCells(Array(gridSize * gridSize).fill(EMPTY_CELL));
-  };
-
-  const fillBackground = () => {
-    const newCells = cells.map((c) => (c === EMPTY_CELL ? selectedColor : c));
-    setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
-    setFuture([]);
-    setCells(newCells);
-  };
+  const undo = () => dispatchCanvas({ type: "undo" });
+  const redo = () => dispatchCanvas({ type: "redo" });
+  const clearAll = () => dispatchCanvas({ type: "clear" });
+  const fillBackground = () => dispatchCanvas({ type: "fillEmpty", color: selectedColor });
 
   const downloadImage = async () => {
     if (isExporting) return;
@@ -498,9 +423,7 @@ function AppContent({ showToast, toast }) {
           if (!window.confirm("Image too detailed. Continue?")) return;
         }
 
-        setHistory((prev) => [...prev.slice(-MAX_HISTORY + 1), cells]);
-        setFuture([]);
-        setCells(newCells);
+        dispatchCanvas({ type: "replace", cells: newCells });
 
         showToast("Image imported!", "success");
       };
