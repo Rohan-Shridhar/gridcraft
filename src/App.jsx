@@ -641,7 +641,7 @@ function AppContent({ showToast, toast }) {
                         const next = !s;
                         showToast(
                           next ? "Preview disabled" : "Preview enabled",
-                          next ? "success" : "error"
+                          "success"
                         );
                         return next;
                       })
