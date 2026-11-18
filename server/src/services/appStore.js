@@ -96,6 +96,7 @@ export class AppStore {
   constructor(databasePath = config.database.path) {
     if (databasePath !== ":memory:") mkdirSync(path.dirname(databasePath), { recursive: true });
     this.db = new DatabaseSync(databasePath);
+    this.db.exec("PRAGMA busy_timeout = 5000");
     this.db.exec(schema);
     const userColumns = this.db.prepare("PRAGMA table_info(users)").all();
     if (!userColumns.some((column) => column.name === "default_branch")) {
