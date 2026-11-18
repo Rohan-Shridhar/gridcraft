@@ -9,11 +9,11 @@
  *   "error"      — save failed for other reason
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useReducer } from "react";
 import apiClient from "../services/apiClient.js";
+import { artworkHistoryReducer, createArtworkHistory } from "../utils/artworkHistory.mjs";
 
 const EMPTY_CELL = null;
-const MAX_HISTORY = 15;
 const SUPPORTED_GRID_SIZES = [16, 32, 64, 128];
 
 export default function useArtworkEditor() {
@@ -24,12 +24,11 @@ export default function useArtworkEditor() {
   const [branch, setBranch] = useState("master");
   const [artworkMeta, setArtworkMeta] = useState(null); // { name, description, gridSize, backgroundColor, createdAt }
 
-  const [cells, setCells] = useState([]);
+  const [{ cells, history, future }, dispatchHistory] = useReducer(
+    artworkHistoryReducer, [], createArtworkHistory
+  );
   const [gridSize, setGridSize] = useState(16);
   const [backgroundColor, setBackgroundColor] = useState("transparent");
-
-  const [history, setHistory] = useState([]);
-  const [future, setFuture] = useState([]);
 
   const [isDirty, setIsDirty] = useState(false);
   const [saveState, setSaveState] = useState("saved"); // "unsaved"|"saving"|"saved"|"conflict"|"error"
@@ -58,8 +57,6 @@ export default function useArtworkEditor() {
       lastSavedArtworkRef.current = aw;
       setSaveState("saved");
       setIsDirty(false);
-      setHistory([]);
-      setFuture([]);
       setRemoteArtwork(null);
       setArtworkMeta({
         name: aw.name,
@@ -71,7 +68,7 @@ export default function useArtworkEditor() {
       });
       setGridSize(aw.gridSize);
       setBackgroundColor(aw.backgroundColor);
-      setCells([...aw.cells]);
+      dispatchHistory({ type: "reset", cells: aw.cells });
     } catch (err) {
       setLoadError(err.message || "Failed to load artwork.");
     } finally {
@@ -79,80 +76,47 @@ export default function useArtworkEditor() {
     }
   }, []);
 
-  // Push a cell paint (from Grid/Tools interaction)
-  const paintCell = useCallback(
-    (index, newColor) => {
-      setCells((prev) => {
-        if (prev[index] === newColor) return prev;
-        setHistory((h) => [...h.slice(-MAX_HISTORY + 1), prev]);
-        setFuture([]);
-        setIsDirty(true);
-        setSaveState("unsaved");
-        const next = [...prev];
-        next[index] = newColor;
-        return next;
-      });
-    },
-    []
-  );
+  // Keep each canvas/history transition in one pure reducer update.
+  const paintCell = useCallback((index, newColor) => {
+    if (cells[index] === newColor) return;
+    dispatchHistory({ type: "paint", index, color: newColor });
+    setIsDirty(true);
+    setSaveState("unsaved");
+  }, [cells]);
 
   const setCellsBulk = useCallback((newCells) => {
-    setCells((prev) => {
-      setHistory((h) => [...h.slice(-MAX_HISTORY + 1), prev]);
-      setFuture([]);
-      setIsDirty(true);
-      setSaveState("unsaved");
-      return [...newCells];
-    });
+    dispatchHistory({ type: "replace", cells: newCells });
+    setIsDirty(true);
+    setSaveState("unsaved");
   }, []);
 
   const changeGridSize = useCallback((newSize) => {
     if (!SUPPORTED_GRID_SIZES.includes(newSize) || newSize === gridSize) return;
-    setHistory([]);
-    setFuture([]);
+    dispatchHistory({ type: "reset", cells: Array(newSize * newSize).fill(EMPTY_CELL) });
     setGridSize(newSize);
-    setCells(Array(newSize * newSize).fill(EMPTY_CELL));
     setIsDirty(true);
     setSaveState("unsaved");
   }, [gridSize]);
 
   const undo = useCallback(() => {
-    setHistory((h) => {
-      if (!h.length) return h;
-      const prev = h[h.length - 1];
-      setCells((cur) => {
-        setFuture((f) => [cur, ...f.slice(0, MAX_HISTORY - 1)]);
-        setIsDirty(true);
-        setSaveState("unsaved");
-        return prev;
-      });
-      return h.slice(0, -1);
-    });
-  }, []);
+    if (!history.length) return;
+    dispatchHistory({ type: "undo" });
+    setIsDirty(true);
+    setSaveState("unsaved");
+  }, [history]);
 
   const redo = useCallback(() => {
-    setFuture((f) => {
-      if (!f.length) return f;
-      const next = f[0];
-      setCells((cur) => {
-        setHistory((h) => [...h.slice(-MAX_HISTORY + 1), cur]);
-        setIsDirty(true);
-        setSaveState("unsaved");
-        return next;
-      });
-      return f.slice(1);
-    });
-  }, []);
+    if (!future.length) return;
+    dispatchHistory({ type: "redo" });
+    setIsDirty(true);
+    setSaveState("unsaved");
+  }, [future]);
 
   const clearCanvas = useCallback((confirmFn) => {
     if (confirmFn && !confirmFn()) return;
-    setCells((prev) => {
-      setHistory((h) => [...h.slice(-MAX_HISTORY + 1), prev]);
-      setFuture([]);
-      setIsDirty(true);
-      setSaveState("unsaved");
-      return Array(prev.length).fill(EMPTY_CELL);
-    });
+    dispatchHistory({ type: "clear" });
+    setIsDirty(true);
+    setSaveState("unsaved");
   }, []);
 
   const updateBackgroundColor = useCallback((color) => {
@@ -227,8 +191,7 @@ export default function useArtworkEditor() {
     setRemoteArtwork(null);
     setIsDirty(false);
     setSaveState("saved");
-    setHistory([]);
-    setFuture([]);
+    dispatchHistory({ type: "resetHistory" });
     return artwork;
   }, [owner, repoName, storyId, artworkMeta, gridSize, backgroundColor, cells, branch]);
 
@@ -259,7 +222,7 @@ export default function useArtworkEditor() {
   const discardChanges = useCallback(() => {
     const saved = lastSavedArtworkRef.current;
     if (!saved) return;
-    setCells([...saved.cells]);
+    dispatchHistory({ type: "reset", cells: saved.cells });
     setGridSize(saved.gridSize);
     setBackgroundColor(saved.backgroundColor);
     setArtworkMeta({
@@ -270,8 +233,6 @@ export default function useArtworkEditor() {
       createdAt: saved.createdAt,
       updatedAt: saved.updatedAt,
     });
-    setHistory([]);
-    setFuture([]);
     setIsDirty(false);
     setSaveState("saved");
   }, []);

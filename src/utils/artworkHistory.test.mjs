@@ -1,0 +1,99 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { artworkHistoryReducer as update, createArtworkHistory } from "./artworkHistory.mjs";
+
+test("each paint has exactly one undo and redo step", () => {
+  let state = createArtworkHistory([null, null]);
+  state = update(state, { type: "paint", index: 0, color: "red" });
+  state = update(state, { type: "paint", index: 1, color: "blue" });
+  assert.equal(state.history.length, 2);
+  state = update(state, { type: "undo" });
+  assert.deepEqual(state.cells, ["red", null]);
+  state = update(state, { type: "undo" });
+  assert.deepEqual(state.cells, [null, null]);
+  assert.equal(state.history.length, 0);
+  assert.equal(state.future.length, 2);
+  state = update(state, { type: "redo" });
+  assert.deepEqual(state.cells, ["red", null]);
+  state = update(state, { type: "redo" });
+  assert.deepEqual(state.cells, ["red", "blue"]);
+  assert.equal(state.future.length, 0);
+  assert.equal(state.history.length, 2);
+});
+
+test("replaying a transition does not mutate the input or duplicate history", () => {
+  const state = createArtworkHistory([null]);
+  Object.freeze(state.cells);
+  Object.freeze(state.history);
+  Object.freeze(state.future);
+  Object.freeze(state);
+  const action = { type: "paint", index: 0, color: "red" };
+  assert.deepEqual(update(state, action), update(state, action));
+  assert.deepEqual(state, { cells: [null], history: [], future: [] });
+  const painted = update(state, action);
+  for (const type of ["undo", "clear", "replace", "resetHistory"]) {
+    const nextAction = { type, cells: ["blue"] };
+    const original = structuredClone(painted);
+    assert.deepEqual(update(painted, nextAction), update(painted, nextAction));
+    assert.deepEqual(painted, original);
+  }
+  const undone = update(painted, { type: "undo" });
+  assert.deepEqual(update(undone, { type: "redo" }), update(undone, { type: "redo" }));
+  assert.equal(undone.history.length, 0);
+  assert.equal(undone.future.length, 1);
+});
+
+test("unchanged paint and unavailable history actions preserve state", () => {
+  const state = createArtworkHistory(["red"]);
+  assert.equal(update(state, { type: "paint", index: 0, color: "red" }), state);
+  assert.equal(update(state, { type: "undo" }), state);
+  assert.equal(update(state, { type: "redo" }), state);
+});
+
+test("a new edit after undo discards the redo branch", () => {
+  let state = createArtworkHistory([null]);
+  state = update(state, { type: "paint", index: 0, color: "red" });
+  state = update(state, { type: "undo" });
+  state = update(state, { type: "paint", index: 0, color: "blue" });
+  assert.equal(state.future.length, 0);
+  assert.deepEqual(update(state, { type: "undo" }).cells, [null]);
+});
+
+test("bulk replacement and clearing retain independent undo snapshots", () => {
+  let state = createArtworkHistory(["red", null]);
+  const replacement = ["blue", "green"];
+  state = update(state, { type: "replace", cells: replacement });
+  replacement[0] = "black";
+  assert.deepEqual(state.cells, ["blue", "green"]);
+  state = update(state, { type: "clear" });
+  assert.deepEqual(state.cells, [null, null]);
+  state = update(state, { type: "undo" });
+  assert.deepEqual(state.cells, ["blue", "green"]);
+  state = update(state, { type: "undo" });
+  assert.deepEqual(state.cells, ["red", null]);
+});
+
+test("history retains only the latest fifteen edits", () => {
+  let state = createArtworkHistory([null]);
+  for (let color = 0; color < 20; color++) {
+    state = update(state, { type: "paint", index: 0, color });
+  }
+  assert.equal(state.history.length, 15);
+  for (let i = 0; i < 15; i++) state = update(state, { type: "undo" });
+  assert.deepEqual(state.cells, [4]);
+  assert.equal(state.future.length, 15);
+  for (let i = 0; i < 15; i++) state = update(state, { type: "redo" });
+  assert.deepEqual(state.cells, [19]);
+  assert.equal(state.history.length, 15);
+});
+
+test("loading or resizing resets history while saving preserves the canvas", () => {
+  let state = createArtworkHistory([null]);
+  state = update(state, { type: "paint", index: 0, color: "red" });
+  const saved = update(state, { type: "resetHistory" });
+  assert.deepEqual(saved, { cells: ["red"], history: [], future: [] });
+  const cells = ["blue", null];
+  const loaded = update(state, { type: "reset", cells });
+  cells[0] = "black";
+  assert.deepEqual(loaded, { cells: ["blue", null], history: [], future: [] });
+});
