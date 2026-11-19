@@ -88,4 +88,56 @@ describe("Story GitHub persistence", () => {
     const service = new StoryService(async () => response({ message: "Forbidden" }, 403), store);
     await assert.rejects(service.listStories("token", "owner", "repo"), (error) => error.status === 403);
   });
+
+  it("rejects partial or duplicate frame orders and preserves repeated artwork frames in reorderFrames", async () => {
+    const existing = {
+      ...storyFixture(),
+      frames: [
+        { artworkId: "frame-one", artworkPath: "frame-one.json", durationMs: 120 },
+        { artworkId: "frame-two", artworkPath: "frame-two.json", durationMs: 240 },
+        { artworkId: "frame-one", artworkPath: "frame-one.json", durationMs: 360 },
+      ],
+    };
+    const service = new StoryService(async (url, options) => {
+      if (url.includes("/contents/repo/opening/story.json") && options.method !== "PUT") {
+        return response({
+          sha: "current-sha",
+          content: Buffer.from(JSON.stringify(existing)).toString("base64"),
+        });
+      }
+      if (url.includes("/contents/repo/opening/frame-one.json") || url.includes("/contents/repo/opening/frame-two.json")) {
+        return response({ content: "encoded-artwork" });
+      }
+      if (options.method === "PUT") {
+        return response({ content: { sha: "saved-sha" }, commit: { sha: "commit-sha" } });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }, store);
+
+    await assert.rejects(
+      service.reorderFrames("token", owner, "owner", "repo", "opening", ["frame-one"]),
+      (error) => error.status === 400
+    );
+
+    await assert.rejects(
+      service.reorderFrames("token", owner, "owner", "repo", "opening", ["frame-two", "frame-two", "frame-one"]),
+      (error) => error.status === 400
+    );
+
+    const reordered = await service.reorderFrames(
+      "token",
+      owner,
+      "owner",
+      "repo",
+      "opening",
+      ["frame-two", "frame-one", "frame-one"],
+      "current-sha"
+    );
+
+    assert.deepEqual(reordered.story.frames, [
+      { artworkId: "frame-two", artworkPath: "frame-two.json", durationMs: 240 },
+      { artworkId: "frame-one", artworkPath: "frame-one.json", durationMs: 120 },
+      { artworkId: "frame-one", artworkPath: "frame-one.json", durationMs: 360 },
+    ]);
+  });
 });

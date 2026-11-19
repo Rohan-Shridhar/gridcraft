@@ -271,9 +271,19 @@ export class StoryService {
   async reorderFrames(accessToken, user, owner, repoName, storyId, frameIds, sha, branch = "master") {
     this.#requireOwner(user, owner, repoName);
     const current = await this.getStory(accessToken, owner, repoName, storyId, branch);
-    const byId = new Map(current.story.frames.map((frame) => [frame.artworkId, frame]));
+    if (!Array.isArray(frameIds) || frameIds.length !== current.story.frames.length) {
+      const err = new Error("Frame order must include every existing story frame.");
+      err.status = 400;
+      throw err;
+    }
+    const queuesById = new Map();
+    for (const frame of current.story.frames) {
+      const queue = queuesById.get(frame.artworkId) || [];
+      queue.push(frame);
+      queuesById.set(frame.artworkId, queue);
+    }
     const frames = frameIds.map((id) => {
-      const frame = byId.get(id);
+      const frame = queuesById.get(id)?.shift();
       if (!frame) {
         const err = new Error(`Unknown frame artworkId: ${id}`);
         err.status = 400;
