@@ -122,6 +122,8 @@ test("leaving the canvas does not paint outside it or lose the captured stroke",
   s.handlers.onPointerMove(s.event());
   s.handlers.onPointerLeave();
   assert.equal(s.hovered.at(-1), null);
+  s.hit(s.cells[0]);
+  s.handlers.onPointerMove(s.event());
   s.hit({
     dataset: { cellIndex: "3" },
     closest() {
