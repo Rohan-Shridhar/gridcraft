@@ -89,9 +89,9 @@ export class PullRequestService {
     }
   }
 
-  #pullForAlbum(owner, slug, number) {
+  #pullForAlbum(owner, slug, number, options) {
     const album = this.#album(owner, slug);
-    const result = this.store.getPull(Number(number));
+    const result = this.store.getPull(Number(number), options);
     const context = this.store.getPullContext(Number(number));
     if (!result || !context
       || (context.base_album_id !== album.id && context.head_album_id !== album.id)) {
@@ -106,13 +106,16 @@ export class PullRequestService {
     const album = this.#album(owner, repoName);
     return this.store.listPulls(album.id, {
       state: query.state || "open",
-      page: query.page || 1,
-      perPage: query.perPage || 20,
+      page: Math.max(1, Number(query.page) || 1),
+      perPage: Math.min(100, Math.max(1, Number(query.perPage) || 20)),
     });
   }
 
-  getPull(_accessToken, owner, repoName, user, number) {
-    const { result, context } = this.#pullForAlbum(owner, repoName, number);
+  getPull(_accessToken, owner, repoName, user, number, commentsPage = 1) {
+    const { result, context } = this.#pullForAlbum(owner, repoName, number, {
+      page: Math.max(1, Number(commentsPage) || 1),
+      perPage: 20,
+    });
     return {
       ...result,
       permissions: { push: context.base_owner.toLowerCase() === user?.login?.toLowerCase() },
