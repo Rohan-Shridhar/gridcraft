@@ -3,15 +3,16 @@
  * All requests are made with same-origin credentials (cookies) included.
  */
 
-async function request(endpoint, options = {}) {
+export async function request(endpoint, options = {}) {
+  const { headers: optionHeaders, ...restOptions } = options;
   const config = {
+    credentials: "include",
+    ...restOptions,
     headers: {
       Accept: "application/json",
       ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
+      ...optionHeaders,
     },
-    credentials: "include",
-    ...options,
   };
 
   if (options.body && typeof options.body === "object") {
