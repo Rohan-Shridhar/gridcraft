@@ -108,12 +108,13 @@ export default function useSnaps({
       const sequence =
         snaps.reduce((highest, snap) => Math.max(highest, snap.sequence), 0) +
         1;
+      const duplicateTitle = `${original.title.slice(0, 75).trimEnd()} copy`.slice(0, 80);
       const duplicate = {
         ...original,
         id: createId(),
         createdAt: new Date().toISOString(),
         sequence,
-        title: `${original.title} copy`,
+        title: duplicateTitle,
         cells: [...original.cells],
       };
 
