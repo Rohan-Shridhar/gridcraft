@@ -252,7 +252,7 @@ function AppContent({ showToast, toast }) {
       clearAll();
       showToast("Canvas cleared", "success");
     }
-  }, [history, future, showGrid, activeView]);
+  }, [history, future, showGrid, activeView, selectedColor]);
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyPress);
