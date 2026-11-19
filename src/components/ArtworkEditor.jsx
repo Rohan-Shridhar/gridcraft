@@ -70,6 +70,8 @@ export default function ArtworkEditor({
       } else if (historyShortcut === "redo") {
         event.preventDefault();
         editor.redo();
+      } else if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
       } else if (event.key.toLowerCase() === "e") {
         setIsEraser((value) => !value);
         setIsFill(false);
