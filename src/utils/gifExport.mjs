@@ -70,16 +70,18 @@ export function renderFrameToRgba(frame, scale) {
 export function encodeStoryGif(frames, { loop = true, scale = 8, onProgress } = {}) {
   const size = assertCompatibleFrames(frames);
   const gif = GIFEncoder();
+  const format = "rgba4444";
   frames.forEach((frame, index) => {
     const { rgba, width, height } = renderFrameToRgba(frame, scale);
-    const palette = quantize(rgba, 256);
-    const indexMap = applyPalette(rgba, palette);
+    const palette = quantize(rgba, 256, { format, oneBitAlpha: true });
+    const indexMap = applyPalette(rgba, palette, format);
+    const transparentIndex = palette.findIndex((color) => color[3] === 0);
     gif.writeFrame(indexMap, width, height, {
       palette,
       delay: Math.max(20, Math.round(frame.durationMs || 150)),
       repeat: index === 0 ? (loop ? 0 : -1) : undefined,
-      transparent: true,
-      transparentIndex: 0,
+      transparent: transparentIndex !== -1,
+      transparentIndex: transparentIndex !== -1 ? transparentIndex : 0,
     });
     if (onProgress) onProgress(index + 1, frames.length);
   });
