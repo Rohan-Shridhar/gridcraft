@@ -219,11 +219,11 @@ export class ArtworkService {
     const updatedArtwork = {
       format: "gridcraft-artwork",
       schemaVersion: 1,
-      createdAt: artworkInput.createdAt || new Date().toISOString(),
       ...artworkInput,
       id: cleanId,
       width: artworkInput.gridSize || artworkInput.width,
       height: artworkInput.gridSize || artworkInput.height,
+      createdAt: artworkInput.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
@@ -373,6 +373,11 @@ export class ArtworkService {
   async getArtworkHistory(accessToken, owner, repoName, storyId, artworkId, branch = "master") {
     await this.#requireStory(accessToken, owner, repoName, storyId, branch);
     const cleanId = sanitizeArtworkId(artworkId);
+    if (!cleanId) {
+      const err = new Error("Invalid artwork id");
+      err.status = 400;
+      throw err;
+    }
     const commits = await this.#request(
       `/repos/${owner}/${ARTWORKS_REPOSITORY}/commits?path=${encodeURIComponent(`${artworkDirectory(repoName, storyId)}/${cleanId}.json`)}&sha=${encodeURIComponent(branch)}&per_page=15`,
       accessToken
@@ -382,10 +387,10 @@ export class ArtworkService {
       sha: c.sha,
       shortSha: c.sha.slice(0, 7),
       message: c.commit.message,
-      author: c.commit.author.name,
-      authorLogin: c.author?.login || c.commit.author.name,
+      author: c.commit.author?.name,
+      authorLogin: c.author?.login || c.commit.author?.name,
       authorAvatar: c.author?.avatar_url || null,
-      date: c.commit.author.date,
+      date: c.commit.author?.date,
       htmlUrl: c.html_url,
     }));
   }
