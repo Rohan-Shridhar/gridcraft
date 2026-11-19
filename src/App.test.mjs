@@ -294,3 +294,24 @@ test("guest editor still fills and clears with unmodified shortcuts", async (con
   assert.equal(confirm.mock.callCount(), 1);
   assert.ok(colors(cells.length).every((color) => color === "transparent"));
 });
+
+test("fill shortcut uses a newly selected color without repainting first", async (context) => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  await stroke([0]);
+  const input = document.querySelector('input[type="color"]');
+  const setValue = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    "value",
+  ).set;
+  await act(async () => {
+    setValue.call(input, "#2255aa");
+    input.dispatchEvent(new window.Event("input", { bubbles: true }));
+    input.dispatchEvent(new window.Event("change", { bubbles: true }));
+  });
+  assert.match(host.textContent, /Color selected/);
+
+  await toolKey("c");
+  assert.deepEqual(colors(3), ["#e63946", "#2255aa", "#2255aa"]);
+  await historyKey();
+  assert.deepEqual(colors(3), ["#e63946", "transparent", "transparent"]);
+});
