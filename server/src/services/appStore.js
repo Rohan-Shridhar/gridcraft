@@ -547,6 +547,13 @@ export class AppStore {
   updatePull(pullId, changes) {
     const current = this.getPull(pullId)?.pull;
     if (!current) return null;
+    const now = new Date().toISOString();
+    const nextState = current.merged
+      ? "merged"
+      : changes.state ?? current.state;
+    const nextMergedAt = nextState === "merged"
+      ? current.mergedAt ?? now
+      : null;
     this.db.prepare(`
       UPDATE pull_requests
       SET title = ?, body = ?, state = ?, updated_at = ?, merged_at = ?
@@ -554,9 +561,9 @@ export class AppStore {
     `).run(
       changes.title ?? current.title,
       changes.body ?? current.body,
-      changes.state ?? (current.merged ? "merged" : current.state),
-      new Date().toISOString(),
-      changes.state === "merged" || current.merged ? new Date().toISOString() : null,
+      nextState,
+      now,
+      nextMergedAt,
       pullId
     );
     return this.getPull(pullId);

@@ -194,6 +194,12 @@ export class PullRequestService {
       error.status = 400;
       throw error;
     }
+    if (result.pull.merged && changes.state !== undefined) {
+      const error = new Error("Merged pull requests cannot change state.");
+      error.status = 409;
+      error.code = "ALREADY_MERGED";
+      throw error;
+    }
     return { pull: this.store.updatePull(Number(number), changes).pull };
   }
 

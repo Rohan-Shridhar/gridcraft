@@ -90,4 +90,68 @@ describe("GridCraft pull request service", () => {
       store.close();
     }
   });
+
+  it("rejects state changes on a merged pull request and preserves mergedAt on metadata edits", () => {
+    const store = new AppStore(":memory:");
+    const owner = { id: 51, login: "owner", name: "Owner" };
+    const contributor = { id: 52, login: "contributor", name: "Contributor" };
+    const base = store.createAlbum(owner, { slug: "base", name: "Base" });
+    const head = store.createAlbum(contributor, { slug: "proposal", name: "Proposal" });
+    const service = new PullRequestService(async () => {
+      throw new Error("No GitHub request should be made");
+    }, store);
+
+    try {
+      const created = store.createPull({
+        baseAlbumId: base.id,
+        headAlbumId: head.id,
+        author: contributor,
+        title: "Add sprites",
+        body: "Initial body",
+      });
+      const pullNumber = created.pull.number;
+
+      const closed = service.updatePull("token", "owner", "base", contributor, pullNumber, {
+        state: "closed",
+      });
+      assert.equal(closed.pull.state, "closed");
+      assert.equal(closed.pull.merged, false);
+      assert.equal(closed.pull.mergedAt, null);
+
+      const reopened = service.updatePull("token", "owner", "base", contributor, pullNumber, {
+        state: "open",
+      });
+      assert.equal(reopened.pull.state, "open");
+      assert.equal(reopened.pull.merged, false);
+      assert.equal(reopened.pull.mergedAt, null);
+
+      const merged = store.setPullState(pullNumber, "merged");
+      assert.equal(merged.pull.merged, true);
+      const originalMergedAt = "2026-01-01T00:00:00.000Z";
+      store.db.prepare("UPDATE pull_requests SET merged_at = ? WHERE id = ?").run(originalMergedAt, pullNumber);
+
+      for (const nextState of ["open", "closed"]) {
+        assert.throws(
+          () => service.updatePull("token", "owner", "base", owner, pullNumber, { state: nextState }),
+          (error) => error.status === 409
+        );
+        const current = service.getPull("token", "owner", "base", owner, pullNumber).pull;
+        assert.equal(current.merged, true);
+        assert.equal(current.state, "closed");
+        assert.equal(current.mergedAt, originalMergedAt);
+      }
+
+      const edited = service.updatePull("token", "owner", "base", owner, pullNumber, {
+        title: "Add forest sprites",
+        body: "Updated notes",
+      });
+      assert.equal(edited.pull.title, "Add forest sprites");
+      assert.equal(edited.pull.body, "Updated notes");
+      assert.equal(edited.pull.merged, true);
+      assert.equal(edited.pull.state, "closed");
+      assert.equal(edited.pull.mergedAt, originalMergedAt);
+    } finally {
+      store.close();
+    }
+  });
 });
