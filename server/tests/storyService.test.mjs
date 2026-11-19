@@ -140,4 +140,40 @@ describe("Story GitHub persistence", () => {
       { artworkId: "frame-one", artworkPath: "frame-one.json", durationMs: 360 },
     ]);
   });
+
+  it("preserves existing story fields and original createdAt on saveStory updates", async () => {
+    const existing = {
+      ...storyFixture(),
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const service = new StoryService(async (url, options) => {
+      if (url.includes("/contents/repo/opening/story.json") && options.method !== "PUT") {
+        return response({
+          sha: "current-sha",
+          content: Buffer.from(JSON.stringify(existing)).toString("base64"),
+        });
+      }
+      if (url.includes("/contents/repo/opening/frame-one.json")) {
+        return response({ content: "encoded-artwork" });
+      }
+      if (options.method === "PUT") {
+        return response({ content: { sha: "saved-sha" }, commit: { sha: "commit-sha" } });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }, store);
+
+    const saved = await service.saveStory("token", owner, "owner", "repo", "opening", {
+      sha: "current-sha",
+      story: {
+        description: "Updated description only",
+        createdAt: "2099-01-01T00:00:00.000Z",
+      },
+    });
+
+    assert.equal(saved.story.name, "Opening");
+    assert.equal(saved.story.description, "Updated description only");
+    assert.equal(saved.story.createdAt, "2026-01-01T00:00:00.000Z");
+    assert.deepEqual(saved.story.frames, existing.frames);
+  });
 });

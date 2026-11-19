@@ -168,10 +168,12 @@ export class StoryService {
     }
     const input = body.story || body;
     const updated = StorySchema.parse({
+      ...current.story,
       ...input,
       format: "gridcraft-story",
       schemaVersion: 1,
       id: cleanId,
+      createdAt: current.story.createdAt,
       updatedAt: new Date().toISOString(),
     });
     await this.#validateFrameArtworks(accessToken, owner, repoName, cleanId, updated.frames, branch);
