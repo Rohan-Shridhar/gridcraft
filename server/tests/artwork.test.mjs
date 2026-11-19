@@ -236,6 +236,53 @@ describe("Artwork GitHub persistence", () => {
       (error) => error.status === 409 && error.code === "CONFLICT"
     );
   });
+
+  it("applies fallback createdAt when saveArtwork payload has undefined or empty createdAt and validates artworkId in getArtworkHistory", async () => {
+    let commitRequests = 0;
+    const service = new ArtworkService(async (url, options) => {
+      if (url.includes("/contents/rpg-items/opening/story.json")) {
+        return new Response(JSON.stringify({ content: Buffer.from(JSON.stringify(story)).toString("base64") }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (options.method === "PUT") {
+        return new Response(JSON.stringify({
+          content: { sha: "saved-sha" },
+          commit: { sha: "commit-sha" },
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      commitRequests += 1;
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }, store);
+
+    const saved = await service.saveArtwork(
+      "test-token",
+      ownerUser,
+      "pixelcrafter",
+      "rpg-items",
+      "opening",
+      "shield",
+      {
+        sha: "old-sha",
+        name: "Shield",
+        gridSize: 16,
+        backgroundColor: "transparent",
+        cells: Array(256).fill(null),
+        createdAt: undefined,
+      }
+    );
+    assert.ok(!Number.isNaN(Date.parse(saved.artwork.createdAt)));
+
+    await assert.rejects(
+      service.getArtworkHistory("test-token", "pixelcrafter", "rpg-items", "opening", "!!!"),
+      (error) => error.status === 400 && /Invalid artwork id/.test(error.message)
+    );
+    assert.equal(commitRequests, 0);
+  });
 });
 
 describe("Artwork API Integration Tests", () => {
