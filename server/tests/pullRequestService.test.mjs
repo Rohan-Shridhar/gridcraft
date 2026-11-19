@@ -154,4 +154,47 @@ describe("GridCraft pull request service", () => {
       store.close();
     }
   });
+
+  it("paginates pull request comments and returns newly added comments past the first page", () => {
+    const store = new AppStore(":memory:");
+    const owner = { id: 61, login: "owner", name: "Owner" };
+    const contributor = { id: 62, login: "contributor", name: "Contributor" };
+    const base = store.createAlbum(owner, { slug: "base", name: "Base" });
+    const head = store.createAlbum(contributor, { slug: "proposal", name: "Proposal" });
+    const service = new PullRequestService(async () => {
+      throw new Error("No GitHub request should be made");
+    }, store);
+
+    try {
+      const created = store.createPull({
+        baseAlbumId: base.id,
+        headAlbumId: head.id,
+        author: contributor,
+        title: "Add sprites",
+      });
+      const pullNumber = created.pull.number;
+
+      for (let i = 1; i <= 25; i += 1) {
+        const added = service.commentOnPull("token", "owner", "base", owner, pullNumber, `Comment ${i}`);
+        assert.equal(added.comment.body, `Comment ${i}`);
+      }
+
+      const firstPage = service.getPull("token", "owner", "base", contributor, pullNumber, 1);
+      assert.equal(firstPage.comments.length, 20);
+      assert.equal(firstPage.comments[0].body, "Comment 1");
+      assert.equal(firstPage.comments[19].body, "Comment 20");
+      assert.equal(firstPage.commentsPage, 1);
+      assert.equal(firstPage.commentsHasNext, true);
+      assert.equal(firstPage.pull.comments, 25);
+
+      const secondPage = service.getPull("token", "owner", "base", contributor, pullNumber, 2);
+      assert.equal(secondPage.comments.length, 5);
+      assert.equal(secondPage.comments[0].body, "Comment 21");
+      assert.equal(secondPage.comments[4].body, "Comment 25");
+      assert.equal(secondPage.commentsPage, 2);
+      assert.equal(secondPage.commentsHasNext, false);
+    } finally {
+      store.close();
+    }
+  });
 });

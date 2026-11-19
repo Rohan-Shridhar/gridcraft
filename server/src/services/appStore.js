@@ -433,7 +433,7 @@ export class AppStore {
     }
   }
 
-  getPull(pullId) {
+  getPull(pullId, { page = 1, perPage = 20 } = {}) {
     const row = this.db.prepare(`
       SELECT p.*, base.owner_login AS base_owner, base.slug AS base_slug,
         head.owner_login AS head_owner, head.slug AS head_slug,
@@ -449,8 +449,8 @@ export class AppStore {
     const comments = this.db.prepare(`
       SELECT c.id, c.body, c.created_at, u.login, u.avatar_url
       FROM pull_comments c JOIN users u ON u.github_id = c.author_id
-      WHERE c.pull_id = ? ORDER BY c.id
-    `).all(pullId).map((comment) => ({
+      WHERE c.pull_id = ? ORDER BY c.id LIMIT ? OFFSET ?
+    `).all(pullId, perPage, (page - 1) * perPage).map((comment) => ({
       id: comment.id, body: comment.body, createdAt: comment.created_at,
       user: { login: comment.login, avatarUrl: comment.avatar_url },
     }));
@@ -478,7 +478,8 @@ export class AppStore {
       reviews,
       files,
       commits: [],
-      commentsHasNext: false,
+      commentsPage: page,
+      commentsHasNext: page * perPage < row.comments,
       permissions: { push: true },
       mergeMethods: { merge: true, squash: false, rebase: false },
     };
@@ -522,10 +523,15 @@ export class AppStore {
   addPullComment(pullId, author, body) {
     const user = this.upsertUser(author);
     const now = new Date().toISOString();
-    this.db.prepare("INSERT INTO pull_comments (pull_id, author_id, body, created_at) VALUES (?, ?, ?, ?)")
+    const result = this.db.prepare("INSERT INTO pull_comments (pull_id, author_id, body, created_at) VALUES (?, ?, ?, ?)")
       .run(pullId, user.github_id, body, now);
     this.db.prepare("UPDATE pull_requests SET updated_at = ? WHERE id = ?").run(now, pullId);
-    return this.getPull(pullId).comments.at(-1);
+    return {
+      id: Number(result.lastInsertRowid),
+      body,
+      createdAt: now,
+      user: { login: user.login, avatarUrl: user.avatar_url },
+    };
   }
 
   addPullReview(pullId, author, event, body) {
