@@ -69,6 +69,10 @@ export default function useSnaps({
   }, [snaps, canPersist]);
 
   const createSnap = useCallback(() => {
+    if (snaps.length >= MAX_SNAP_COUNT) {
+      showToast(`A maximum of ${MAX_SNAP_COUNT} snaps can be stored`);
+      return;
+    }
     const sequence =
       snaps.reduce((highest, snap) => Math.max(highest, snap.sequence), 0) + 1;
     const snap = {
@@ -102,6 +106,10 @@ export default function useSnaps({
 
   const duplicateSnap = useCallback(
     (id) => {
+      if (snaps.length >= MAX_SNAP_COUNT) {
+        showToast(`A maximum of ${MAX_SNAP_COUNT} snaps can be stored`);
+        return;
+      }
       const original = snaps.find((snap) => snap.id === id);
       if (!original) return;
 
