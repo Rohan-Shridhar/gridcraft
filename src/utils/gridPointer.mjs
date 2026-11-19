@@ -45,7 +45,8 @@ export function createGridPointerHandlers(
       const index = cellIndex(grid, target);
       onHover(index);
       if (!showGrid || isFill || stroke.pointerId !== event.pointerId) return;
-      if (index !== null && index !== stroke.lastCell) paintCell(index);
+      if (index === null) return;
+      if (index !== stroke.lastCell) paintCell(index);
       stroke.lastCell = index;
     },
     onPointerUp: finish,
