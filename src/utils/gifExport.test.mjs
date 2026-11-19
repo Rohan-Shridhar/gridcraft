@@ -39,4 +39,28 @@ describe("Story GIF export", () => {
     assert.throws(() => assertCompatibleFrames([frame("#ff0000", 100), { ...frame("#00ff00", 100), gridSize: 32 }]), /same grid size/);
     assert.throws(() => assertCompatibleFrames(Array(121).fill(frame("#ff0000", 100))), /at most 120/);
   });
+
+  it("preserves opaque pixels on opaque frames and opaque black pixels on transparent frames", () => {
+    const opaqueCells = Array(16 * 16).fill("#ff0000");
+    const opaqueGif = encodeStoryGif(
+      [{ gridSize: 16, cells: opaqueCells, backgroundColor: "#ffffff", durationMs: 120 }],
+      { scale: 1 }
+    );
+    const decodedOpaque = decompressFrames(parseGIF(opaqueGif.bytes), true);
+
+    assert.deepEqual([...decodedOpaque[0].patch.slice(0, 4)], [255, 0, 0, 255]);
+
+    const blackAndTransparentCells = Array(16 * 16).fill(null);
+    blackAndTransparentCells[0] = "#000000";
+    blackAndTransparentCells[1] = "#ff0000";
+    const transparentGif = encodeStoryGif(
+      [{ gridSize: 16, cells: blackAndTransparentCells, backgroundColor: "transparent", durationMs: 120 }],
+      { scale: 1 }
+    );
+    const decodedTransparent = decompressFrames(parseGIF(transparentGif.bytes), true);
+
+    assert.deepEqual([...decodedTransparent[0].patch.slice(0, 4)], [0, 0, 0, 255]);
+    assert.deepEqual([...decodedTransparent[0].patch.slice(4, 8)], [255, 0, 0, 255]);
+    assert.equal(decodedTransparent[0].patch[11], 0);
+  });
 });
