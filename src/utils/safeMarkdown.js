@@ -6,15 +6,35 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
+function formatEmphasis(text) {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+}
+
 export function renderSafeMarkdown(markdown) {
   const escaped = escapeHtml(markdown || "");
-  const withCode = escaped.replace(/`([^`]+)`/g, "<code>$1</code>");
-  const withBold = withCode.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  const withItalic = withBold.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  const withLinks = withItalic.replace(
+  let sentinel = "\uE000";
+  while (escaped.includes(sentinel)) {
+    sentinel += "\uE000";
+  }
+
+  const placeholders = [];
+  const stash = (html) => {
+    const id = placeholders.length;
+    placeholders.push(html);
+    return `${sentinel}${id}${sentinel}`;
+  };
+
+  const withoutCode = escaped.replace(/`([^`]+)`/g, (_, code) => stash(`<code>${code}</code>`));
+  const withoutLinks = withoutCode.replace(
     /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>'
+    (_, label, href) => stash(`<a href="${href}" target="_blank" rel="noreferrer noopener">${formatEmphasis(label)}</a>`)
   );
-  const withBreaks = withLinks.replace(/\n/g, "<br />");
-  return withBreaks;
+  const withEmphasis = formatEmphasis(withoutLinks);
+  const restored = withEmphasis.replace(
+    new RegExp(`${sentinel}(\\d+)${sentinel}`, "g"),
+    (_, index) => placeholders[Number(index)]
+  );
+  return restored.replace(/\n/g, "<br />");
 }
