@@ -206,6 +206,8 @@ function AppContent({ showToast, toast }) {
       return;
     }
 
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+
     if (!showGrid) {
       const isToolShortcut =
         eventKey === "e" ||
