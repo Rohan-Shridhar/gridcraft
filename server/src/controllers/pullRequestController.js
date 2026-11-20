@@ -24,8 +24,8 @@ export class PullRequestController {
       const { owner, repo } = req.params;
       const data = await this.service.listPulls(token, owner, repo, {
         state: req.query.state,
-        page: Math.max(1, parseInt(req.query.page || "1", 10)),
-        perPage: Math.min(100, Math.max(1, parseInt(req.query.per_page || "20", 10))),
+        page: Math.max(1, parseInt(req.query.page, 10) || 1),
+        perPage: Math.min(100, Math.max(1, parseInt(req.query.per_page, 10) || 20)),
       });
       return res.json(data);
     } catch (err) {
@@ -38,7 +38,7 @@ export class PullRequestController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, number } = req.params;
-      const commentsPage = Math.max(1, parseInt(req.query.page || "1", 10));
+      const commentsPage = Math.max(1, parseInt(req.query.page, 10) || 1);
       const data = await this.service.getPull(token, owner, repo, req.user, number, commentsPage);
       return res.json(data);
     } catch (err) {

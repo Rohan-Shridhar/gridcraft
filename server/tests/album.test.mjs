@@ -295,4 +295,55 @@ describe("Album API Integration Tests", () => {
     assert.equal(treeRes.status, 200);
     assert.equal(treeRes.body.tree.length, 3);
   });
+
+  it("falls back to bounded integer defaults when pagination query params are non-numeric", async () => {
+    const received = [];
+    const app = createApp({
+      albumService: {
+        listAlbums: async (_token, { page, perPage }) => {
+          received.push({ endpoint: "albums", page, perPage });
+          return { albums: [], page, perPage, total: 0 };
+        },
+      },
+      branchService: {
+        listBranches: async (_token, _owner, _repo, { page, perPage }) => {
+          received.push({ endpoint: "branches", page, perPage });
+          return { branches: [], defaultBranch: "main", page, perPage };
+        },
+      },
+      forkService: {
+        listUserForks: async (_token, _user, { page, perPage }) => {
+          received.push({ endpoint: "forks", page, perPage });
+          return { forks: [], page, perPage, total: 0 };
+        },
+      },
+      issueService: {
+        listIssues: async (_token, _owner, _repo, { page, perPage }) => {
+          received.push({ endpoint: "issues", page, perPage });
+          return { issues: [], page, perPage, hasNext: false, total: 0 };
+        },
+      },
+      pullService: {
+        listPulls: async (_token, _owner, _repo, { page, perPage }) => {
+          received.push({ endpoint: "pulls", page, perPage });
+          return { pulls: [], page, perPage, hasNext: false, total: 0 };
+        },
+      },
+    });
+
+    const cookie = [`${config.session.cookieName}=${authCookie}`];
+    await request(app).get("/api/v1/albums?page=abc&per_page=xyz").set("Cookie", cookie);
+    await request(app).get("/api/v1/albums/craftmaster/retro/branches?page=abc&per_page=xyz").set("Cookie", cookie);
+    await request(app).get("/api/v1/forks?page=abc&per_page=xyz").set("Cookie", cookie);
+    await request(app).get("/api/v1/albums/craftmaster/retro/issues?page=abc&per_page=xyz").set("Cookie", cookie);
+    await request(app).get("/api/v1/albums/craftmaster/retro/pulls?page=abc&per_page=xyz").set("Cookie", cookie);
+
+    assert.deepEqual(received, [
+      { endpoint: "albums", page: 1, perPage: 30 },
+      { endpoint: "branches", page: 1, perPage: 30 },
+      { endpoint: "forks", page: 1, perPage: 30 },
+      { endpoint: "issues", page: 1, perPage: 20 },
+      { endpoint: "pulls", page: 1, perPage: 20 },
+    ]);
+  });
 });

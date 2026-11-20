@@ -21,8 +21,8 @@ export class AlbumController {
         });
       }
 
-      const page = Math.max(1, parseInt(req.query.page || "1", 10));
-      const perPage = Math.min(100, Math.max(1, parseInt(req.query.per_page || "30", 10)));
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const perPage = Math.min(100, Math.max(1, parseInt(req.query.per_page, 10) || 30));
 
       const data = await this.service.listAlbums(token, { page, perPage, user: req.user });
       return res.json(data);

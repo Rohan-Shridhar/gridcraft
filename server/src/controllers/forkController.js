@@ -33,8 +33,8 @@ export class ForkController {
     try {
       const token = requireToken(req, res);
       if (!token) return;
-      const page = Math.max(1, parseInt(req.query.page || "1", 10));
-      const perPage = Math.min(100, Math.max(1, parseInt(req.query.per_page || "30", 10)));
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const perPage = Math.min(100, Math.max(1, parseInt(req.query.per_page, 10) || 30));
       const data = await this.service.listUserForks(token, req.user, { page, perPage });
       return res.json(data);
     } catch (err) {
