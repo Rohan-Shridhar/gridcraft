@@ -150,8 +150,29 @@ export default function useSnaps({
   }, [snaps, duplicateSnap, showToast]);
 
   const updateSnap = useCallback((id, updates) => {
+    if (!updates || typeof updates !== "object") return;
     setSnaps((current) =>
-      current.map((snap) => (snap.id === id ? { ...snap, ...updates } : snap))
+      current.map((snap) => {
+        if (snap.id !== id) return snap;
+        const next = { ...snap };
+        if (typeof updates.title === "string") {
+          const trimmedTitle = updates.title.trim().slice(0, 80);
+          if (trimmedTitle) next.title = trimmedTitle;
+        }
+        if (typeof updates.caption === "string") {
+          next.caption = updates.caption.slice(0, 120);
+        }
+        if (typeof updates.notes === "string") {
+          next.notes = updates.notes.slice(0, 1000);
+        }
+        if (typeof updates.includedInPresentation === "boolean") {
+          next.includedInPresentation = updates.includedInPresentation;
+        }
+        if (updates.durationMs !== undefined && Number.isFinite(Number(updates.durationMs))) {
+          next.durationMs = Math.min(10000, Math.max(500, Math.round(Number(updates.durationMs))));
+        }
+        return next;
+      })
     );
   }, []);
 
@@ -174,6 +195,7 @@ export default function useSnaps({
     setSnaps([]);
     setSelectedSnapId(null);
     setIsPlaying(false);
+    setPresentationStartSnapId(null);
     showToast("All snaps cleared", "success");
   }, [showToast]);
 
@@ -289,14 +311,17 @@ export default function useSnaps({
     setPresentationStartSnapId(null);
   }, []);
 
-  useEffect(() => {
-    if (isPlaying && snaps.length === 0) setIsPlaying(false);
-  }, [isPlaying, snaps.length]);
-
   const presentationSnaps = useMemo(
     () => snaps.filter((snap) => snap.includedInPresentation !== false),
     [snaps]
   );
+
+  useEffect(() => {
+    if (isPlaying && presentationSnaps.length === 0) {
+      setIsPlaying(false);
+      setPresentationStartSnapId(null);
+    }
+  }, [isPlaying, presentationSnaps.length]);
 
   return {
     snaps,

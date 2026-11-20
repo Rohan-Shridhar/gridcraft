@@ -136,3 +136,58 @@ it("enforces MAX_SNAP_COUNT on createSnap and duplicateSnap so stored snaps rema
   });
   host.remove();
 });
+
+it("bounds updateSnap fields to storage limits and stops presentation when all snaps are excluded", async () => {
+  let snapsApi;
+  function Harness() {
+    snapsApi = useSnaps({
+      cells: Array(16 * 16).fill(null),
+      gridSize: 16,
+      backgroundColor: "transparent",
+      applySnapshot: () => {},
+      showToast: () => {},
+    });
+    return null;
+  }
+
+  await act(async () => {
+    root.render(createElement(Harness));
+  });
+
+  await act(async () => {
+    snapsApi.createSnap();
+  });
+
+  const snapId = snapsApi.snaps[0].id;
+
+  await act(async () => {
+    snapsApi.startPresentation();
+  });
+  assert.equal(snapsApi.isPlaying, true);
+  assert.equal(snapsApi.presentationStartSnapId, snapId);
+
+  await act(async () => {
+    snapsApi.updateSnap(snapId, {
+      caption: "C".repeat(200),
+      notes: "N".repeat(1200),
+      durationMs: 25000,
+      includedInPresentation: false,
+    });
+  });
+
+  assert.equal(snapsApi.snaps[0].caption.length, 120);
+  assert.equal(snapsApi.snaps[0].notes.length, 1000);
+  assert.equal(snapsApi.snaps[0].durationMs, 10000);
+  assert.equal(snapsApi.isPlaying, false);
+  assert.equal(snapsApi.presentationStartSnapId, null);
+
+  const persisted = parseStoredSnaps(window.localStorage.getItem(SNAP_STORAGE_KEY));
+  assert.equal(persisted.snaps.length, 1);
+  assert.equal(persisted.notice, null);
+  assert.equal(persisted.canPersist, true);
+
+  await act(async () => {
+    root.unmount();
+  });
+  host.remove();
+});
