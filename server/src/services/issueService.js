@@ -2,14 +2,14 @@ import { z } from "zod";
 import { albumService } from "./albumService.js";
 
 const CreateIssueSchema = z.object({
-  title: z.string().min(1).max(256),
+  title: z.string().trim().min(1).max(256),
   body: z.string().max(65536).optional().default(""),
   labels: z.array(z.string().trim().min(1).max(50)).max(20).optional().default([]),
   assignees: z.array(z.string().trim().min(1).max(39)).max(20).optional().default([]),
 });
 
 const UpdateIssueSchema = z.object({
-  title: z.string().min(1).max(256).optional(),
+  title: z.string().trim().min(1).max(256).optional(),
   body: z.string().max(65536).optional(),
   state: z.enum(["open", "closed"]).optional(),
 });
@@ -44,8 +44,9 @@ export class IssueService {
 
   listIssues(_accessToken, owner, repoName, query = {}) {
     const album = this.#album(owner, repoName);
+    const state = ["open", "closed", "all"].includes(query.state) ? query.state : "open";
     return this.store.listIssues(album.id, {
-      state: query.state || "open",
+      state,
       page: Math.max(1, Number(query.page) || 1),
       perPage: Math.min(100, Math.max(1, Number(query.perPage) || 20)),
       author: query.author || "",
@@ -97,13 +98,18 @@ export class IssueService {
       throw error;
     }
     const validated = UpdateIssueSchema.parse(input);
+    if (!Object.values(validated).some((value) => value !== undefined)) {
+      const error = new Error("No supported issue changes were provided.");
+      error.status = 400;
+      throw error;
+    }
     return { issue: this.store.updateIssue(Number(number), validated) };
   }
 
   addComment(_accessToken, owner, repoName, user, number, body) {
     this.#requireSignedIn(user);
     this.getIssue(null, owner, repoName, number);
-    const text = z.string().min(1).max(65536).parse(body);
+    const text = z.string().trim().min(1).max(65536).parse(body);
     return { comment: this.store.addIssueComment(Number(number), user, text) };
   }
 }
