@@ -16,6 +16,7 @@ function albumPath(slug) {
 
 function mapAlbumToApi(album) {
   const branch = album.defaultBranch || "master";
+  const parentBranch = album.parent?.defaultBranch || branch;
   const htmlUrl = `https://github.com/${album.owner}/${ARTWORKS_REPOSITORY}/tree/${encodeURIComponent(branch)}/${albumPath(album.slug)}`;
   return {
     id: album.id,
@@ -37,8 +38,8 @@ function mapAlbumToApi(album) {
           owner: album.parent.owner,
           name: album.parent.slug,
           slug: album.parent.slug,
-          fullName:           `${album.parent.owner}/${ARTWORKS_REPOSITORY}/${albumPath(album.parent.slug)}`,
-          htmlUrl: `https://github.com/${album.parent.owner}/${ARTWORKS_REPOSITORY}/tree/${encodeURIComponent(album.defaultBranch || "master")}/${albumPath(album.parent.slug)}`,
+          fullName: `${album.parent.owner}/${ARTWORKS_REPOSITORY}/${albumPath(album.parent.slug)}`,
+          htmlUrl: `https://github.com/${album.parent.owner}/${ARTWORKS_REPOSITORY}/tree/${encodeURIComponent(parentBranch)}/${albumPath(album.parent.slug)}`,
         }
       : null,
   };
@@ -262,13 +263,16 @@ export class AlbumService {
     let forkSlug = source.slug;
     let suffix = 2;
     while (this.store.getAlbum(user.login, forkSlug)) {
-      forkSlug = `${source.slug}-${suffix}`;
+      const suffixText = `-${suffix}`;
+      const baseSlug = source.slug.slice(0, 100 - suffixText.length).replace(/-+$/g, "");
+      forkSlug = `${baseSlug}${suffixText}`;
       suffix += 1;
     }
 
     const destinationRepo = await this.#ensureRepository(accessToken, user);
     const sourceRepo = await this.#getRepository(accessToken, source.owner);
     const branch = sourceRepo.default_branch || "master";
+    this.store.setUserDefaultBranch(source.ownerId, branch);
     const { data: tree } = await this.#request(
       `/repos/${encodeURIComponent(source.owner)}/${ARTWORKS_REPOSITORY}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
       accessToken
@@ -391,19 +395,17 @@ export class AlbumService {
       throw error;
     }
     rootRepo ||= await this.#getRepository(accessToken, owner);
-    this.store.setUserDefaultBranch(album.ownerId, rootRepo.default_branch || "master");
-    const file = await this.#readFile(accessToken, owner, `${albumPath(album.slug)}/album.json`, rootRepo.default_branch || "master");
+    const defaultBranch = rootRepo.default_branch || "master";
+    this.store.setUserDefaultBranch(album.ownerId, defaultBranch);
+    const file = await this.#readFile(accessToken, owner, `${albumPath(album.slug)}/album.json`, defaultBranch);
     const manifest = AlbumManifestSchema.parse(
       JSON.parse(Buffer.from(file.content, "base64").toString("utf8"))
     );
     return {
       repo: {
-        ...mapAlbumToApi(album),
-        defaultBranch: rootRepo.default_branch || "master",
+        ...mapAlbumToApi({ ...album, defaultBranch }),
         ownerAvatar: rootRepo.owner?.avatar_url || null,
         permissions: rootRepo.permissions || {},
-        fork: Boolean(album.parent),
-        parent: album.parent,
         topics: ["gridcraft"],
       },
       manifest,
