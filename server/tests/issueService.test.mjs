@@ -48,4 +48,54 @@ describe("GridCraft issue service", () => {
       store.close();
     }
   });
+
+  it("rejects whitespace-only titles/comments and empty updates, deduplicates labels/assignees case-insensitively, and normalizes invalid list state", () => {
+    const store = new AppStore(":memory:");
+    const owner = { id: 21, login: "owner", name: "Owner" };
+    const author = { id: 22, login: "artist", name: "Artist" };
+    store.createAlbum(owner, { slug: "forest", name: "Forest" });
+    const service = new IssueService(store);
+
+    try {
+      assert.throws(() =>
+        service.createIssue("unused", "owner", "forest", author, {
+          title: "   ",
+        })
+      );
+
+      const { issue } = service.createIssue("unused", "owner", "forest", author, {
+        title: "  Add a lantern  ",
+        labels: ["Art", "art", "LIGHTING"],
+        assignees: ["Owner", "owner"],
+      });
+      assert.equal(issue.title, "Add a lantern");
+      assert.deepEqual(
+        issue.labels.map((label) => label.name),
+        ["Art", "LIGHTING"]
+      );
+      assert.deepEqual(
+        issue.assignees.map((assignee) => assignee.login),
+        ["Owner"]
+      );
+
+      assert.throws(
+        () => service.updateIssue("unused", "owner", "forest", author, issue.number, {}),
+        (error) => error.status === 400
+      );
+      assert.throws(() =>
+        service.updateIssue("unused", "owner", "forest", author, issue.number, { title: "   " })
+      );
+      assert.throws(() =>
+        service.addComment("unused", "owner", "forest", owner, issue.number, "   ")
+      );
+
+      const listed = service.listIssues("unused", "owner", "forest", {
+        state: "invalid-state",
+      });
+      assert.equal(listed.total, 1);
+      assert.equal(listed.issues[0].number, issue.number);
+    } finally {
+      store.close();
+    }
+  });
 });

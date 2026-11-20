@@ -261,9 +261,21 @@ export class AppStore {
     `).run(albumId, user.github_id, title, body, now, now);
     const issueId = Number(result.lastInsertRowid);
     const insertLabel = this.db.prepare("INSERT INTO issue_labels (issue_id, name) VALUES (?, ?)");
-    for (const label of new Set(labels)) insertLabel.run(issueId, label);
+    const seenLabels = new Set();
+    for (const label of labels) {
+      const key = label.toLowerCase();
+      if (seenLabels.has(key)) continue;
+      seenLabels.add(key);
+      insertLabel.run(issueId, label);
+    }
     const insertAssignee = this.db.prepare("INSERT INTO issue_assignees (issue_id, login) VALUES (?, ?)");
-    for (const login of new Set(assignees)) insertAssignee.run(issueId, login);
+    const seenAssignees = new Set();
+    for (const login of assignees) {
+      const key = login.toLowerCase();
+      if (seenAssignees.has(key)) continue;
+      seenAssignees.add(key);
+      insertAssignee.run(issueId, login);
+    }
     return this.getIssue(issueId);
   }
 
