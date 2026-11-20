@@ -128,9 +128,11 @@ export class AppStore {
     const offset = (page - 1) * perPage;
     const albums = this.db.prepare(`
       SELECT a.*, u.avatar_url AS owner_avatar, u.default_branch AS owner_default_branch,
-        parent.owner_login AS parent_owner, parent.slug AS parent_slug
+        parent.owner_login AS parent_owner, parent.slug AS parent_slug,
+        pu.default_branch AS parent_default_branch
       FROM albums a JOIN users u ON u.github_id = a.owner_id
       LEFT JOIN albums parent ON parent.id = a.parent_album_id
+      LEFT JOIN users pu ON pu.github_id = parent.owner_id
       ORDER BY a.updated_at DESC, a.id DESC LIMIT ? OFFSET ?
     `).all(perPage, offset);
     const total = this.db.prepare("SELECT COUNT(*) AS count FROM albums").get().count;
@@ -145,9 +147,11 @@ export class AppStore {
   listUserAlbums(ownerId) {
     return this.db.prepare(`
       SELECT a.*, u.avatar_url AS owner_avatar, u.default_branch AS owner_default_branch,
-        parent.owner_login AS parent_owner, parent.slug AS parent_slug
+        parent.owner_login AS parent_owner, parent.slug AS parent_slug,
+        pu.default_branch AS parent_default_branch
       FROM albums a JOIN users u ON u.github_id = a.owner_id
       LEFT JOIN albums parent ON parent.id = a.parent_album_id
+      LEFT JOIN users pu ON pu.github_id = parent.owner_id
       WHERE a.owner_id = ? ORDER BY a.updated_at DESC, a.id DESC
     `).all(ownerId).map((album) => this.mapAlbum(album));
   }
@@ -155,9 +159,11 @@ export class AppStore {
   getAlbum(owner, slug) {
     const album = this.db.prepare(`
       SELECT a.*, u.avatar_url AS owner_avatar, u.default_branch AS owner_default_branch,
-        parent.owner_login AS parent_owner, parent.slug AS parent_slug
+        parent.owner_login AS parent_owner, parent.slug AS parent_slug,
+        pu.default_branch AS parent_default_branch
       FROM albums a JOIN users u ON u.github_id = a.owner_id
       LEFT JOIN albums parent ON parent.id = a.parent_album_id
+      LEFT JOIN users pu ON pu.github_id = parent.owner_id
       WHERE lower(a.owner_login) = lower(?) AND lower(a.slug) = lower(?)
     `).get(owner, slug);
     return album ? this.mapAlbum(album) : null;
@@ -166,9 +172,12 @@ export class AppStore {
   getAlbumById(id) {
     const album = this.db.prepare(`
       SELECT a.*, u.avatar_url AS owner_avatar, u.default_branch AS owner_default_branch,
-        parent.owner_login AS parent_owner, parent.slug AS parent_slug
+        parent.owner_login AS parent_owner, parent.slug AS parent_slug,
+        pu.default_branch AS parent_default_branch
       FROM albums a JOIN users u ON u.github_id = a.owner_id
-      LEFT JOIN albums parent ON parent.id = a.parent_album_id WHERE a.id = ?
+      LEFT JOIN albums parent ON parent.id = a.parent_album_id
+      LEFT JOIN users pu ON pu.github_id = parent.owner_id
+      WHERE a.id = ?
     `).get(id);
     return album ? this.mapAlbum(album) : null;
   }
@@ -233,7 +242,12 @@ export class AppStore {
       createdAt: album.created_at,
       updatedAt: album.updated_at,
       parent: album.parent_album_id
-        ? { id: album.parent_album_id, owner: album.parent_owner, slug: album.parent_slug }
+        ? {
+            id: album.parent_album_id,
+            owner: album.parent_owner,
+            slug: album.parent_slug,
+            defaultBranch: album.parent_default_branch || "master",
+          }
         : null,
     };
   }
