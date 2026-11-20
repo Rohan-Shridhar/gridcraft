@@ -36,22 +36,28 @@ export function snapsToMigrationPlan(snaps, { storyName = "Migrated Snaps", albu
   const usedIds = new Set();
   let truncatedMetadataCount = 0;
   const artworks = valid.map((snap, index) => {
-    const base = sanitizeArtworkId(snap.title || `snap-${index + 1}`) || `snap-${index + 1}`;
+    const trimmedTitle = typeof snap.title === "string" ? snap.title.trim().slice(0, 100) : "";
+    const base = sanitizeArtworkId(trimmedTitle || `snap-${index + 1}`) || `snap-${index + 1}`;
     let id = base;
     let n = 2;
     while (usedIds.has(id)) {
-      id = `${base}-${n}`;
+      const suffix = `-${n}`;
+      const prefix = base.slice(0, 100 - suffix.length).replace(/-+$/g, "");
+      id = `${prefix}${suffix}`;
       n += 1;
     }
     usedIds.add(id);
-    const now = snap.createdAt || new Date().toISOString();
+    const now =
+      typeof snap.createdAt === "string" && Number.isFinite(Date.parse(snap.createdAt))
+        ? snap.createdAt
+        : new Date().toISOString();
     const rawDescription = [snap.caption, snap.notes].filter(Boolean).join("\n");
     if (rawDescription.length > 500) truncatedMetadataCount += 1;
     return {
       format: "gridcraft-artwork",
       schemaVersion: 1,
       id,
-      name: snap.title || `Snap ${index + 1}`,
+      name: trimmedTitle || `Snap ${index + 1}`,
       description: rawDescription.slice(0, 500),
       gridSize: snap.gridSize,
       width: snap.gridSize,

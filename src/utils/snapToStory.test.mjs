@@ -37,4 +37,37 @@ describe("Snap-to-Story migration plan", () => {
     assert.equal(plan.truncatedMetadataCount, 1);
     assert.equal(plan.artworks[0].description.length, 500);
   });
+
+  it("normalizes whitespace-only titles, bounds deduplicated IDs to 100 chars, and replaces invalid createdAt dates", () => {
+    const longTitle = "a".repeat(100);
+    const plan = snapsToMigrationPlan([
+      {
+        title: "   ",
+        createdAt: "not-a-date",
+        gridSize: 16,
+        backgroundColor: "transparent",
+        cells: Array(256).fill(null),
+      },
+      {
+        title: longTitle,
+        gridSize: 16,
+        backgroundColor: "transparent",
+        cells: Array(256).fill(null),
+      },
+      {
+        title: longTitle,
+        gridSize: 16,
+        backgroundColor: "transparent",
+        cells: Array(256).fill(null),
+      },
+    ]);
+
+    assert.equal(plan.artworks[0].name, "Snap 1");
+    assert.equal(plan.artworks[0].id, "snap-1");
+    assert.ok(Number.isFinite(Date.parse(plan.artworks[0].createdAt)));
+    assert.equal(plan.artworks[1].id.length, 100);
+    assert.ok(plan.artworks[2].id.length <= 100);
+    assert.ok(plan.artworks[2].id.endsWith("-2"));
+    assert.notEqual(plan.artworks[1].id, plan.artworks[2].id);
+  });
 });
