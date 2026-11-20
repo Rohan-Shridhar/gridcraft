@@ -25,3 +25,14 @@ it("preserves asterisks inside link URLs without corrupting href", () => {
     '<a href="https://example.com/a*b*c" target="_blank" rel="noreferrer noopener">docs</a>'
   );
 });
+
+it("restores inline code spans inside link labels and avoids matching emphasis across newlines or space-padded asterisks", () => {
+  const linkWithCode = renderSafeMarkdown("[Run `npm test` *now*](https://example.com)");
+  assert.equal(
+    linkWithCode,
+    '<a href="https://example.com" target="_blank" rel="noreferrer noopener">Run <code>npm test</code> <em>now</em></a>'
+  );
+
+  const bulletListAndMath = renderSafeMarkdown("* first item\r\n* second item\r\n2 * 3 * 4");
+  assert.equal(bulletListAndMath, "* first item<br />* second item<br />2 * 3 * 4");
+});

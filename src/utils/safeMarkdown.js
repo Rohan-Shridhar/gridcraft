@@ -8,8 +8,8 @@ function escapeHtml(value) {
 
 function formatEmphasis(text) {
   return text
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    .replace(/\*\*(?!\s)([^*\r\n]+?)(?<!\s)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(?!\s)([^*\r\n]+?)(?<!\s)\*/g, "<em>$1</em>");
 }
 
 export function renderSafeMarkdown(markdown) {
@@ -26,15 +26,15 @@ export function renderSafeMarkdown(markdown) {
     return `${sentinel}${id}${sentinel}`;
   };
 
-  const withoutCode = escaped.replace(/`([^`]+)`/g, (_, code) => stash(`<code>${code}</code>`));
+  const withoutCode = escaped.replace(/`([^`\r\n]+)`/g, (_, code) => stash(`<code>${code}</code>`));
   const withoutLinks = withoutCode.replace(
     /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
     (_, label, href) => stash(`<a href="${href}" target="_blank" rel="noreferrer noopener">${formatEmphasis(label)}</a>`)
   );
   const withEmphasis = formatEmphasis(withoutLinks);
-  const restored = withEmphasis.replace(
-    new RegExp(`${sentinel}(\\d+)${sentinel}`, "g"),
-    (_, index) => placeholders[Number(index)]
-  );
-  return restored.replace(/\n/g, "<br />");
+  const placeholderPattern = new RegExp(`${sentinel}(\\d+)${sentinel}`, "g");
+  const restorePlaceholders = (text) =>
+    text.replace(placeholderPattern, (_, index) => placeholders[Number(index)]);
+  const restored = restorePlaceholders(restorePlaceholders(withEmphasis));
+  return restored.replace(/\r?\n/g, "<br />");
 }
