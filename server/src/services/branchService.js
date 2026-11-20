@@ -12,11 +12,12 @@ export class BranchService {
   }
 
   async listBranches(accessToken, owner, repoName, { page = 1, perPage = 30 } = {}) {
+    const repoPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}`;
     const { data, headers } = await this.#request(
-      `/repos/${owner}/${repoName}/branches?per_page=${perPage}&page=${page}`,
+      `${repoPath}/branches?per_page=${perPage}&page=${page}`,
       accessToken
     );
-    const repo = await this.#request(`/repos/${owner}/${repoName}`, accessToken);
+    const repo = await this.#request(repoPath, accessToken);
     const defaultBranch = repo.data.default_branch;
     return {
       branches: (data || []).map((branch) => ({
@@ -35,7 +36,7 @@ export class BranchService {
   async getBranch(accessToken, owner, repoName, branchName) {
     assertSafeBranchName(branchName);
     const { data } = await this.#request(
-      `/repos/${owner}/${repoName}/branches/${encodeURIComponent(branchName)}`,
+      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/branches/${encodeURIComponent(branchName)}`,
       accessToken
     );
     return {
@@ -55,10 +56,14 @@ export class BranchService {
   async createBranch(accessToken, owner, repoName, input) {
     const validated = CreateBranchSchema.parse(input);
     const name = assertSafeBranchName(validated.name);
-    const repository = await this.#request(`/repos/${owner}/${repoName}`, accessToken);
+    if (validated.from !== undefined) {
+      assertSafeBranchName(validated.from);
+    }
+    const repoPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}`;
+    const repository = await this.#request(repoPath, accessToken);
     const from = assertSafeBranchName(validated.from || repository.data.default_branch || "master");
     const base = await this.getBranch(accessToken, owner, repoName, from);
-    const { data } = await this.#request(`/repos/${owner}/${repoName}/git/refs`, accessToken, {
+    const { data } = await this.#request(`${repoPath}/git/refs`, accessToken, {
       method: "POST",
       body: JSON.stringify({
         ref: `refs/heads/${name}`,
@@ -70,16 +75,17 @@ export class BranchService {
 
   async renameBranch(accessToken, owner, repoName, branchName, input) {
     assertSafeBranchName(branchName);
-    const repository = await this.#request(`/repos/${owner}/${repoName}`, accessToken);
+    const { newName } = RenameBranchSchema.parse(input);
+    assertSafeBranchName(newName);
+    const repoPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}`;
+    const repository = await this.#request(repoPath, accessToken);
     if (branchName === repository.data.default_branch) {
       const err = new Error("The default branch cannot be renamed from GridCraft.");
       err.status = 400;
       throw err;
     }
-    const { newName } = RenameBranchSchema.parse(input);
-    assertSafeBranchName(newName);
     const { data } = await this.#request(
-      `/repos/${owner}/${repoName}/branches/${encodeURIComponent(branchName)}/rename`,
+      `${repoPath}/branches/${encodeURIComponent(branchName)}/rename`,
       accessToken,
       {
         method: "POST",
@@ -91,7 +97,8 @@ export class BranchService {
 
   async deleteBranch(accessToken, owner, repoName, branchName) {
     assertSafeBranchName(branchName);
-    const repo = await this.#request(`/repos/${owner}/${repoName}`, accessToken);
+    const repoPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}`;
+    const repo = await this.#request(repoPath, accessToken);
     if (branchName === repo.data.default_branch) {
       const err = new Error("The default branch cannot be deleted.");
       err.status = 400;
@@ -99,7 +106,7 @@ export class BranchService {
       throw err;
     }
     await this.#request(
-      `/repos/${owner}/${repoName}/git/refs/heads/${encodeURIComponent(branchName)}`,
+      `${repoPath}/git/refs/heads/${encodeURIComponent(branchName)}`,
       accessToken,
       { method: "DELETE" }
     );
@@ -110,7 +117,7 @@ export class BranchService {
     assertSafeBranchName(base);
     assertSafeBranchName(head);
     const { data } = await this.#request(
-      `/repos/${owner}/${repoName}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`,
+      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`,
       accessToken
     );
     return {
@@ -140,7 +147,7 @@ export class BranchService {
   async listCommits(accessToken, owner, repoName, branch = "master", { page = 1, perPage = 20 } = {}) {
     assertSafeBranchName(branch);
     const { data } = await this.#request(
-      `/repos/${owner}/${repoName}/commits?sha=${encodeURIComponent(branch)}&page=${page}&per_page=${perPage}`,
+      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/commits?sha=${encodeURIComponent(branch)}&page=${page}&per_page=${perPage}`,
       accessToken
     );
     return (data || []).map((c) => ({
