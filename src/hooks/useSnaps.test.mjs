@@ -191,3 +191,56 @@ it("bounds updateSnap fields to storage limits and stops presentation when all s
   });
   host.remove();
 });
+
+it("ignores non-numeric durationMs in updateSnap, non-integer moveSnap directions, non-string renameSnap titles, and empty importSnaps", async () => {
+  let snapsApi;
+  const toasts = [];
+  function Harness() {
+    snapsApi = useSnaps({
+      cells: Array(16 * 16).fill(null),
+      gridSize: 16,
+      backgroundColor: "transparent",
+      applySnapshot: () => {},
+      showToast: (msg) => toasts.push(msg),
+    });
+    return null;
+  }
+
+  await act(async () => {
+    root.render(createElement(Harness));
+  });
+
+  await act(async () => {
+    snapsApi.createSnap();
+  });
+  await act(async () => {
+    snapsApi.createSnap();
+  });
+
+  const firstId = snapsApi.snaps[0].id;
+  const originalDuration = snapsApi.snaps[0].durationMs;
+
+  await act(async () => {
+    snapsApi.renameSnap(firstId, null);
+    snapsApi.updateSnap(firstId, { durationMs: null });
+    snapsApi.updateSnap(firstId, { durationMs: "" });
+    snapsApi.updateSnap(firstId, { durationMs: false });
+    snapsApi.moveSnap(firstId, 0.5);
+  });
+
+  assert.equal(snapsApi.snaps[0].durationMs, originalDuration);
+  assert.equal(snapsApi.snaps.length, 2);
+  assert.equal(snapsApi.snaps[0].id, firstId);
+
+  let importResult;
+  await act(async () => {
+    importResult = snapsApi.importSnaps([]);
+  });
+  assert.equal(importResult, false);
+  assert.ok(!toasts.some((msg) => msg.includes("0 snaps imported")));
+
+  await act(async () => {
+    root.unmount();
+  });
+  host.remove();
+});

@@ -95,6 +95,7 @@ export default function useSnaps({
   }, [snaps, cells, gridSize, backgroundColor, showToast]);
 
   const renameSnap = useCallback((id, title) => {
+    if (typeof title !== "string") return;
     const trimmedTitle = title.trim().slice(0, 80);
     if (!trimmedTitle) return;
     setSnaps((current) =>
@@ -168,8 +169,15 @@ export default function useSnaps({
         if (typeof updates.includedInPresentation === "boolean") {
           next.includedInPresentation = updates.includedInPresentation;
         }
-        if (updates.durationMs !== undefined && Number.isFinite(Number(updates.durationMs))) {
-          next.durationMs = Math.min(10000, Math.max(500, Math.round(Number(updates.durationMs))));
+        const rawDuration = updates.durationMs;
+        const parsedDuration =
+          typeof rawDuration === "number"
+            ? rawDuration
+            : typeof rawDuration === "string" && rawDuration.trim() !== ""
+              ? Number(rawDuration)
+              : Number.NaN;
+        if (Number.isFinite(parsedDuration)) {
+          next.durationMs = Math.min(10000, Math.max(500, Math.round(parsedDuration)));
         }
         return next;
       })
@@ -201,6 +209,9 @@ export default function useSnaps({
 
   const importSnaps = useCallback(
     (importedSnaps) => {
+      if (!Array.isArray(importedSnaps) || importedSnaps.length === 0) {
+        return false;
+      }
       if (snaps.length + importedSnaps.length > MAX_SNAP_COUNT) {
         showToast(`A maximum of ${MAX_SNAP_COUNT} snaps can be stored`);
         return false;
@@ -212,8 +223,8 @@ export default function useSnaps({
         0
       );
       const imported = importedSnaps.map((snap, index) => {
-        let id = snap.id;
-        while (existingIds.has(id)) id = createId();
+        let id = typeof snap.id === "string" ? snap.id.trim() : "";
+        while (!id || existingIds.has(id)) id = createId();
         existingIds.add(id);
         return {
           ...normalizeSnap(snap),
@@ -244,6 +255,7 @@ export default function useSnaps({
 
   const moveSnap = useCallback(
     (id, direction) => {
+      if (!Number.isInteger(direction) || direction === 0) return;
       const index = snaps.findIndex((snap) => snap.id === id);
       const nextIndex = index + direction;
       if (index < 0 || nextIndex < 0 || nextIndex >= snaps.length) return;
