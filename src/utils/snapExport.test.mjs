@@ -95,3 +95,32 @@ test("creates a JSON export copy without sharing pixel arrays", () => {
   assert.notEqual(result.snaps[0].cells, snap.cells);
   assert.deepEqual(result.snaps[0].cells, snap.cells);
 });
+
+test("strips unknown properties, normalizes defaults, and rejects whitespace-only ids on import", () => {
+  const rawSnap = makeSnap();
+  delete rawSnap.caption;
+  delete rawSnap.notes;
+  delete rawSnap.includedInPresentation;
+  delete rawSnap.durationMs;
+  rawSnap.unexpectedField = "drop-me";
+
+  const validRes = validateSnapExport({
+    format: SNAP_EXPORT_FORMAT,
+    version: SNAP_EXPORT_VERSION,
+    snaps: [rawSnap],
+  });
+  assert.equal(validRes.valid, true);
+  assert.equal("unexpectedField" in validRes.snaps[0], false);
+  assert.equal(validRes.snaps[0].caption, "");
+  assert.equal(validRes.snaps[0].notes, "");
+  assert.equal(validRes.snaps[0].includedInPresentation, true);
+  assert.equal(validRes.snaps[0].durationMs, 1500);
+  assert.notEqual(validRes.snaps[0].cells, rawSnap.cells);
+
+  const blankIdRes = validateSnapExport({
+    format: SNAP_EXPORT_FORMAT,
+    version: SNAP_EXPORT_VERSION,
+    snaps: [{ ...makeSnap(), id: "   " }],
+  });
+  assert.equal(blankIdRes.valid, false);
+});

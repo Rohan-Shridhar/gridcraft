@@ -8,37 +8,39 @@ const GRID_SIZES = [16, 32, 64, 128];
 const HEX_COLOR = /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i;
 
 export function isValidSnap(snap) {
-  return (
+  return Boolean(
     snap &&
-    typeof snap.id === "string" &&
-    snap.id.length > 0 &&
-    snap.id.length <= 128 &&
-    Number.isInteger(snap.sequence) &&
-    snap.sequence > 0 &&
-    typeof snap.title === "string" &&
-    snap.title.trim().length > 0 &&
-    snap.title.length <= 80 &&
-    typeof snap.createdAt === "string" &&
-    Number.isFinite(Date.parse(snap.createdAt)) &&
-    GRID_SIZES.includes(snap.gridSize) &&
-    Array.isArray(snap.cells) &&
-    snap.cells.length === snap.gridSize * snap.gridSize &&
-    snap.cells.every(
-      (color) => color === null || (typeof color === "string" && HEX_COLOR.test(color))
-    ) &&
-    (snap.caption === undefined ||
-      (typeof snap.caption === "string" && snap.caption.length <= 120)) &&
-    (snap.notes === undefined ||
-      (typeof snap.notes === "string" && snap.notes.length <= 1000)) &&
-    (snap.includedInPresentation === undefined ||
-      typeof snap.includedInPresentation === "boolean") &&
-    (snap.durationMs === undefined ||
-      (Number.isFinite(snap.durationMs) &&
-        snap.durationMs >= 500 &&
-        snap.durationMs <= 10000)) &&
-    (snap.backgroundColor === "transparent" ||
-      (typeof snap.backgroundColor === "string" &&
-        HEX_COLOR.test(snap.backgroundColor)))
+      typeof snap === "object" &&
+      !Array.isArray(snap) &&
+      typeof snap.id === "string" &&
+      snap.id.trim().length > 0 &&
+      snap.id.length <= 128 &&
+      Number.isInteger(snap.sequence) &&
+      snap.sequence > 0 &&
+      typeof snap.title === "string" &&
+      snap.title.trim().length > 0 &&
+      snap.title.length <= 80 &&
+      typeof snap.createdAt === "string" &&
+      Number.isFinite(Date.parse(snap.createdAt)) &&
+      GRID_SIZES.includes(snap.gridSize) &&
+      Array.isArray(snap.cells) &&
+      snap.cells.length === snap.gridSize * snap.gridSize &&
+      snap.cells.every(
+        (color) => color === null || (typeof color === "string" && HEX_COLOR.test(color))
+      ) &&
+      (snap.caption === undefined ||
+        (typeof snap.caption === "string" && snap.caption.length <= 120)) &&
+      (snap.notes === undefined ||
+        (typeof snap.notes === "string" && snap.notes.length <= 1000)) &&
+      (snap.includedInPresentation === undefined ||
+        typeof snap.includedInPresentation === "boolean") &&
+      (snap.durationMs === undefined ||
+        (Number.isFinite(snap.durationMs) &&
+          snap.durationMs >= 500 &&
+          snap.durationMs <= 10000)) &&
+      (snap.backgroundColor === "transparent" ||
+        (typeof snap.backgroundColor === "string" &&
+          HEX_COLOR.test(snap.backgroundColor)))
   );
 }
 

@@ -101,4 +101,13 @@ test("strips unknown properties and rejects invalid color and metadata fields", 
   assert.equal(result.snaps.length, 1);
   assert.equal("svgDataUrl" in result.snaps[0], false);
   assert.equal(result.canPersist, false);
+
+  const blankIdResult = parseStoredSnaps(
+    JSON.stringify({
+      version: SNAP_SCHEMA_VERSION,
+      snaps: [makeSnap({ id: "   " })],
+    })
+  );
+  assert.equal(blankIdResult.snaps.length, 0);
+  assert.equal(blankIdResult.canPersist, false);
 });
