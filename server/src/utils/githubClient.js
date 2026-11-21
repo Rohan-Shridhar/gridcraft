@@ -12,6 +12,21 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function parseRetryAfterMs(header, fallbackMs, now = Date.now()) {
+  if (typeof header !== "string") return fallbackMs;
+  const trimmed = header.trim();
+  if (!trimmed) return fallbackMs;
+  const seconds = Number(trimmed);
+  if (Number.isFinite(seconds)) {
+    return seconds >= 0 ? seconds * 1000 : fallbackMs;
+  }
+  const timestamp = Date.parse(trimmed);
+  if (Number.isFinite(timestamp)) {
+    return Math.max(0, timestamp - now);
+  }
+  return fallbackMs;
+}
+
 export function parseLinkHeader(header) {
   if (!header) return {};
   const links = {};
@@ -47,7 +62,7 @@ export async function githubRequest(fetchFn, endpoint, accessToken, options = {}
     const data = await response.json().catch(() => null);
 
     if (response.status === 429 || (response.status === 403 && rateRemaining === "0")) {
-      const retryAfter = retryAfterHeader ? Number(retryAfterHeader) * 1000 : 500 * 2 ** attempt;
+      const retryAfter = parseRetryAfterMs(retryAfterHeader, 500 * 2 ** attempt);
       lastError = githubError(data, response.status, "RATE_LIMITED");
       lastError.retryAfter = retryAfterHeader;
       if (attempt < maxAttempts) {
@@ -80,6 +95,11 @@ export function githubError(data, status, code) {
     err.code = "CONFLICT";
     err.userMessage =
       "Stale write detected. The remote file has been modified since it was loaded.";
+  } else if (code) {
+    err.code = code;
+    if (code === "RATE_LIMITED") {
+      err.userMessage = data?.message || "GitHub API rate limit exceeded. Please try again later.";
+    }
   } else if (status === 401) {
     err.code = "UNAUTHORIZED";
   } else if (status === 403) {
@@ -89,8 +109,6 @@ export function githubError(data, status, code) {
     err.code = "NOT_FOUND";
   } else if (status === 422) {
     err.code = "VALIDATION_ERROR";
-  } else if (code) {
-    err.code = code;
   }
   return err;
 }
