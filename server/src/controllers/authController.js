@@ -1,8 +1,31 @@
+import crypto from "node:crypto";
 import { config } from "../config/env.js";
 import { generateRandomState, encryptToken, signSessionPayload } from "../utils/crypto.js";
 import { githubAuthService } from "../services/githubAuthService.js";
 import { albumService } from "../services/albumService.js";
 import { getSessionAccessToken } from "../middleware/auth.js";
+
+function authCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: config.isProduction,
+    sameSite: "lax",
+    path: "/",
+  };
+}
+
+function frontendBaseUrl() {
+  return String(config.frontendUrl || "").replace(/\/+$/, "");
+}
+
+function statesMatch(received, expected) {
+  if (typeof received !== "string" || typeof expected !== "string" || !received || !expected) {
+    return false;
+  }
+  const a = Buffer.from(received, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 export class AuthController {
   constructor(service = githubAuthService, libraryService = albumService) {
@@ -14,10 +37,7 @@ export class AuthController {
     const state = generateRandomState(32);
 
     res.cookie(config.session.stateCookieName, state, {
-      httpOnly: true,
-      secure: config.isProduction,
-      sameSite: "lax",
-      path: "/",
+      ...authCookieOptions(),
       maxAge: config.session.stateMaxAgeMs,
     });
 
@@ -34,37 +54,43 @@ export class AuthController {
   handleGitHubCallback = async (req, res, next) => {
     const { code, state, error, error_description } = req.query;
     const storedState = req.cookies?.[config.session.stateCookieName];
+    const frontendUrl = frontendBaseUrl();
 
     // Always clear the temporary OAuth state cookie
-    res.clearCookie(config.session.stateCookieName, { path: "/" });
+    res.clearCookie(config.session.stateCookieName, authCookieOptions());
 
     const wantsJson = req.headers.accept?.includes("application/json");
 
     // 1. Check if GitHub returned an OAuth authorization error
     if (error) {
-      const msg = error_description || error;
+      const msg =
+        typeof error_description === "string" && error_description
+          ? error_description
+          : typeof error === "string"
+            ? error
+            : "OAuth authorization failed.";
       if (wantsJson) {
         return res.status(400).json({ error: { code: "OAUTH_DENIED", message: msg } });
       }
-      return res.redirect(`${config.frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
+      return res.redirect(`${frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
     }
 
     // 2. Validate state against stored state cookie (CSRF prevention)
-    if (!state || !storedState || state !== storedState) {
+    if (!statesMatch(state, storedState)) {
       const msg = "Invalid or expired OAuth state. Please try signing in again.";
       if (wantsJson) {
         return res.status(400).json({ error: { code: "INVALID_STATE", message: msg } });
       }
-      return res.redirect(`${config.frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
+      return res.redirect(`${frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
     }
 
     // 3. Ensure authorization code is present
-    if (!code) {
+    if (typeof code !== "string" || !code) {
       const msg = "Missing authorization code from GitHub.";
       if (wantsJson) {
         return res.status(400).json({ error: { code: "MISSING_CODE", message: msg } });
       }
-      return res.redirect(`${config.frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
+      return res.redirect(`${frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
     }
 
     try {
@@ -93,10 +119,7 @@ export class AuthController {
 
       // 8. Set HttpOnly session cookie
       res.cookie(config.session.cookieName, signedSession, {
-        httpOnly: true,
-        secure: config.isProduction,
-        sameSite: "lax",
-        path: "/",
+        ...authCookieOptions(),
         maxAge: config.session.maxAgeMs,
       });
 
@@ -104,16 +127,21 @@ export class AuthController {
         return res.json({ authenticated: true, user });
       }
 
-      return res.redirect(`${config.frontendUrl}/?auth_success=1`);
+      return res.redirect(`${frontendUrl}/?auth_success=1`);
     } catch (err) {
-      console.error("[AUTH_CALLBACK_ERROR]", err.message || err);
-      const msg = err.message || "Failed to complete GitHub sign-in.";
+      console.error("[AUTH_CALLBACK_ERROR]", err?.message || err);
+      const msg = err?.message || "Failed to complete GitHub sign-in.";
+      const rawStatus = err?.status;
+      const status =
+        Number.isInteger(rawStatus) && rawStatus >= 400 && rawStatus <= 599
+          ? rawStatus
+          : 500;
       if (wantsJson) {
-        return res.status(err.status || 500).json({
-          error: { code: err.code || "AUTH_FAILED", message: msg },
+        return res.status(status).json({
+          error: { code: err?.code || "AUTH_FAILED", message: msg },
         });
       }
-      return res.redirect(`${config.frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
+      return res.redirect(`${frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
     }
   };
 
@@ -129,13 +157,13 @@ export class AuthController {
   };
 
   logout = (req, res) => {
-    res.clearCookie(config.session.cookieName, { path: "/" });
+    res.clearCookie(config.session.cookieName, authCookieOptions());
     return res.json({ success: true, message: "Logged out successfully" });
   };
 
   disconnect = async (req, res) => {
     const accessToken = getSessionAccessToken(req);
-    res.clearCookie(config.session.cookieName, { path: "/" });
+    res.clearCookie(config.session.cookieName, authCookieOptions());
 
     if (accessToken) {
       await this.service.revokeToken(accessToken).catch(() => {});

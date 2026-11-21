@@ -219,4 +219,45 @@ describe("Backend Health and Authentication API Integration Tests", () => {
       .set("Cookie", [`${config.session.cookieName}=${badUser}`]);
     assert.equal(res2.status, 401);
   });
+
+  it("clears auth cookies with matching attributes, rejects non-string callback params, and bounds callback error status", async () => {
+    const logoutRes = await request(app).post("/api/v1/auth/logout");
+    assert.equal(logoutRes.status, 200);
+    const clearedSession = logoutRes.header["set-cookie"]?.find((c) =>
+      c.startsWith(`${config.session.cookieName}=`)
+    );
+    assert.ok(clearedSession);
+    assert.match(clearedSession, /HttpOnly/i);
+    assert.match(clearedSession, /SameSite=Lax/i);
+
+    const validState = "valid_state_array_check";
+    const dupCodeRes = await request(app)
+      .get(`/api/v1/auth/github/callback?code=a&code=b&state=${validState}`)
+      .set("Cookie", [`${config.session.stateCookieName}=${validState}`])
+      .set("Accept", "application/json");
+    assert.equal(dupCodeRes.status, 400);
+    assert.equal(dupCodeRes.body.error.code, "MISSING_CODE");
+    const clearedState = dupCodeRes.header["set-cookie"]?.find((c) =>
+      c.startsWith(`${config.session.stateCookieName}=`)
+    );
+    assert.ok(clearedState);
+    assert.match(clearedState, /HttpOnly/i);
+    assert.match(clearedState, /SameSite=Lax/i);
+
+    const badStatusApp = createApp({
+      authService: {
+        exchangeCodeForToken: async () => {
+          const err = new Error("Upstream failure");
+          err.status = 999;
+          throw err;
+        },
+      },
+    });
+    const badStatusRes = await request(badStatusApp)
+      .get(`/api/v1/auth/github/callback?code=ok&state=${validState}`)
+      .set("Cookie", [`${config.session.stateCookieName}=${validState}`])
+      .set("Accept", "application/json");
+    assert.equal(badStatusRes.status, 500);
+    assert.equal(badStatusRes.body.error.code, "AUTH_FAILED");
+  });
 });
