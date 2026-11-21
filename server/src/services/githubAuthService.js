@@ -2,12 +2,18 @@ import { config } from "../config/env.js";
 import { APP_VERSION } from "../config/version.js";
 
 export class GitHubAuthService {
-  constructor(cfg = config) {
+  constructor(cfg = config, fetchFn = globalThis.fetch) {
     this.config = cfg;
+    this.fetch = fetchFn;
+  }
+
+  #defaultCallbackUri() {
+    const base = String(this.config.backendUrl || "").replace(/\/+$/, "");
+    return `${base}/api/v1/auth/github/callback`;
   }
 
   getAuthorizationUrl(state, redirectUri) {
-    const callbackUri = redirectUri || `${this.config.backendUrl}/api/v1/auth/github/callback`;
+    const callbackUri = redirectUri || this.#defaultCallbackUri();
     const params = new URLSearchParams({
       client_id: this.config.github.clientId,
       redirect_uri: callbackUri,
@@ -17,8 +23,8 @@ export class GitHubAuthService {
   }
 
   async exchangeCodeForToken(code, redirectUri) {
-    const callbackUri = redirectUri || `${this.config.backendUrl}/api/v1/auth/github/callback`;
-    const response = await fetch("https://github.com/login/oauth/access_token", {
+    const callbackUri = redirectUri || this.#defaultCallbackUri();
+    const response = await this.fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -38,10 +44,16 @@ export class GitHubAuthService {
     }
 
     const data = await response.json();
-    if (data.error) {
-      const err = new Error(data.error_description || data.error);
-      err.code = data.error.toUpperCase();
+    if (data?.error) {
+      const err = new Error(data.error_description || String(data.error));
+      err.code = typeof data.error === "string" ? data.error.toUpperCase() : "OAUTH_ERROR";
       err.status = 400;
+      throw err;
+    }
+
+    if (!data || typeof data.access_token !== "string" || !data.access_token) {
+      const err = new Error("GitHub token exchange returned no access token");
+      err.status = 502;
       throw err;
     }
 
@@ -55,7 +67,7 @@ export class GitHubAuthService {
   }
 
   async fetchUserProfile(accessToken) {
-    const response = await fetch("https://api.github.com/user", {
+    const response = await this.fetch("https://api.github.com/user", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/vnd.github+json",
@@ -71,6 +83,12 @@ export class GitHubAuthService {
     }
 
     const user = await response.json();
+    if (!user || user.id === undefined || user.id === null || typeof user.login !== "string" || !user.login) {
+      const err = new Error("GitHub user profile response is missing required fields");
+      err.status = 502;
+      throw err;
+    }
+
     return {
       id: user.id,
       login: user.login,
@@ -90,8 +108,8 @@ export class GitHubAuthService {
         `${this.config.github.clientId}:${this.config.github.clientSecret}`
       ).toString("base64");
 
-      const response = await fetch(
-        `https://api.github.com/applications/${this.config.github.clientId}/token`,
+      const response = await this.fetch(
+        `https://api.github.com/applications/${encodeURIComponent(this.config.github.clientId)}/token`,
         {
           method: "DELETE",
           headers: {
