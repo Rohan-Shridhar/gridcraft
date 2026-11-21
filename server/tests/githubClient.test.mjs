@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { githubError, githubRequest, parseRetryAfterMs } from "../src/utils/githubClient.js";
+import {
+  githubError,
+  githubRequest,
+  parseLinkHeader,
+  parseRetryAfterMs,
+  resolveBranch,
+  resolveLibraryBranch,
+} from "../src/utils/githubClient.js";
 
 describe("GitHub client utilities", () => {
   it("preserves explicit RATE_LIMITED code on 403 rate-limit responses", async () => {
@@ -32,5 +39,30 @@ describe("GitHub client utilities", () => {
     assert.equal(parseRetryAfterMs("invalid-header", 1000, now), 1000);
     assert.equal(parseRetryAfterMs("-5", 1000, now), 1000);
     assert.equal(parseRetryAfterMs(null, 1000, now), 1000);
+  });
+
+  it("handles non-string Link headers, non-string error messages, whitespace branches, and null library responses", async () => {
+    assert.deepEqual(parseLinkHeader(null), {});
+    assert.deepEqual(parseLinkHeader(["<https://api.github.com/items?page=2>; rel=\"next\""]), {});
+    assert.deepEqual(
+      parseLinkHeader("<https://api.github.com/items?page=2>; rel=\"next\""),
+      { next: "https://api.github.com/items?page=2" }
+    );
+
+    const malformed = githubError({ message: { nested: true } }, 403);
+    assert.equal(malformed.message, "GitHub API request failed with status 403");
+    assert.equal(malformed.userMessage, "GitHub denied this action. Check repository permissions.");
+
+    const blankMessage = githubError({ message: "   " }, 429, "RATE_LIMITED");
+    assert.equal(blankMessage.message, "GitHub API request failed with status 429");
+    assert.equal(blankMessage.userMessage, "GitHub API rate limit exceeded. Please try again later.");
+
+    assert.equal(resolveBranch(null), undefined);
+    assert.equal(resolveBranch({ query: { branch: "   " }, body: { branch: "  feature  " } }), "feature");
+    assert.equal(resolveBranch({ query: { branch: "   " }, body: { branch: "   " } }), undefined);
+
+    const nullBodyFetch = async () => new Response("not-json", { status: 200 });
+    const resolved = await resolveLibraryBranch(nullBodyFetch, "token", "owner", "master");
+    assert.equal(resolved, "master");
   });
 });

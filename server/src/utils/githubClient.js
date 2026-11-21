@@ -28,7 +28,7 @@ export function parseRetryAfterMs(header, fallbackMs, now = Date.now()) {
 }
 
 export function parseLinkHeader(header) {
-  if (!header) return {};
+  if (typeof header !== "string" || !header) return {};
   const links = {};
   for (const part of header.split(",")) {
     const match = part.match(/<([^>]+)>\s*;\s*rel="([^"]+)"/);
@@ -43,7 +43,7 @@ export async function githubRequest(fetchFn, endpoint, accessToken, options = {}
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const url = endpoint.startsWith("http") ? endpoint : `${GITHUB_API_URL}${endpoint}`;
+    const url = /^https?:\/\//i.test(endpoint) ? endpoint : `${GITHUB_API_URL}${endpoint}`;
     const headers = {
       ...GITHUB_API_HEADERS,
       Authorization: `Bearer ${accessToken}`,
@@ -83,7 +83,8 @@ export async function githubRequest(fetchFn, endpoint, accessToken, options = {}
 }
 
 export function githubError(data, status, code) {
-  const message = data?.message || `GitHub API request failed with status ${status}`;
+  const rawMessage = typeof data?.message === "string" ? data.message.trim() : "";
+  const message = rawMessage || `GitHub API request failed with status ${status}`;
   const err = new Error(message);
   err.status = status;
   err.githubData = data;
@@ -98,13 +99,13 @@ export function githubError(data, status, code) {
   } else if (code) {
     err.code = code;
     if (code === "RATE_LIMITED") {
-      err.userMessage = data?.message || "GitHub API rate limit exceeded. Please try again later.";
+      err.userMessage = rawMessage || "GitHub API rate limit exceeded. Please try again later.";
     }
   } else if (status === 401) {
     err.code = "UNAUTHORIZED";
   } else if (status === 403) {
     err.code = "FORBIDDEN";
-    err.userMessage = data?.message || "GitHub denied this action. Check repository permissions.";
+    err.userMessage = rawMessage || "GitHub denied this action. Check repository permissions.";
   } else if (status === 404) {
     err.code = "NOT_FOUND";
   } else if (status === 422) {
@@ -114,11 +115,10 @@ export function githubError(data, status, code) {
 }
 
 export function resolveBranch(req) {
-  return (
-    (typeof req.query?.branch === "string" && req.query.branch) ||
-    (typeof req.body?.branch === "string" && req.body.branch) ||
-    undefined
-  );
+  const queryBranch = typeof req?.query?.branch === "string" ? req.query.branch.trim() : "";
+  if (queryBranch) return queryBranch;
+  const bodyBranch = typeof req?.body?.branch === "string" ? req.body.branch.trim() : "";
+  return bodyBranch || undefined;
 }
 
 export async function resolveLibraryBranch(fetchFn, accessToken, owner, branch) {
@@ -128,5 +128,5 @@ export async function resolveLibraryBranch(fetchFn, accessToken, owner, branch) 
     `/repos/${encodeURIComponent(owner)}/gridcraft-artworks`,
     accessToken
   );
-  return data.default_branch || branch || "master";
+  return data?.default_branch || branch || "master";
 }
