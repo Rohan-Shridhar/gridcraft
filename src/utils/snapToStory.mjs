@@ -11,7 +11,22 @@ export function sanitizeArtworkId(input) {
     .replace(/[^a-z0-9-]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 100);
+    .slice(0, 100)
+    .replace(/-+$/g, "");
+}
+
+function hasValidCells(cells, gridSize) {
+  if (!Array.isArray(cells) || cells.length !== gridSize * gridSize) {
+    return false;
+  }
+  for (let i = 0; i < cells.length; i += 1) {
+    if (!Object.hasOwn(cells, i)) return false;
+    const color = cells[i];
+    if (color !== null && (typeof color !== "string" || !HEX_COLOR.test(color))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function durationToStoryMs(durationMs) {
@@ -20,13 +35,14 @@ export function durationToStoryMs(durationMs) {
 }
 
 export function snapsToMigrationPlan(snaps, { storyName = "Migrated Snaps", albumId = "album" } = {}) {
-  const valid = (snaps || []).filter(
+  const inputSnaps = Array.isArray(snaps) ? snaps : [];
+  const valid = inputSnaps.filter(
     (snap) =>
       snap &&
+      typeof snap === "object" &&
+      !Array.isArray(snap) &&
       GRID_SIZES.includes(snap.gridSize) &&
-      Array.isArray(snap.cells) &&
-      snap.cells.length === snap.gridSize * snap.gridSize &&
-      snap.cells.every((color) => color === null || (typeof color === "string" && HEX_COLOR.test(color))) &&
+      hasValidCells(snap.cells, snap.gridSize) &&
       (snap.backgroundColor === "transparent" || (typeof snap.backgroundColor === "string" && HEX_COLOR.test(snap.backgroundColor))) &&
       (snap.caption === undefined || (typeof snap.caption === "string" && snap.caption.length <= 120)) &&
       (snap.notes === undefined || (typeof snap.notes === "string" && snap.notes.length <= 1000)) &&
@@ -76,13 +92,17 @@ export function snapsToMigrationPlan(snaps, { storyName = "Migrated Snaps", albu
     durationMs: durationToStoryMs(valid[index].durationMs),
   }));
 
-  const storyId = sanitizeArtworkId(storyName) || "migrated-snaps";
+  const normalizedStoryName =
+    typeof storyName === "string" && storyName.trim()
+      ? storyName.trim().slice(0, 100)
+      : "Migrated Snaps";
+  const storyId = sanitizeArtworkId(normalizedStoryName) || "migrated-snaps";
   const now = new Date().toISOString();
   const story = {
     format: "gridcraft-story",
     schemaVersion: 1,
     id: storyId,
-    name: storyName,
+    name: normalizedStoryName,
     description: `Migrated from local GridCraft Snaps into album ${albumId}.`,
     loop: true,
     defaultFrameDurationMs: 150,
@@ -91,5 +111,5 @@ export function snapsToMigrationPlan(snaps, { storyName = "Migrated Snaps", albu
     updatedAt: now,
   };
 
-  return { artworks, story, skippedCount: (snaps || []).length - valid.length, truncatedMetadataCount };
+  return { artworks, story, skippedCount: inputSnaps.length - valid.length, truncatedMetadataCount };
 }

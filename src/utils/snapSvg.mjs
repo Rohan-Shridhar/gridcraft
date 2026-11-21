@@ -6,15 +6,23 @@ function isAcceptedColor(color) {
   return typeof color === "string" && HEX_COLOR.test(color);
 }
 
+function hasValidCells(cells, expectedLength) {
+  if (!Array.isArray(cells) || cells.length !== expectedLength) return false;
+  for (let i = 0; i < expectedLength; i += 1) {
+    if (!Object.hasOwn(cells, i)) return false;
+    const color = cells[i];
+    if (color !== null && !isAcceptedColor(color)) return false;
+  }
+  return true;
+}
+
 export function createSnapSvgData(snap) {
   if (
     !snap ||
     typeof snap !== "object" ||
     Array.isArray(snap) ||
     !SUPPORTED_GRID_SIZES.includes(snap.gridSize) ||
-    !Array.isArray(snap.cells) ||
-    snap.cells.length !== snap.gridSize * snap.gridSize ||
-    !snap.cells.every((color) => color === null || isAcceptedColor(color)) ||
+    !hasValidCells(snap.cells, snap.gridSize * snap.gridSize) ||
     !(
       snap.backgroundColor === "transparent" ||
       isAcceptedColor(snap.backgroundColor)
