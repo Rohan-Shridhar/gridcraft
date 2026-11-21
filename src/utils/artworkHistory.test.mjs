@@ -173,3 +173,22 @@ test("out-of-bounds paint/fill and no-op clear/fillEmpty preserve state and redo
   const full = createArtworkHistory(["red", "red", "red", "red"]);
   assert.equal(update(full, { type: "fillEmpty", color: "blue" }), full);
 });
+
+test("malformed actions, mismatched fill gridSize, and undefined fillEmpty color preserve state", () => {
+  assert.deepEqual(createArtworkHistory(null), { cells: [], history: [], future: [] });
+
+  const state = createArtworkHistory([null, null, null, null]);
+  assert.equal(update(state, null), state);
+  assert.equal(update(state, undefined), state);
+  assert.equal(update(state, { type: "fillEmpty", color: undefined }), state);
+  assert.equal(update(state, { type: "replace", cells: null }), state);
+  assert.equal(update(state, { type: "reset", cells: null }), state);
+  assert.equal(
+    update(state, { type: "fill", index: 0, color: "red", gridSize: 4 }),
+    state
+  );
+  assert.equal(
+    update(state, { type: "fill", index: 0, color: "red", gridSize: 1 }),
+    state
+  );
+});
