@@ -4,26 +4,27 @@
  */
 
 export async function request(endpoint, options = {}) {
-  const { headers: optionHeaders, ...restOptions } = options;
+  const safeOptions = options && typeof options === "object" ? options : {};
+  const { headers: optionHeaders, ...restOptions } = safeOptions;
   const config = {
     credentials: "include",
     ...restOptions,
     headers: {
       Accept: "application/json",
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(safeOptions.body ? { "Content-Type": "application/json" } : {}),
       ...optionHeaders,
     },
   };
 
-  if (options.body && typeof options.body === "object") {
-    config.body = JSON.stringify(options.body);
+  if (safeOptions.body && typeof safeOptions.body === "object") {
+    config.body = JSON.stringify(safeOptions.body);
   }
 
   const response = await fetch(endpoint, config);
 
   let data = null;
-  const contentType = response.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
+  const contentType = response.headers?.get?.("content-type");
+  if (response.status !== 204 && typeof contentType === "string" && contentType.toLowerCase().includes("application/json")) {
     try {
       data = await response.json();
     } catch {
@@ -32,10 +33,12 @@ export async function request(endpoint, options = {}) {
   }
 
   if (!response.ok) {
-    const errorMsg = data?.error?.message || `Request failed with status ${response.status}`;
+    const rawMsg = typeof data?.error?.message === "string" ? data.error.message.trim() : "";
+    const errorMsg = rawMsg || `Request failed with status ${response.status}`;
+    const rawCode = typeof data?.error?.code === "string" ? data.error.code.trim() : "";
     const error = new Error(errorMsg);
     error.status = response.status;
-    error.code = data?.error?.code || "REQUEST_FAILED";
+    error.code = rawCode || "REQUEST_FAILED";
     error.data = data;
     throw error;
   }
@@ -213,20 +216,23 @@ export const apiClient = {
   },
 
   async listIssues(owner, repo, params = {}) {
+    const safeParams = params && typeof params === "object" ? params : {};
     const query = new URLSearchParams({
-      state: params.state || "open",
-      page: String(params.page || 1),
-      per_page: String(params.perPage || 20),
+      state: safeParams.state || "open",
+      page: String(safeParams.page || 1),
+      per_page: String(safeParams.perPage || 20),
     });
-    if (params.author) query.set("author", params.author);
-    if (params.assignee) query.set("assignee", params.assignee);
-    if (params.labels) query.set("labels", params.labels);
-    if (params.q) query.set("q", params.q);
+    if (safeParams.author) query.set("author", safeParams.author);
+    if (safeParams.assignee) query.set("assignee", safeParams.assignee);
+    if (safeParams.labels) query.set("labels", safeParams.labels);
+    if (safeParams.q) query.set("q", safeParams.q);
     return request(albumPath(owner, repo, `/issues?${query.toString()}`));
   },
 
   async getIssue(owner, repo, number, commentsPage = 1) {
-    return request(albumPath(owner, repo, `/issues/${number}?page=${commentsPage}`));
+    return request(
+      albumPath(owner, repo, `/issues/${encodeURIComponent(number)}?page=${encodeURIComponent(commentsPage)}`)
+    );
   },
 
   async createIssue(owner, repo, payload) {
@@ -234,27 +240,33 @@ export const apiClient = {
   },
 
   async updateIssue(owner, repo, number, payload) {
-    return request(albumPath(owner, repo, `/issues/${number}`), { method: "PATCH", body: payload });
+    return request(albumPath(owner, repo, `/issues/${encodeURIComponent(number)}`), {
+      method: "PATCH",
+      body: payload,
+    });
   },
 
   async commentOnIssue(owner, repo, number, body) {
-    return request(albumPath(owner, repo, `/issues/${number}/comments`), {
+    return request(albumPath(owner, repo, `/issues/${encodeURIComponent(number)}/comments`), {
       method: "POST",
       body: { body },
     });
   },
 
   async listPulls(owner, repo, params = {}) {
+    const safeParams = params && typeof params === "object" ? params : {};
     const query = new URLSearchParams({
-      state: params.state || "open",
-      page: String(params.page || 1),
-      per_page: String(params.perPage || 20),
+      state: safeParams.state || "open",
+      page: String(safeParams.page || 1),
+      per_page: String(safeParams.perPage || 20),
     });
     return request(albumPath(owner, repo, `/pulls?${query.toString()}`));
   },
 
   async getPull(owner, repo, number, commentsPage = 1) {
-    return request(albumPath(owner, repo, `/pulls/${number}?page=${commentsPage}`));
+    return request(
+      albumPath(owner, repo, `/pulls/${encodeURIComponent(number)}?page=${encodeURIComponent(commentsPage)}`)
+    );
   },
 
   async createPull(owner, repo, payload) {
@@ -262,21 +274,21 @@ export const apiClient = {
   },
 
   async reviewPull(owner, repo, number, payload) {
-    return request(albumPath(owner, repo, `/pulls/${number}/reviews`), {
+    return request(albumPath(owner, repo, `/pulls/${encodeURIComponent(number)}/reviews`), {
       method: "POST",
       body: payload,
     });
   },
 
   async commentOnPull(owner, repo, number, body) {
-    return request(albumPath(owner, repo, `/pulls/${number}/comments`), {
+    return request(albumPath(owner, repo, `/pulls/${encodeURIComponent(number)}/comments`), {
       method: "POST",
       body: { body },
     });
   },
 
   async mergePull(owner, repo, number, payload = {}) {
-    return request(albumPath(owner, repo, `/pulls/${number}/merge`), {
+    return request(albumPath(owner, repo, `/pulls/${encodeURIComponent(number)}/merge`), {
       method: "PUT",
       body: payload,
     });
