@@ -176,4 +176,51 @@ describe("Story GitHub persistence", () => {
     assert.equal(saved.story.createdAt, "2026-01-01T00:00:00.000Z");
     assert.deepEqual(saved.story.frames, existing.frames);
   });
+
+  it("rejects unreadable story files, rejects zero durationMs in addFrame, and URL-encodes owner", async () => {
+    const urls = [];
+    const unreadableService = new StoryService(async (url) => {
+      urls.push(url);
+      return response({ sha: "abc" });
+    }, { getAlbum: () => ({ id: 1, owner: "owner/1", slug: "repo" }) });
+
+    await assert.rejects(
+      () => unreadableService.getStory("token", "owner/1", "repo", "opening"),
+      (err) => err.status === 422
+    );
+    assert.ok(urls[0].includes("/repos/owner%2F1/"));
+
+    const existing = storyFixture();
+    const frameService = new StoryService(async (url, options) => {
+      if (url.includes("/contents/repo/opening/story.json") && options.method !== "PUT") {
+        return response({
+          sha: "current-sha",
+          content: Buffer.from(JSON.stringify(existing)).toString("base64"),
+        });
+      }
+      if (url.includes("/contents/repo/opening/")) {
+        return response({ content: "encoded-artwork" });
+      }
+      return response({ content: { sha: "saved-sha" }, commit: { sha: "commit-sha" } });
+    }, store);
+
+    await assert.rejects(
+      () =>
+        frameService.addFrame(
+          "token",
+          owner,
+          "owner",
+          "repo",
+          "opening",
+          { artworkId: "frame-one", durationMs: 0 },
+          "current-sha"
+        ),
+      (err) => err.name === "ZodError"
+    );
+
+    await assert.rejects(
+      () => frameService.addFrame("token", owner, "owner", "repo", "opening", null, "current-sha"),
+      (err) => err.status === 400
+    );
+  });
 });
