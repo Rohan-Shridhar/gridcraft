@@ -293,6 +293,83 @@ describe("Artwork GitHub persistence", () => {
     );
     assert.equal(commitRequests, 0);
   });
+
+  it("URL-encodes owner, trims newName in renameArtwork, rejects non-object artwork payloads, and guards commit history fields", async () => {
+    const requestedUrls = [];
+    const existingArtwork = {
+      format: "gridcraft-artwork",
+      schemaVersion: 1,
+      id: "hero",
+      name: "Hero",
+      description: "",
+      gridSize: 16,
+      width: 16,
+      height: 16,
+      backgroundColor: "transparent",
+      cells: Array(256).fill(null),
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const encodedOwner = { id: 201, login: "owner/1", name: "Owner" };
+    const encodedStore = { getAlbum: () => ({ id: 2, owner: "owner/1", slug: "rpg-items" }) };
+
+    const service = new ArtworkService(async (url, options) => {
+      requestedUrls.push(url);
+      if (url.includes("/contents/rpg-items/opening/story.json")) {
+        return new Response(JSON.stringify({ content: Buffer.from(JSON.stringify(story)).toString("base64") }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.includes("/contents/rpg-items/opening/hero.json") && options.method !== "PUT") {
+        return new Response(
+          JSON.stringify({
+            sha: "hero-sha",
+            content: Buffer.from(JSON.stringify(existingArtwork)).toString("base64"),
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      }
+      if (options.method === "PUT") {
+        return new Response(
+          JSON.stringify({ content: { sha: "renamed-sha" }, commit: { sha: "commit-sha" } }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      }
+      if (url.includes("/commits?")) {
+        return new Response(JSON.stringify([{}]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }, encodedStore);
+
+    await assert.rejects(
+      () => service.saveArtwork("token", encodedOwner, "owner/1", "rpg-items", "opening", "hero", { sha: "hero-sha", artwork: [] }),
+      (error) => error.status === 400
+    );
+
+    const renamed = await service.renameArtwork(
+      "token",
+      encodedOwner,
+      "owner/1",
+      "rpg-items",
+      "opening",
+      "hero",
+      { newName: "  Hero  ", sha: "hero-sha" }
+    );
+    assert.equal(renamed.artwork.name, "Hero");
+    assert.ok(requestedUrls.every((u) => u.includes("/repos/owner%2F1/")));
+
+    const history = await service.getArtworkHistory("token", "owner/1", "rpg-items", "opening", "hero");
+    assert.equal(history.length, 1);
+    assert.equal(history[0].shortSha, "");
+    assert.equal(history[0].message, "");
+  });
 });
 
 describe("Artwork API Integration Tests", () => {

@@ -65,12 +65,16 @@ export class ArtworkService {
     StorySchema.parse(JSON.parse(Buffer.from(file.content, "base64").toString("utf8")));
   }
 
+  #repoPath(owner) {
+    return `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}`;
+  }
+
   async listArtworks(accessToken, owner, repoName, storyId, branch = "master") {
     await this.#requireStory(accessToken, owner, repoName, storyId, branch);
     let files;
     try {
       files = await this.#request(
-        `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(artworkDirectory(repoName, storyId))}?ref=${encodeURIComponent(branch)}`,
+        `${this.#repoPath(owner)}/contents/${githubPath(artworkDirectory(repoName, storyId))}?ref=${encodeURIComponent(branch)}`,
         accessToken
       );
     } catch (err) {
@@ -93,7 +97,7 @@ export class ArtworkService {
     return Promise.all(
       jsonFiles.map(async (file) => {
         const detail = await this.#request(
-          `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(file.path)}?ref=${encodeURIComponent(branch)}`,
+          `${this.#repoPath(owner)}/contents/${githubPath(file.path)}?ref=${encodeURIComponent(branch)}`,
           accessToken
         );
         const validated = parseArtworkFile(detail?.content, file.path);
@@ -117,7 +121,7 @@ export class ArtworkService {
     }
 
     const file = await this.#request(
-      `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${cleanId}.json`)}?ref=${encodeURIComponent(branch)}`,
+      `${this.#repoPath(owner)}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${cleanId}.json`)}?ref=${encodeURIComponent(branch)}`,
       accessToken
     );
 
@@ -174,7 +178,7 @@ export class ArtworkService {
     const commitMessage = `feat(artwork): add ${artworkId}`;
 
     const result = await this.#request(
-      `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${artworkId}.json`)}`,
+      `${this.#repoPath(owner)}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${artworkId}.json`)}`,
       accessToken,
       {
         method: "PUT",
@@ -209,8 +213,8 @@ export class ArtworkService {
       throw err;
     }
 
-    const artworkInput = body.artwork || (Array.isArray(body.cells) ? body : null);
-    if (!artworkInput) {
+    const artworkInput = body?.artwork || (Array.isArray(body?.cells) ? body : null);
+    if (!artworkInput || typeof artworkInput !== "object" || Array.isArray(artworkInput)) {
       const err = new Error("Artwork payload is required");
       err.status = 400;
       throw err;
@@ -233,7 +237,7 @@ export class ArtworkService {
     const msg = body.commitMessage || `update(artwork): refine ${updatedArtwork.name || cleanId}`;
 
     const result = await this.#request(
-      `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${cleanId}.json`)}`,
+      `${this.#repoPath(owner)}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${cleanId}.json`)}`,
       accessToken,
       {
         method: "PUT",
@@ -253,7 +257,7 @@ export class ArtworkService {
     };
   }
 
-  async renameArtwork(accessToken, user, owner, repoName, storyId, artworkId, { newName, sha, branch = "master" }) {
+  async renameArtwork(accessToken, user, owner, repoName, storyId, artworkId, { newName, sha, branch = "master" } = {}) {
     this.#requireOwner(user, owner, repoName);
     await this.#requireStory(accessToken, owner, repoName, storyId, branch);
     if (typeof sha !== "string" || !sha) {
@@ -269,7 +273,8 @@ export class ArtworkService {
       err.code = "CONFLICT";
       throw err;
     }
-    const nextId = sanitizeArtworkId(newName);
+    const trimmedName = typeof newName === "string" ? newName.trim() : "";
+    const nextId = sanitizeArtworkId(trimmedName);
     if (!nextId) {
       const err = new Error("Invalid new artwork name");
       err.status = 400;
@@ -278,7 +283,7 @@ export class ArtworkService {
     const renamed = {
       ...current.artwork,
       id: nextId,
-      name: newName,
+      name: trimmedName,
       updatedAt: new Date().toISOString(),
     };
     ArtworkSchema.parse(renamed);
@@ -286,12 +291,12 @@ export class ArtworkService {
     const encoded = Buffer.from(JSON.stringify(renamed, null, 2), "utf8").toString("base64");
     if (nextId === current.artwork.id) {
       const updated = await this.#request(
-        `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${nextId}.json`)}`,
+        `${this.#repoPath(owner)}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${nextId}.json`)}`,
         accessToken,
         {
           method: "PUT",
           body: JSON.stringify({
-            message: `rename(artwork): ${current.artwork.name} to ${newName}`,
+            message: `rename(artwork): ${current.artwork.name} to ${trimmedName}`,
             content: encoded,
             sha: current.sha,
             branch,
@@ -307,7 +312,7 @@ export class ArtworkService {
     }
 
     const created = await this.#request(
-      `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${nextId}.json`)}`,
+      `${this.#repoPath(owner)}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${nextId}.json`)}`,
       accessToken,
       {
         method: "PUT",
@@ -355,7 +360,7 @@ export class ArtworkService {
     }
 
     await this.#request(
-      `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${cleanId}.json`)}`,
+      `${this.#repoPath(owner)}/contents/${githubPath(`${artworkDirectory(repoName, storyId)}/${cleanId}.json`)}`,
       accessToken,
       {
         method: "DELETE",
@@ -379,18 +384,18 @@ export class ArtworkService {
       throw err;
     }
     const commits = await this.#request(
-      `/repos/${owner}/${ARTWORKS_REPOSITORY}/commits?path=${encodeURIComponent(`${artworkDirectory(repoName, storyId)}/${cleanId}.json`)}&sha=${encodeURIComponent(branch)}&per_page=15`,
+      `${this.#repoPath(owner)}/commits?path=${encodeURIComponent(`${artworkDirectory(repoName, storyId)}/${cleanId}.json`)}&sha=${encodeURIComponent(branch)}&per_page=15`,
       accessToken
     );
 
     return (commits || []).map((c) => ({
       sha: c.sha,
-      shortSha: c.sha.slice(0, 7),
-      message: c.commit.message,
-      author: c.commit.author?.name,
-      authorLogin: c.author?.login || c.commit.author?.name,
+      shortSha: typeof c.sha === "string" ? c.sha.slice(0, 7) : "",
+      message: c.commit?.message || "",
+      author: c.commit?.author?.name,
+      authorLogin: c.author?.login || c.commit?.author?.name,
       authorAvatar: c.author?.avatar_url || null,
-      date: c.commit.author?.date,
+      date: c.commit?.author?.date,
       htmlUrl: c.html_url,
     }));
   }
