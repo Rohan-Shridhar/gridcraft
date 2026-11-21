@@ -1,4 +1,5 @@
 import { createSnapSvgData } from "./snapSvg.mjs";
+import { normalizeSnap } from "./snapStorage.mjs";
 
 export const SNAP_EXPORT_FORMAT = "gridcraft-snaps";
 export const SNAP_EXPORT_VERSION = 1;
@@ -22,12 +23,14 @@ export function validateSnapExport(data) {
   }
 
   const ids = new Set();
+  const normalizedSnaps = [];
   for (const snap of data.snaps) {
     if (
       !snap ||
       typeof snap !== "object" ||
+      Array.isArray(snap) ||
       typeof snap.id !== "string" ||
-      !snap.id ||
+      !snap.id.trim() ||
       snap.id.length > 128 ||
       ids.has(snap.id) ||
       !Number.isInteger(snap.sequence) ||
@@ -65,9 +68,10 @@ export function validateSnapExport(data) {
       };
     }
     ids.add(snap.id);
+    normalizedSnaps.push(normalizeSnap(snap));
   }
 
-  return { valid: true, snaps: data.snaps };
+  return { valid: true, snaps: normalizedSnaps };
 }
 
 export function createSnapExportData(snaps) {
