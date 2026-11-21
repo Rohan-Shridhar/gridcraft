@@ -37,8 +37,8 @@ export class BranchController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner } = req.params;
-      const page = Math.max(1, parseInt(req.query.page || "1", 10));
-      const perPage = Math.min(100, Math.max(1, parseInt(req.query.per_page || "30", 10)));
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const perPage = Math.min(100, Math.max(1, parseInt(req.query.per_page, 10) || 30));
       const data = await this.service.listBranches(token, owner, ARTWORKS_REPOSITORY, { page, perPage });
       return res.json(data);
     } catch (err) {
@@ -121,7 +121,7 @@ export class BranchController {
       if (!token) return;
       const { owner } = req.params;
       const branch = await branchFor(this.service, token, owner, resolveBranch(req));
-      const page = Math.max(1, parseInt(req.query.page || "1", 10));
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
       const commits = await this.service.listCommits(token, owner, ARTWORKS_REPOSITORY, branch, { page });
       return res.json({ commits });
     } catch (err) {

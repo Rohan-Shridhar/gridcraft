@@ -24,8 +24,8 @@ export class IssueController {
       const { owner, repo } = req.params;
       const data = await this.service.listIssues(token, owner, repo, {
         state: req.query.state,
-        page: Math.max(1, parseInt(req.query.page || "1", 10)),
-        perPage: Math.min(100, Math.max(1, parseInt(req.query.per_page || "20", 10))),
+        page: Math.max(1, parseInt(req.query.page, 10) || 1),
+        perPage: Math.min(100, Math.max(1, parseInt(req.query.per_page, 10) || 20)),
         author: req.query.author,
         assignee: req.query.assignee,
         labels: req.query.labels,
@@ -42,7 +42,7 @@ export class IssueController {
       const token = requireToken(req, res);
       if (!token) return;
       const { owner, repo, number } = req.params;
-      const data = await this.service.getIssue(token, owner, repo, number, Math.max(1, parseInt(req.query.page || "1", 10)));
+      const data = await this.service.getIssue(token, owner, repo, number, Math.max(1, parseInt(req.query.page, 10) || 1));
       return res.json(data);
     } catch (err) {
       next(err);
