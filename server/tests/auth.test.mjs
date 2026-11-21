@@ -51,6 +51,10 @@ describe("Backend Health and Authentication API Integration Tests", () => {
 
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, "STATE_COOKIE_MISSING");
+    assert.equal(
+      res.body.error.message,
+      "Sign-in session cookie was not received. Start sign-in from https://<frontend host> and make sure cookies are enabled."
+    );
     assert.equal(res.header["cache-control"], "no-store");
   });
 

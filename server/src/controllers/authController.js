@@ -84,7 +84,7 @@ export class AuthController {
           cookiePresent,
           hostname: req.hostname,
           protocol: req.protocol,
-          forwardedProto: req.get("x-forwarded-proto") || null,
+          xForwardedProto: req.get("x-forwarded-proto") || null,
           statePresent: state !== undefined,
         })
       );
