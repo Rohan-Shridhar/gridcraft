@@ -1,12 +1,16 @@
 const MAX_HISTORY = 15;
 
 export function createArtworkHistory(cells) {
-  return { cells: [...cells], history: [], future: [] };
+  return { cells: Array.isArray(cells) ? [...cells] : [], history: [], future: [] };
 }
 
 export function artworkHistoryReducer(state, action) {
+  if (!action || typeof action !== "object") {
+    return state;
+  }
   switch (action.type) {
     case "reset":
+      if (!Array.isArray(action.cells)) return state;
       return createArtworkHistory(action.cells);
     case "resetHistory":
       return { ...state, history: [], future: [] };
@@ -29,7 +33,8 @@ export function artworkHistoryReducer(state, action) {
         action.index < 0 ||
         action.index >= state.cells.length ||
         !Number.isInteger(action.gridSize) ||
-        action.gridSize <= 0
+        action.gridSize <= 0 ||
+        action.gridSize * action.gridSize !== state.cells.length
       ) {
         return state;
       }
@@ -43,13 +48,14 @@ export function artworkHistoryReducer(state, action) {
       return cells === state.cells ? state : replaceCells(state, cells);
     }
     case "fillEmpty": {
-      if (action.color === null || !state.cells.includes(null)) return state;
+      if (action.color == null || !state.cells.includes(null)) return state;
       return replaceCells(
         state,
         state.cells.map((cell) => (cell === null ? action.color : cell))
       );
     }
     case "replace":
+      if (!Array.isArray(action.cells)) return state;
       return replaceCells(state, [...action.cells]);
     case "clear": {
       if (state.cells.every((cell) => cell === null)) return state;
