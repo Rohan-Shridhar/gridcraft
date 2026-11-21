@@ -14,6 +14,31 @@ const UpdateIssueSchema = z.object({
   state: z.enum(["open", "closed"]).optional(),
 });
 
+function parsePositiveInt(value, fallback, max = Number.POSITIVE_INFINITY) {
+  let parsed;
+  if (typeof value === "number") {
+    parsed = value;
+  } else if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    parsed = Number(value.trim());
+  } else {
+    return fallback;
+  }
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    return fallback;
+  }
+  return Math.min(max, parsed);
+}
+
+function parseIssueNumber(value) {
+  const parsed = parsePositiveInt(value, null);
+  if (parsed === null) {
+    const error = new Error("Issue number must be a positive integer.");
+    error.status = 400;
+    throw error;
+  }
+  return parsed;
+}
+
 export class IssueService {
   constructor(store = albumService.store) {
     this.store = store;
@@ -44,22 +69,24 @@ export class IssueService {
 
   listIssues(_accessToken, owner, repoName, query = {}) {
     const album = this.#album(owner, repoName);
-    const state = ["open", "closed", "all"].includes(query.state) ? query.state : "open";
+    const filters = query && typeof query === "object" ? query : {};
+    const state = ["open", "closed", "all"].includes(filters.state) ? filters.state : "open";
     return this.store.listIssues(album.id, {
       state,
-      page: Math.max(1, Number(query.page) || 1),
-      perPage: Math.min(100, Math.max(1, Number(query.perPage) || 20)),
-      author: query.author || "",
-      assignee: query.assignee || "",
-      labels: query.labels || "",
-      q: query.q || "",
+      page: parsePositiveInt(filters.page, 1),
+      perPage: parsePositiveInt(filters.perPage, 20, 100),
+      author: typeof filters.author === "string" ? filters.author : "",
+      assignee: typeof filters.assignee === "string" ? filters.assignee : "",
+      labels: typeof filters.labels === "string" ? filters.labels : "",
+      q: typeof filters.q === "string" ? filters.q : "",
     });
   }
 
   getIssue(_accessToken, owner, repoName, number, commentsPage = 1) {
-    this.#album(owner, repoName);
-    const result = this.store.getIssue(Number(number), {
-      page: Math.max(1, Number(commentsPage) || 1),
+    const album = this.#album(owner, repoName);
+    const issueNumber = parseIssueNumber(number);
+    const result = this.store.getIssue(issueNumber, {
+      page: parsePositiveInt(commentsPage, 1),
       perPage: 20,
     });
     if (!result) {
@@ -67,8 +94,8 @@ export class IssueService {
       error.status = 404;
       throw error;
     }
-    const context = this.store.getIssueAlbum(Number(number));
-    if (context?.id !== this.store.getAlbum(owner, repoName)?.id) {
+    const context = this.store.getIssueAlbum(issueNumber);
+    if (context?.id !== album.id) {
       const error = new Error("Issue was not found in this album.");
       error.status = 404;
       throw error;
@@ -103,14 +130,14 @@ export class IssueService {
       error.status = 400;
       throw error;
     }
-    return { issue: this.store.updateIssue(Number(number), validated) };
+    return { issue: this.store.updateIssue(issue.number, validated) };
   }
 
   addComment(_accessToken, owner, repoName, user, number, body) {
     this.#requireSignedIn(user);
-    this.getIssue(null, owner, repoName, number);
+    const { issue } = this.getIssue(null, owner, repoName, number);
     const text = z.string().trim().min(1).max(65536).parse(body);
-    return { comment: this.store.addIssueComment(Number(number), user, text) };
+    return { comment: this.store.addIssueComment(issue.number, user, text) };
   }
 }
 

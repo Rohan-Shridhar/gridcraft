@@ -98,4 +98,49 @@ describe("GridCraft issue service", () => {
       store.close();
     }
   });
+
+  it("validates positive integer issue numbers and normalizes non-integer pagination and non-string filters", () => {
+    const store = new AppStore(":memory:");
+    const owner = { id: 21, login: "owner", name: "Owner" };
+    const author = { id: 22, login: "artist", name: "Artist" };
+    store.createAlbum(owner, { slug: "forest", name: "Forest" });
+    const service = new IssueService(store);
+
+    try {
+      const { issue } = service.createIssue("unused", "owner", "forest", author, {
+        title: "Validate issue inputs",
+        labels: ["bug"],
+      });
+
+      for (const badNumber of ["abc", "", 0, -1, 1.5, Number.POSITIVE_INFINITY, null]) {
+        assert.throws(
+          () => service.getIssue("unused", "owner", "forest", badNumber),
+          (error) => error.status === 400
+        );
+      }
+
+      const listed = service.listIssues("unused", "owner", "forest", {
+        page: Number.POSITIVE_INFINITY,
+        perPage: 1.5,
+        author: ["artist"],
+        assignee: { login: "owner" },
+        labels: ["bug"],
+        q: ["Validate"],
+      });
+      assert.equal(listed.page, 1);
+      assert.equal(listed.perPage, 20);
+      assert.equal(listed.total, 1);
+
+      const nullQueryList = service.listIssues("unused", "owner", "forest", null);
+      assert.equal(nullQueryList.page, 1);
+      assert.equal(nullQueryList.perPage, 20);
+      assert.equal(nullQueryList.total, 1);
+
+      const fetched = service.getIssue("unused", "owner", "forest", issue.number, Number.POSITIVE_INFINITY);
+      assert.equal(fetched.commentsPage, 1);
+      assert.equal(fetched.issue.number, issue.number);
+    } finally {
+      store.close();
+    }
+  });
 });
