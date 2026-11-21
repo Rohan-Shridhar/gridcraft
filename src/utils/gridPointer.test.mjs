@@ -148,3 +148,19 @@ test("a re-render preserves the stroke and uses the latest tool state", () => {
   createGridPointerHandlers(s.stroke, s.settings).onPointerMove(s.event());
   assert.deepEqual(s.painted, [0, 1]);
 });
+
+test("cells with empty, non-numeric, negative, or non-integer data-cell-index are ignored", () => {
+  for (const rawIndex of ["", "   ", "abc", "-1", "1.5"]) {
+    const s = setup();
+    s.cells[0].dataset.cellIndex = rawIndex;
+    s.handlers.onPointerDown(s.event({ target: s.cells[0] }));
+    assert.deepEqual(s.painted, []);
+    assert.deepEqual(s.hovered, []);
+    assert.equal(s.captures.size, 0);
+
+    s.hit(s.cells[0]);
+    s.handlers.onPointerMove(s.event());
+    assert.deepEqual(s.painted, []);
+    assert.deepEqual(s.hovered, [null]);
+  }
+});

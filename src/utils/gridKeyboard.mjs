@@ -1,9 +1,14 @@
 export function getGridNavigationIndex(index, key, gridSize, control = false) {
+  if (!Number.isInteger(gridSize) || gridSize <= 0) return null;
+  const totalCells = gridSize * gridSize;
+  if (!Number.isInteger(index) || index < 0 || index >= totalCells) {
+    return null;
+  }
   const rowStart = Math.floor(index / gridSize) * gridSize;
   const rowEnd = rowStart + gridSize - 1;
   if (control) {
     if (key === "Home") return 0;
-    if (key === "End") return gridSize * gridSize - 1;
+    if (key === "End") return totalCells - 1;
     return null;
   }
   switch (key) {

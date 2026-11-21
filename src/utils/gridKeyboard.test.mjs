@@ -36,3 +36,16 @@ test("other keys and modified arrows remain available to other handlers", () => 
   assert.equal(getGridNavigationIndex(0, "Tab", 16), null);
   assert.equal(getGridNavigationIndex(0, "ArrowRight", 16, true), null);
 });
+
+test("invalid gridSize or out-of-range index returns null", () => {
+  for (const invalidSize of [0, -4, 2.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.equal(getGridNavigationIndex(0, "ArrowRight", invalidSize), null);
+    assert.equal(getGridNavigationIndex(0, "Home", invalidSize, true), null);
+    assert.equal(getGridNavigationIndex(0, "End", invalidSize, true), null);
+  }
+  for (const invalidIndex of [-1, 16, 1.5, Number.NaN]) {
+    assert.equal(getGridNavigationIndex(invalidIndex, "ArrowLeft", 4), null);
+    assert.equal(getGridNavigationIndex(invalidIndex, "ArrowDown", 4), null);
+    assert.equal(getGridNavigationIndex(invalidIndex, "Home", 4, true), null);
+  }
+});
