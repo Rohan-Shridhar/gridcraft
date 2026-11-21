@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { snapsToMigrationPlan } from "./snapToStory.mjs";
+import { sanitizeArtworkId, snapsToMigrationPlan } from "./snapToStory.mjs";
 
 describe("Snap-to-Story migration plan", () => {
   it("preserves order, labels, notes, pixels, and frame durations", () => {
@@ -69,5 +69,31 @@ describe("Snap-to-Story migration plan", () => {
     assert.ok(plan.artworks[2].id.length <= 100);
     assert.ok(plan.artworks[2].id.endsWith("-2"));
     assert.notEqual(plan.artworks[1].id, plan.artworks[2].id);
+  });
+
+  it("strips trailing hyphens after truncation, rejects sparse cells, and normalizes storyName", () => {
+    assert.equal(sanitizeArtworkId(`${"a".repeat(99)}-extra`), "a".repeat(99));
+
+    const sparseCells = new Array(256);
+    const plan = snapsToMigrationPlan(
+      [
+        {
+          title: "Sparse",
+          gridSize: 16,
+          backgroundColor: "transparent",
+          cells: sparseCells,
+        },
+      ],
+      { storyName: "   " }
+    );
+
+    assert.equal(plan.artworks.length, 0);
+    assert.equal(plan.skippedCount, 1);
+    assert.equal(plan.story.name, "Migrated Snaps");
+    assert.equal(plan.story.id, "migrated-snaps");
+
+    const nonArrayPlan = snapsToMigrationPlan("invalid");
+    assert.equal(nonArrayPlan.artworks.length, 0);
+    assert.equal(nonArrayPlan.skippedCount, 0);
   });
 });

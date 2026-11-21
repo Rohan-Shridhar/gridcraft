@@ -77,6 +77,7 @@ test("returns null for malformed dimensions, cells, colors, and backgrounds", ()
     createSnap(15, Array(15 * 15).fill(null)),
     createSnap(16, validCells.slice(1)),
     createSnap(16, [undefined, ...validCells.slice(1)]),
+    createSnap(16, new Array(16 * 16)),
     createSnap(16, ["url(javascript:alert(1))", ...validCells.slice(1)]),
     createSnap(16, validCells, "url(javascript:alert(1))"),
     createSnap(16, validCells, null),
