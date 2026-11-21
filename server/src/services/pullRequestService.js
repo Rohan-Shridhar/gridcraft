@@ -3,13 +3,20 @@ import { githubRequest } from "../utils/githubClient.js";
 import { albumService } from "./albumService.js";
 import { ARTWORKS_REPOSITORY } from "./albumService.js";
 
+const VALID_PULL_STATES = new Set(["open", "closed", "merged", "all"]);
+
 const CreatePullSchema = z.object({
-  title: z.string().min(1).max(256),
+  title: z.string().trim().min(1).max(256),
   body: z.string().max(65536).optional().default(""),
   head: z.string().min(1).max(255).optional(),
   headOwner: z.string().max(39).optional(),
   headAlbum: z.string().max(100).optional(),
 });
+
+function normalizePositiveInt(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
 
 const ReviewSchema = z.object({
   body: z.string().max(65536).optional().default(""),
@@ -91,8 +98,14 @@ export class PullRequestService {
 
   #pullForAlbum(owner, slug, number, options) {
     const album = this.#album(owner, slug);
-    const result = this.store.getPull(Number(number), options);
-    const context = this.store.getPullContext(Number(number));
+    const pullNumber = Number(number);
+    if (!Number.isInteger(pullNumber) || pullNumber <= 0) {
+      const error = new Error("Pull request was not found in this album.");
+      error.status = 404;
+      throw error;
+    }
+    const result = this.store.getPull(pullNumber, options);
+    const context = this.store.getPullContext(pullNumber);
     if (!result || !context
       || (context.base_album_id !== album.id && context.head_album_id !== album.id)) {
       const error = new Error("Pull request was not found in this album.");
@@ -104,16 +117,17 @@ export class PullRequestService {
 
   listPulls(_accessToken, owner, repoName, query = {}) {
     const album = this.#album(owner, repoName);
+    const state = VALID_PULL_STATES.has(query.state) ? query.state : "open";
     return this.store.listPulls(album.id, {
-      state: query.state || "open",
-      page: Math.max(1, Number(query.page) || 1),
-      perPage: Math.min(100, Math.max(1, Number(query.perPage) || 20)),
+      state,
+      page: normalizePositiveInt(query.page, 1),
+      perPage: Math.min(100, normalizePositiveInt(query.perPage, 20)),
     });
   }
 
   getPull(_accessToken, owner, repoName, user, number, commentsPage = 1) {
     const { result, context } = this.#pullForAlbum(owner, repoName, number, {
-      page: Math.max(1, Number(commentsPage) || 1),
+      page: normalizePositiveInt(commentsPage, 1),
       perPage: 20,
     });
     return {
@@ -188,7 +202,7 @@ export class PullRequestService {
       throw error;
     }
     const changes = z.object({
-      title: z.string().min(1).max(256).optional(),
+      title: z.string().trim().min(1).max(256).optional(),
       body: z.string().max(65536).optional(),
       state: z.enum(["open", "closed"]).optional(),
     }).parse(input);
@@ -216,7 +230,7 @@ export class PullRequestService {
   commentOnPull(_accessToken, owner, repoName, user, number, body) {
     this.#requireSignedIn(user);
     this.#pullForAlbum(owner, repoName, number);
-    const text = z.string().min(1).max(65536).parse(body);
+    const text = z.string().trim().min(1).max(65536).parse(body);
     return { comment: this.store.addPullComment(Number(number), user, text) };
   }
 
