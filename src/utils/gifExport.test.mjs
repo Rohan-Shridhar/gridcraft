@@ -63,4 +63,15 @@ describe("Story GIF export", () => {
     assert.deepEqual([...decodedTransparent[0].patch.slice(4, 8)], [255, 0, 0, 255]);
     assert.equal(decodedTransparent[0].patch[11], 0);
   });
+
+  it("rejects invalid gridSize, malformed cells arrays, and non-positive scale while falling back on non-finite delays", () => {
+    assert.throws(() => assertCompatibleFrames([{ gridSize: 0, cells: [] }]), /valid grid size/i);
+    assert.throws(() => assertCompatibleFrames([{ gridSize: 16, cells: [] }]), /pixel data/i);
+    assert.throws(() => encodeStoryGif([frame("#ff0000", 120)], { scale: 0 }), /positive integer/i);
+    assert.throws(() => encodeStoryGif([frame("#ff0000", 120)], { scale: -2 }), /positive integer/i);
+
+    const output = encodeStoryGif([frame("#ff0000", Number.POSITIVE_INFINITY)], { scale: 1 });
+    const decoded = decompressFrames(parseGIF(output.bytes), true);
+    assert.equal(decoded[0].delay, 150);
+  });
 });

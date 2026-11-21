@@ -6,15 +6,21 @@ export const MAX_GIF_PIXELS = 128 * 128 * 64;
 export const MAX_GIF_FRAMES = 120;
 
 export function assertCompatibleFrames(frames) {
-  if (!frames?.length) {
+  if (!Array.isArray(frames) || !frames.length) {
     throw new Error("A Story needs at least one frame to export.");
   }
   if (frames.length > MAX_GIF_FRAMES) {
     throw new Error(`GIF export supports at most ${MAX_GIF_FRAMES} frames.`);
   }
-  const size = frames[0].gridSize;
-  if (frames.some((frame) => frame.gridSize !== size)) {
+  const size = frames[0]?.gridSize;
+  if (!Number.isInteger(size) || size <= 0) {
+    throw new Error("Story frames must have a valid grid size before GIF export.");
+  }
+  if (frames.some((frame) => !frame || frame.gridSize !== size)) {
     throw new Error("All Story frames must share the same grid size before GIF export.");
+  }
+  if (frames.some((frame) => !Array.isArray(frame.cells) || frame.cells.length !== size * size)) {
+    throw new Error("Story frames must contain complete pixel data before GIF export.");
   }
   if (size * size * frames.length > MAX_GIF_PIXELS) {
     throw new Error("This Story is too large to encode in the browser. Reduce frames or grid size.");
@@ -68,6 +74,9 @@ export function renderFrameToRgba(frame, scale) {
 }
 
 export function encodeStoryGif(frames, { loop = true, scale = 8, onProgress } = {}) {
+  if (!Number.isInteger(scale) || scale < 1) {
+    throw new Error("GIF scale must be a positive integer.");
+  }
   const size = assertCompatibleFrames(frames);
   const gif = GIFEncoder();
   const format = "rgba4444";
@@ -76,9 +85,11 @@ export function encodeStoryGif(frames, { loop = true, scale = 8, onProgress } = 
     const palette = quantize(rgba, 256, { format, oneBitAlpha: true });
     const indexMap = applyPalette(rgba, palette, format);
     const transparentIndex = palette.findIndex((color) => color[3] === 0);
+    const durationMs =
+      Number.isFinite(frame.durationMs) && frame.durationMs > 0 ? frame.durationMs : 150;
     gif.writeFrame(indexMap, width, height, {
       palette,
-      delay: Math.max(20, Math.round(frame.durationMs || 150)),
+      delay: Math.max(20, Math.round(durationMs)),
       repeat: index === 0 ? (loop ? 0 : -1) : undefined,
       transparent: transparentIndex !== -1,
       transparentIndex: transparentIndex !== -1 ? transparentIndex : 0,
