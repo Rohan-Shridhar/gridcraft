@@ -25,6 +25,9 @@
     "url": "https://github.com/Rohan-Shridhar/gridcraft/issues"
   },
   "homepage": "https://github.com/Rohan-Shridhar/gridcraft#readme",
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
     "@vercel/analytics": "^2.0.1",

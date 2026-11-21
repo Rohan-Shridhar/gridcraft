@@ -11,7 +11,9 @@ export const config = {
   frontendUrl: (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, ""),
   backendUrl: (process.env.BACKEND_URL || "http://localhost:4000").replace(/\/$/, ""),
   database: {
-    path: process.env.GRIDCRAFT_DATABASE_PATH || path.resolve(process.cwd(), "server", "data", "gridcraft.sqlite"),
+    path:
+      process.env.GRIDCRAFT_DATABASE_PATH ||
+      (process.env.VERCEL ? "/tmp/gridcraft.sqlite" : path.resolve(process.cwd(), "server", "data", "gridcraft.sqlite")),
   },
 
   github: {

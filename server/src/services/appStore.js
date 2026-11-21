@@ -94,6 +94,7 @@ const schema = `
 
 export class AppStore {
   constructor(databasePath = config.database.path) {
+    // On Vercel, /tmp is ephemeral, so issues, PRs, comments, and other data do not persist.
     if (databasePath !== ":memory:") mkdirSync(path.dirname(databasePath), { recursive: true });
     this.db = new DatabaseSync(databasePath);
     this.db.exec("PRAGMA busy_timeout = 5000");
