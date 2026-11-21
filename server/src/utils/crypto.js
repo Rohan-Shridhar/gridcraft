@@ -15,6 +15,9 @@ function deriveKey(secret) {
  * Generates a cryptographically secure random hex string for OAuth state.
  */
 export function generateRandomState(bytes = 32) {
+  if (!Number.isSafeInteger(bytes) || bytes < 1) {
+    throw new RangeError("Random state byte length must be a positive integer.");
+  }
   return crypto.randomBytes(bytes).toString("hex");
 }
 
@@ -24,6 +27,9 @@ export function generateRandomState(bytes = 32) {
  */
 export function encryptToken(text, secret) {
   if (!text) return "";
+  if (typeof text !== "string") {
+    throw new TypeError("Token plaintext must be a string.");
+  }
   const key = deriveKey(secret);
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv, {

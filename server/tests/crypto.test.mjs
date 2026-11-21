@@ -7,6 +7,7 @@ import {
   signSessionPayload,
   verifySessionPayload,
 } from "../src/utils/crypto.js";
+import { getSessionAccessToken } from "../src/middleware/auth.js";
 
 describe("Crypto and Session Utility Tests", () => {
   const secretKey = "test-secret-key-for-unit-testing-32-chars";
@@ -93,5 +94,19 @@ describe("Crypto and Session Utility Tests", () => {
 
     const signedString = signSessionPayload("hello", secretKey);
     assert.equal(verifySessionPayload(signedString, secretKey), null);
+  });
+
+  it("validates generateRandomState length, encryptToken input type, and null requests in getSessionAccessToken", () => {
+    for (const badLength of [0, -4, 1.5, Number.NaN, "32"]) {
+      assert.throws(() => generateRandomState(badLength), RangeError);
+    }
+
+    assert.throws(() => encryptToken(12345, secretKey), /Token plaintext must be a string/);
+    assert.throws(() => encryptToken({ token: "abc" }, secretKey), /Token plaintext must be a string/);
+    assert.equal(encryptToken("", secretKey), "");
+
+    assert.equal(getSessionAccessToken(null), null);
+    assert.equal(getSessionAccessToken(undefined), null);
+    assert.equal(getSessionAccessToken({ session: { encryptedToken: 12345 } }), null);
   });
 });
