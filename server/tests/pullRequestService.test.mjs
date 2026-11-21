@@ -197,4 +197,60 @@ describe("GridCraft pull request service", () => {
       store.close();
     }
   });
+
+  it("rejects whitespace-only PR titles and comments, normalizes invalid listPulls state/pagination, and rejects non-integer PR numbers", async () => {
+    const store = new AppStore(":memory:");
+    const owner = { id: 71, login: "owner", name: "Owner" };
+    const contributor = { id: 72, login: "contributor", name: "Contributor" };
+    const base = store.createAlbum(owner, { slug: "base", name: "Base" });
+    const head = store.createAlbum(contributor, { slug: "proposal", name: "Proposal" });
+    const service = new PullRequestService(async () => {
+      throw new Error("No GitHub request should be made");
+    }, store);
+
+    try {
+      await assert.rejects(
+        () =>
+          service.createPull("token", "owner", "base", contributor, {
+            title: "   ",
+            headOwner: "contributor",
+            headAlbum: "proposal",
+          }),
+        (err) => err.name === "ZodError"
+      );
+
+      const created = store.createPull({
+        baseAlbumId: base.id,
+        headAlbumId: head.id,
+        author: contributor,
+        title: "Valid PR",
+      });
+      const pullNumber = created.pull.number;
+
+      assert.throws(
+        () => service.updatePull("token", "owner", "base", contributor, pullNumber, { title: "   " }),
+        (err) => err.name === "ZodError"
+      );
+      assert.throws(
+        () => service.commentOnPull("token", "owner", "base", owner, pullNumber, "   "),
+        (err) => err.name === "ZodError"
+      );
+
+      const listed = service.listPulls("token", "owner", "base", {
+        state: "invalid-state",
+        page: 1.7,
+        perPage: 25.9,
+      });
+      assert.equal(listed.pulls.length, 1);
+      assert.equal(listed.page, 1);
+      assert.equal(listed.perPage, 25);
+
+      assert.throws(
+        () => service.getPull("token", "owner", "base", owner, "not-a-number"),
+        (err) => err.status === 404
+      );
+    } finally {
+      store.close();
+    }
+  });
 });
