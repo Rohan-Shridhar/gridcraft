@@ -40,14 +40,28 @@ export function encryptToken(text, secret) {
 /**
  * Decrypts ciphertext produced by encryptToken using AES-256-GCM.
  */
+const HEX_REGEX = /^[0-9a-f]+$/i;
+
 export function decryptToken(cipherText, secret) {
   if (!cipherText) return "";
+  if (typeof cipherText !== "string") {
+    throw new Error("Invalid encrypted payload structure");
+  }
   const parts = cipherText.split(":");
   if (parts.length !== 3) {
     throw new Error("Invalid encrypted payload structure");
   }
 
   const [ivHex, authTagHex, encryptedHex] = parts;
+  if (
+    ivHex.length !== IV_LENGTH * 2 ||
+    authTagHex.length !== AUTH_TAG_LENGTH * 2 ||
+    !HEX_REGEX.test(ivHex) ||
+    !HEX_REGEX.test(authTagHex) ||
+    (encryptedHex.length > 0 && (encryptedHex.length % 2 !== 0 || !HEX_REGEX.test(encryptedHex)))
+  ) {
+    throw new Error("Invalid encrypted payload structure");
+  }
   const key = deriveKey(secret);
   const iv = Buffer.from(ivHex, "hex");
   const authTag = Buffer.from(authTagHex, "hex");
@@ -103,7 +117,11 @@ export function verifySessionPayload(signedStr, secret) {
 
   try {
     const jsonStr = Buffer.from(base64Data, "base64url").toString("utf8");
-    return JSON.parse(jsonStr);
+    const parsed = JSON.parse(jsonStr);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
