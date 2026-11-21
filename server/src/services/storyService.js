@@ -56,12 +56,16 @@ export class StoryService {
     this.#requireAlbum(owner, albumId);
   }
 
+  #contentsPath(owner, filePath) {
+    return `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/contents/${githubPath(filePath)}`;
+  }
+
   async listStories(accessToken, owner, repoName, branch = "master") {
     this.#requireAlbum(owner, repoName);
     let entries;
     try {
       entries = await this.#request(
-        `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(repoName)}?ref=${encodeURIComponent(branch)}`,
+        `${this.#contentsPath(owner, repoName)}?ref=${encodeURIComponent(branch)}`,
         accessToken
       );
     } catch (err) {
@@ -84,7 +88,7 @@ export class StoryService {
     await Promise.all(
       frames.map(async (frame) => {
         const result = await this.#request(
-          `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(`${this.#albumPath(albumId, storyId)}/${frame.artworkPath}`)}?ref=${encodeURIComponent(branch)}`,
+          `${this.#contentsPath(owner, `${this.#albumPath(albumId, storyId)}/${frame.artworkPath}`)}?ref=${encodeURIComponent(branch)}`,
           accessToken
         );
         if (!result?.content) {
@@ -101,9 +105,15 @@ export class StoryService {
     this.#requireAlbum(owner, repoName);
     const cleanId = sanitizeStoryId(storyId);
     const file = await this.#request(
-      `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(this.#path(repoName, cleanId))}?ref=${encodeURIComponent(branch)}`,
+      `${this.#contentsPath(owner, this.#path(repoName, cleanId))}?ref=${encodeURIComponent(branch)}`,
       accessToken
     );
+    if (!file || typeof file.content !== "string" || !file.content) {
+      const err = new Error("Story file has no readable content.");
+      err.status = 422;
+      err.code = "VALIDATION_ERROR";
+      throw err;
+    }
     const raw = Buffer.from(file.content, "base64").toString("utf8");
     const story = StorySchema.parse(JSON.parse(raw));
     return { story, sha: file.sha, htmlUrl: file.html_url };
@@ -135,7 +145,7 @@ export class StoryService {
 
     const encoded = Buffer.from(JSON.stringify(story, null, 2), "utf8").toString("base64");
     const result = await this.#request(
-      `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(this.#path(repoName, storyId))}`,
+      this.#contentsPath(owner, this.#path(repoName, storyId)),
       accessToken,
       {
         method: "PUT",
@@ -179,7 +189,7 @@ export class StoryService {
     await this.#validateFrameArtworks(accessToken, owner, repoName, cleanId, updated.frames, branch);
     const encoded = Buffer.from(JSON.stringify(updated, null, 2), "utf8").toString("base64");
     const result = await this.#request(
-      `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(this.#path(repoName, cleanId))}`,
+      this.#contentsPath(owner, this.#path(repoName, cleanId)),
       accessToken,
       {
         method: "PUT",
@@ -213,7 +223,7 @@ export class StoryService {
     let artworkFiles = [];
     try {
       artworkFiles = await this.#request(
-        `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(this.#albumPath(repoName, cleanId))}?ref=${encodeURIComponent(branch)}`,
+        `${this.#contentsPath(owner, this.#albumPath(repoName, cleanId))}?ref=${encodeURIComponent(branch)}`,
         accessToken
       );
     } catch (err) {
@@ -222,7 +232,7 @@ export class StoryService {
     for (const artwork of Array.isArray(artworkFiles) ? artworkFiles : []) {
       if (artwork.type !== "file" || artwork.name === "story.json") continue;
       await this.#request(
-        `/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(artwork.path)}`,
+        this.#contentsPath(owner, artwork.path),
         accessToken,
         {
           method: "DELETE",
@@ -234,7 +244,7 @@ export class StoryService {
         }
       );
     }
-    await this.#request(`/repos/${owner}/${ARTWORKS_REPOSITORY}/contents/${githubPath(this.#path(repoName, cleanId))}`, accessToken, {
+    await this.#request(this.#contentsPath(owner, this.#path(repoName, cleanId)), accessToken, {
       method: "DELETE",
       body: JSON.stringify({
         message: `delete(story): remove ${cleanId}`,
@@ -247,6 +257,12 @@ export class StoryService {
 
   async addFrame(accessToken, user, owner, repoName, storyId, frame, sha, branch = "master") {
     this.#requireOwner(user, owner, repoName);
+    if (!frame || typeof frame !== "object" || Array.isArray(frame)) {
+      const err = new Error("Frame payload must be an object.");
+      err.status = 400;
+      err.code = "VALIDATION_ERROR";
+      throw err;
+    }
     const current = await this.getStory(accessToken, owner, repoName, storyId, branch);
     const next = {
       ...current.story,
@@ -255,7 +271,7 @@ export class StoryService {
         {
           artworkId: frame.artworkId,
           artworkPath: frame.artworkPath || `${frame.artworkId}.json`,
-          durationMs: frame.durationMs || current.story.defaultFrameDurationMs,
+          durationMs: frame.durationMs ?? current.story.defaultFrameDurationMs,
         },
       ],
     };
