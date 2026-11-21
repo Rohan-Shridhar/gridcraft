@@ -13,13 +13,24 @@ const FrameSchema = z.object({
   durationMs: z.number().int().min(20).max(10000),
 });
 
-export const CreateStoryInputSchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional().default(""),
-  loop: z.boolean().optional().default(true),
-  defaultFrameDurationMs: z.number().int().min(20).max(10000).optional().default(150),
-  frames: z.array(FrameSchema).optional().default([]),
-});
+export const CreateStoryInputSchema = z
+  .object({
+    name: z
+      .string()
+      .min(1)
+      .max(100)
+      .refine((value) => sanitizeStoryId(value).length > 0, {
+        message: "Story name must include at least one letter or number.",
+      }),
+    description: z.string().max(500).optional().default(""),
+    loop: z.boolean().optional().default(true),
+    defaultFrameDurationMs: z.number().int().min(20).max(10000).optional().default(150),
+    frames: z.array(FrameSchema).optional().default([]),
+  })
+  .refine(
+    (data) => data.frames.every((frame) => frame.artworkPath === `${frame.artworkId}.json`),
+    { message: "Each frame artworkPath must match artworkId", path: ["frames"] }
+  );
 
 export const StorySchema = z
   .object({

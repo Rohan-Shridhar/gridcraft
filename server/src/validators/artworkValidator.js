@@ -16,7 +16,8 @@ export function sanitizeArtworkId(input) {
     .replace(/[^a-z0-9-]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 100);
+    .slice(0, 100)
+    .replace(/-+$/, "");
 }
 
 export function isValidColor(color) {
@@ -29,7 +30,13 @@ export function isValidBackgroundColor(color) {
 }
 
 export const CreateArtworkInputSchema = z.object({
-  name: z.string().min(1, "Artwork name is required").max(100),
+  name: z
+    .string()
+    .min(1, "Artwork name is required")
+    .max(100)
+    .refine((value) => sanitizeArtworkId(value).length > 0, {
+      message: "Artwork name must include at least one letter or number.",
+    }),
   description: z.string().max(500).optional().default(""),
   gridSize: z.number().refine((val) => SUPPORTED_GRID_SIZES.includes(val), {
     message: "gridSize must be one of 16, 32, 64, or 128",

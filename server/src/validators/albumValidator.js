@@ -9,7 +9,8 @@ export function slugifyRepoName(input) {
     .replace(/[^a-z0-9-]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 100);
+    .slice(0, 100)
+    .replace(/-+$/, "");
 }
 
 export const CreateAlbumSchema = z.object({
@@ -28,7 +29,12 @@ export const CreateAlbumSchema = z.object({
 });
 
 export const UpdateAlbumSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Album name is required")
+    .max(100, "Album name must be 100 characters or fewer")
+    .optional(),
   description: z.string().max(350).optional(),
 });
 
