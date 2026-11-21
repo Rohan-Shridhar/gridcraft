@@ -1,4 +1,12 @@
-const SENSITIVE_QUERY_PARAMS = new Set(["code", "state", "token", "access_token", "secret"]);
+const SENSITIVE_QUERY_PARAMS = new Set([
+  "code",
+  "state",
+  "token",
+  "access_token",
+  "refresh_token",
+  "secret",
+  "client_secret",
+]);
 const SENSITIVE_HEADERS = new Set([
   "authorization",
   "cookie",
@@ -13,7 +21,7 @@ const SENSITIVE_HEADERS = new Set([
 export function sanitizeUrl(url) {
   try {
     const parsed = new URL(url, "http://localhost");
-    for (const key of parsed.searchParams.keys()) {
+    for (const key of new Set(parsed.searchParams.keys())) {
       if (SENSITIVE_QUERY_PARAMS.has(key.toLowerCase())) {
         parsed.searchParams.set(key, "[REDACTED]");
       }
@@ -27,7 +35,8 @@ export function sanitizeUrl(url) {
 /**
  * Sanitizes headers object by masking tokens, authorization, and cookies.
  */
-export function sanitizeHeaders(headers = {}) {
+export function sanitizeHeaders(headers) {
+  if (!headers || typeof headers !== "object") return {};
   const sanitized = {};
   for (const [key, value] of Object.entries(headers)) {
     if (SENSITIVE_HEADERS.has(key.toLowerCase())) {
