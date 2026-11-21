@@ -72,4 +72,42 @@ describe("Branch GitHub operations", () => {
       assert.throws(() => assertSafeBranchName(invalid), (error) => error.status === 400);
     }
   });
+
+  it("enforces max branch length, rejects no-op renames, and normalizes pagination in listBranches/listCommits", async () => {
+    assert.throws(
+      () => assertSafeBranchName("a".repeat(256)),
+      (error) => error.status === 400
+    );
+
+    let renameCalled = false;
+    const calls = [];
+    const service = new BranchService(async (url, options) => {
+      calls.push(new URL(url));
+      if (options?.method === "POST") renameCalled = true;
+      if (url.includes("/branches?")) {
+        return response([{ name: "main", commit: { sha: "abc1234567" }, protected: false }]);
+      }
+      if (url.includes("/commits?")) {
+        return response([{ sha: "abc1234567", commit: { message: "init", author: { name: "dev", date: "2026-01-01T00:00:00Z" } } }]);
+      }
+      return response({ default_branch: "main" });
+    });
+
+    await assert.rejects(
+      () => service.renameBranch("token", "owner", "repo", "feature", { newName: "feature" }),
+      (error) => error.status === 400
+    );
+    assert.equal(renameCalled, false);
+
+    const branchList = await service.listBranches("token", "owner", "repo", { page: 0, perPage: 500 });
+    assert.equal(branchList.page, 1);
+    assert.equal(branchList.perPage, 100);
+    assert.equal(calls[0].searchParams.get("page"), "1");
+    assert.equal(calls[0].searchParams.get("per_page"), "100");
+
+    await service.listCommits("token", "owner", "repo", "main", { page: Number.NaN, perPage: -5 });
+    const commitCall = calls.find((u) => u.pathname.endsWith("/commits"));
+    assert.equal(commitCall.searchParams.get("page"), "1");
+    assert.equal(commitCall.searchParams.get("per_page"), "20");
+  });
 });

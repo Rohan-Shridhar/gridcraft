@@ -3,7 +3,14 @@ import { z } from "zod";
 export const BRANCH_NAME_REGEX = /^(?!\/)(?!-)(?!.*\.\.)(?!.*\/\/)(?!^\.)(?!.*\/\.)(?!.*\.lock(?:\/|$))[A-Za-z0-9._\-\/]+(?<!\/)(?<!\.)$/;
 
 export function assertSafeBranchName(name) {
-  if (!name || typeof name !== "string" || name === "HEAD" || !BRANCH_NAME_REGEX.test(name) || name.includes("\\")) {
+  if (
+    !name ||
+    typeof name !== "string" ||
+    name.length > 255 ||
+    name === "HEAD" ||
+    !BRANCH_NAME_REGEX.test(name) ||
+    name.includes("\\")
+  ) {
     const err = new Error("Invalid branch name");
     err.status = 400;
     err.code = "VALIDATION_ERROR";
