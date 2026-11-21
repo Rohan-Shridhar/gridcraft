@@ -146,4 +146,55 @@ describe("Album folder metadata", () => {
       store.close();
     }
   });
+
+  it("normalizes listAlbums pagination, rejects truncated trees and unreadable manifests, and guards listCommits fields", async () => {
+    const user = { id: 9, login: "artist", name: "Artist" };
+    const store = new AppStore(":memory:");
+    store.createAlbum(user, { slug: "forest", name: "Forest" });
+
+    const service = new AlbumService(async (url) => {
+      const requestUrl = new URL(url);
+      if (requestUrl.pathname === "/repos/artist/gridcraft-artworks") {
+        return response({
+          default_branch: "main",
+          private: false,
+          owner: { id: 9, login: "artist" },
+        });
+      }
+      if (requestUrl.pathname.endsWith("/contents/forest/album.json")) {
+        return response({ sha: "no-content-sha" });
+      }
+      if (requestUrl.pathname.endsWith("/git/trees/main")) {
+        return response({ truncated: true, tree: [] });
+      }
+      if (requestUrl.pathname.endsWith("/commits")) {
+        return response([{}]);
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    }, store);
+
+    try {
+      const listed = await service.listAlbums("token", { page: 0, perPage: 500 });
+      assert.equal(listed.page, 1);
+      assert.equal(listed.perPage, 100);
+      assert.equal(listed.albums.length, 1);
+
+      await assert.rejects(
+        () => service.getAlbum("token", "artist", "forest"),
+        (err) => err.status === 422
+      );
+
+      await assert.rejects(
+        () => service.getTree("token", "artist", "forest", "main"),
+        (err) => err.status === 422
+      );
+
+      const commits = await service.listCommits("token", "artist", "forest", "main");
+      assert.equal(commits.length, 1);
+      assert.equal(commits[0].shortSha, "");
+      assert.equal(commits[0].message, "");
+    } finally {
+      store.close();
+    }
+  });
 });

@@ -14,10 +14,34 @@ function albumPath(slug) {
   return slug;
 }
 
+function normalizePagination(page, perPage) {
+  const parsedPage = Number.parseInt(page, 10);
+  const parsedPerPage = Number.parseInt(perPage, 10);
+  return {
+    page: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1,
+    perPage:
+      Number.isFinite(parsedPerPage) && parsedPerPage > 0
+        ? Math.min(100, parsedPerPage)
+        : 30,
+  };
+}
+
+function parseManifestFile(file, filePath) {
+  if (!file || typeof file.content !== "string" || !file.content) {
+    const error = new Error(`Album manifest has no readable content: ${filePath}`);
+    error.status = 422;
+    error.code = "VALIDATION_ERROR";
+    throw error;
+  }
+  return AlbumManifestSchema.parse(
+    JSON.parse(Buffer.from(file.content, "base64").toString("utf8"))
+  );
+}
+
 function mapAlbumToApi(album) {
   const branch = album.defaultBranch || "master";
   const parentBranch = album.parent?.defaultBranch || branch;
-  const htmlUrl = `https://github.com/${album.owner}/${ARTWORKS_REPOSITORY}/tree/${encodeURIComponent(branch)}/${albumPath(album.slug)}`;
+  const htmlUrl = `https://github.com/${encodeURIComponent(album.owner)}/${ARTWORKS_REPOSITORY}/tree/${encodeURIComponent(branch)}/${albumPath(album.slug)}`;
   return {
     id: album.id,
     name: album.name,
@@ -39,7 +63,7 @@ function mapAlbumToApi(album) {
           name: album.parent.slug,
           slug: album.parent.slug,
           fullName: `${album.parent.owner}/${ARTWORKS_REPOSITORY}/${albumPath(album.parent.slug)}`,
-          htmlUrl: `https://github.com/${album.parent.owner}/${ARTWORKS_REPOSITORY}/tree/${encodeURIComponent(parentBranch)}/${albumPath(album.parent.slug)}`,
+          htmlUrl: `https://github.com/${encodeURIComponent(album.parent.owner)}/${ARTWORKS_REPOSITORY}/tree/${encodeURIComponent(parentBranch)}/${albumPath(album.parent.slug)}`,
         }
       : null,
   };
@@ -138,9 +162,7 @@ export class AlbumService {
     for (const item of manifests) {
       const slug = item.path.split("/")[0];
       const file = await this.#readFile(accessToken, user.login, item.path, branch);
-      const manifest = AlbumManifestSchema.parse(
-        JSON.parse(Buffer.from(file.content, "base64").toString("utf8"))
-      );
+      const manifest = parseManifestFile(file, item.path);
       if (manifest.id !== slug) {
         const error = new Error(`Album manifest id does not match its folder: ${item.path}`);
         error.status = 422;
@@ -201,7 +223,8 @@ export class AlbumService {
       const repository = await this.#ensureRepository(accessToken, user);
       await this.#syncUserAlbums(accessToken, user, repository);
     }
-    const result = this.store.listAlbums({ page, perPage });
+    const pagination = normalizePagination(page, perPage);
+    const result = this.store.listAlbums(pagination);
     const albums = result.albums.map(mapAlbumToApi);
     return { ...result, albums };
   }
@@ -397,10 +420,9 @@ export class AlbumService {
     rootRepo ||= await this.#getRepository(accessToken, owner);
     const defaultBranch = rootRepo.default_branch || "master";
     this.store.setUserDefaultBranch(album.ownerId, defaultBranch);
-    const file = await this.#readFile(accessToken, owner, `${albumPath(album.slug)}/album.json`, defaultBranch);
-    const manifest = AlbumManifestSchema.parse(
-      JSON.parse(Buffer.from(file.content, "base64").toString("utf8"))
-    );
+    const manifestPath = `${albumPath(album.slug)}/album.json`;
+    const file = await this.#readFile(accessToken, owner, manifestPath, defaultBranch);
+    const manifest = parseManifestFile(file, manifestPath);
     return {
       repo: {
         ...mapAlbumToApi({ ...album, defaultBranch }),
@@ -426,9 +448,7 @@ export class AlbumService {
     const rootRepo = await this.#getRepository(accessToken, owner);
     const branch = rootRepo.default_branch || "master";
     const file = await this.#readFile(accessToken, owner, filePath, branch);
-    const currentManifest = AlbumManifestSchema.parse(
-      JSON.parse(Buffer.from(file.content, "base64").toString("utf8"))
-    );
+    const currentManifest = parseManifestFile(file, filePath);
     const manifest = AlbumManifestSchema.parse({
       ...currentManifest,
       name: validated.name || currentManifest.name,
@@ -495,12 +515,12 @@ export class AlbumService {
     );
     return (data || []).map((commit) => ({
       sha: commit.sha,
-      shortSha: commit.sha.slice(0, 7),
-      message: commit.commit.message,
-      author: commit.commit.author?.name,
-      authorLogin: commit.author?.login || commit.commit.author?.name,
+      shortSha: typeof commit.sha === "string" ? commit.sha.slice(0, 7) : "",
+      message: commit.commit?.message || "",
+      author: commit.commit?.author?.name,
+      authorLogin: commit.author?.login || commit.commit?.author?.name,
       authorAvatar: commit.author?.avatar_url || null,
-      date: commit.commit.author?.date,
+      date: commit.commit?.author?.date,
       htmlUrl: commit.html_url,
     }));
   }
@@ -510,6 +530,11 @@ export class AlbumService {
       `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
       accessToken
     );
+    if (data.truncated) {
+      const error = new Error("The artwork library tree is too large to safely enumerate.");
+      error.status = 422;
+      throw error;
+    }
     const prefix = `${albumPath(slug)}/`;
     return (data.tree || [])
       .filter((item) => item.path.startsWith(prefix))
