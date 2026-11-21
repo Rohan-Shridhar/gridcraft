@@ -10,12 +10,26 @@ export function loadSession(req, res, next) {
     return next();
   }
 
+  const clearCookieOptions = {
+    httpOnly: true,
+    secure: config.isProduction,
+    sameSite: "lax",
+    path: "/",
+  };
+
   const payload = verifySessionPayload(sessionCookie, config.session.secret);
-  if (!payload || !payload.user || !payload.createdAt) {
+  if (
+    !payload ||
+    !payload.user ||
+    typeof payload.user !== "object" ||
+    Array.isArray(payload.user) ||
+    typeof payload.createdAt !== "number" ||
+    !Number.isFinite(payload.createdAt)
+  ) {
     req.session = null;
     req.user = null;
     // Clear corrupted/tampered cookie
-    res.clearCookie(config.session.cookieName, { path: "/" });
+    res.clearCookie(config.session.cookieName, clearCookieOptions);
     return next();
   }
 
@@ -23,7 +37,7 @@ export function loadSession(req, res, next) {
   if (Date.now() - payload.createdAt > config.session.maxAgeMs) {
     req.session = null;
     req.user = null;
-    res.clearCookie(config.session.cookieName, { path: "/" });
+    res.clearCookie(config.session.cookieName, clearCookieOptions);
     return next();
   }
 

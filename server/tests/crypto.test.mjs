@@ -73,4 +73,25 @@ describe("Crypto and Session Utility Tests", () => {
     const verifiedWrongSig = verifySessionPayload(`${parts[0]}.invalidsignature`, secretKey);
     assert.equal(verifiedWrongSig, null);
   });
+
+  it("rejects malformed encrypted token hex segments and non-object session payloads", () => {
+    assert.throws(
+      () => decryptToken("nothex:nothex:abcd", secretKey),
+      /Invalid encrypted payload structure/
+    );
+    assert.throws(
+      () => decryptToken("aa:bb:cc", secretKey),
+      /Invalid encrypted payload structure/
+    );
+    assert.throws(
+      () => decryptToken(12345, secretKey),
+      /Invalid encrypted payload structure/
+    );
+
+    const signedArray = signSessionPayload([1, 2, 3], secretKey);
+    assert.equal(verifySessionPayload(signedArray, secretKey), null);
+
+    const signedString = signSessionPayload("hello", secretKey);
+    assert.equal(verifySessionPayload(signedString, secretKey), null);
+  });
 });

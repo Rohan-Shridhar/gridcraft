@@ -199,4 +199,24 @@ describe("Backend Health and Authentication API Integration Tests", () => {
     assert.equal(authRes.status, 200);
     assert.equal(authRes.body.success, true);
   });
+
+  it("rejects signed sessions with non-numeric createdAt or non-object user", async () => {
+    const badCreatedAt = signSessionPayload(
+      { user: { id: 1, login: "testuser" }, encryptedToken: "", createdAt: "not-a-timestamp" },
+      config.session.secret
+    );
+    const res1 = await request(app)
+      .post("/api/v1/auth/disconnect")
+      .set("Cookie", [`${config.session.cookieName}=${badCreatedAt}`]);
+    assert.equal(res1.status, 401);
+
+    const badUser = signSessionPayload(
+      { user: "not-an-object", encryptedToken: "", createdAt: Date.now() },
+      config.session.secret
+    );
+    const res2 = await request(app)
+      .post("/api/v1/auth/disconnect")
+      .set("Cookie", [`${config.session.cookieName}=${badUser}`]);
+    assert.equal(res2.status, 401);
+  });
 });
