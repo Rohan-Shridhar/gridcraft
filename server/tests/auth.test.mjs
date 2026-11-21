@@ -49,11 +49,12 @@ describe("Backend Health and Authentication API Integration Tests", () => {
       .get("/api/v1/auth/github/callback?code=mock_code&state=fake_state")
       .set("Accept", "application/json");
 
+    const frontendHost = new URL(config.frontendUrl).host;
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, "STATE_COOKIE_MISSING");
     assert.equal(
       res.body.error.message,
-      "Sign-in session cookie was not received. Start sign-in from https://<frontend host> and make sure cookies are enabled."
+      `Sign-in session cookie was not received. Start sign-in from ${frontendHost} in a fresh tab and make sure cookies are enabled.`
     );
     assert.equal(res.header["cache-control"], "no-store");
   });

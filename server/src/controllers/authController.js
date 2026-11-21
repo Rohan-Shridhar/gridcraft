@@ -18,6 +18,15 @@ function frontendBaseUrl() {
   return String(config.frontendUrl || "").replace(/\/+$/, "");
 }
 
+function frontendHost() {
+  const frontendUrl = frontendBaseUrl();
+  try {
+    return new URL(frontendUrl).host;
+  } catch {
+    return frontendUrl.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/.*$/, "");
+  }
+}
+
 function statesMatch(received, expected) {
   if (typeof received !== "string" || typeof expected !== "string" || !received || !expected) {
     return false;
@@ -92,7 +101,7 @@ export class AuthController {
       const code = cookiePresent ? "INVALID_STATE" : "STATE_COOKIE_MISSING";
       const msg = cookiePresent
         ? "Invalid or expired OAuth state. Please try signing in again."
-        : "Sign-in session cookie was not received. Start sign-in from https://<frontend host> and make sure cookies are enabled.";
+        : `Sign-in session cookie was not received. Start sign-in from ${frontendHost()} in a fresh tab and make sure cookies are enabled.`;
       if (wantsJson) {
         return res.status(400).json({ error: { code, message: msg } });
       }
