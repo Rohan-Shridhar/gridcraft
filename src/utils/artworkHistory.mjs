@@ -11,12 +11,28 @@ export function artworkHistoryReducer(state, action) {
     case "resetHistory":
       return { ...state, history: [], future: [] };
     case "paint": {
-      if (state.cells[action.index] === action.color) return state;
+      if (
+        !Number.isInteger(action.index) ||
+        action.index < 0 ||
+        action.index >= state.cells.length ||
+        state.cells[action.index] === action.color
+      ) {
+        return state;
+      }
       const cells = [...state.cells];
       cells[action.index] = action.color;
       return replaceCells(state, cells);
     }
     case "fill": {
+      if (
+        !Number.isInteger(action.index) ||
+        action.index < 0 ||
+        action.index >= state.cells.length ||
+        !Number.isInteger(action.gridSize) ||
+        action.gridSize <= 0
+      ) {
+        return state;
+      }
       const cells = floodFill(
         state.cells,
         action.index,
@@ -26,15 +42,19 @@ export function artworkHistoryReducer(state, action) {
       );
       return cells === state.cells ? state : replaceCells(state, cells);
     }
-    case "fillEmpty":
+    case "fillEmpty": {
+      if (action.color === null || !state.cells.includes(null)) return state;
       return replaceCells(
         state,
         state.cells.map((cell) => (cell === null ? action.color : cell))
       );
+    }
     case "replace":
       return replaceCells(state, [...action.cells]);
-    case "clear":
+    case "clear": {
+      if (state.cells.every((cell) => cell === null)) return state;
       return replaceCells(state, Array(state.cells.length).fill(null));
+    }
     case "undo":
       if (!state.history.length) return state;
       return {

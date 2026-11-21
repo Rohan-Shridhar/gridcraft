@@ -161,3 +161,15 @@ test("filling empty cells retains preceding paint and its undo snapshot", () => 
     "wall",
   ]);
 });
+
+test("out-of-bounds paint/fill and no-op clear/fillEmpty preserve state and redo history", () => {
+  const empty = createArtworkHistory([null, null, null, null]);
+  assert.equal(update(empty, { type: "clear" }), empty);
+  assert.equal(update(empty, { type: "paint", index: -1, color: "red" }), empty);
+  assert.equal(update(empty, { type: "paint", index: 4, color: "red" }), empty);
+  assert.equal(update(empty, { type: "fill", index: -1, color: "red", gridSize: 2 }), empty);
+  assert.equal(update(empty, { type: "fill", index: 4, color: "red", gridSize: 2 }), empty);
+
+  const full = createArtworkHistory(["red", "red", "red", "red"]);
+  assert.equal(update(full, { type: "fillEmpty", color: "blue" }), full);
+});
