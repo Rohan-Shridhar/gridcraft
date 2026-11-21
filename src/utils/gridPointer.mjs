@@ -1,7 +1,11 @@
 function cellIndex(grid, target) {
   const cell = target?.closest?.("[data-cell-index]");
   if (!cell || !grid.contains(cell)) return null;
-  return Number(cell.dataset.cellIndex);
+  const raw = cell.dataset?.cellIndex;
+  if (typeof raw !== "string" || raw.trim() === "") return null;
+  const index = Number(raw);
+  if (!Number.isInteger(index) || index < 0) return null;
+  return index;
 }
 
 export function createGridPointerHandlers(
