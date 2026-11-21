@@ -1,6 +1,18 @@
 import { assertSafeBranchName, CreateBranchSchema, RenameBranchSchema } from "../validators/branchValidator.js";
 import { githubRequest } from "../utils/githubClient.js";
 
+function normalizePagination(page, perPage, defaultPerPage) {
+  const parsedPage = Number.parseInt(page, 10);
+  const parsedPerPage = Number.parseInt(perPage, 10);
+  return {
+    page: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1,
+    perPage:
+      Number.isFinite(parsedPerPage) && parsedPerPage > 0
+        ? Math.min(100, parsedPerPage)
+        : defaultPerPage,
+  };
+}
+
 export class BranchService {
   constructor(fetchFn = globalThis.fetch) {
     this.fetch = fetchFn;
@@ -12,9 +24,10 @@ export class BranchService {
   }
 
   async listBranches(accessToken, owner, repoName, { page = 1, perPage = 30 } = {}) {
+    const pagination = normalizePagination(page, perPage, 30);
     const repoPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}`;
     const { data, headers } = await this.#request(
-      `${repoPath}/branches?per_page=${perPage}&page=${page}`,
+      `${repoPath}/branches?per_page=${pagination.perPage}&page=${pagination.page}`,
       accessToken
     );
     const repo = await this.#request(repoPath, accessToken);
@@ -27,8 +40,8 @@ export class BranchService {
         isDefault: branch.name === defaultBranch,
       })),
       defaultBranch,
-      page,
-      perPage,
+      page: pagination.page,
+      perPage: pagination.perPage,
       link: headers.get("link"),
     };
   }
@@ -77,6 +90,12 @@ export class BranchService {
     assertSafeBranchName(branchName);
     const { newName } = RenameBranchSchema.parse(input);
     assertSafeBranchName(newName);
+    if (newName === branchName) {
+      const err = new Error("New branch name must differ from the current branch name.");
+      err.status = 400;
+      err.code = "VALIDATION_ERROR";
+      throw err;
+    }
     const repoPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}`;
     const repository = await this.#request(repoPath, accessToken);
     if (branchName === repository.data.default_branch) {
@@ -146,17 +165,18 @@ export class BranchService {
 
   async listCommits(accessToken, owner, repoName, branch = "master", { page = 1, perPage = 20 } = {}) {
     assertSafeBranchName(branch);
+    const pagination = normalizePagination(page, perPage, 20);
     const { data } = await this.#request(
-      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/commits?sha=${encodeURIComponent(branch)}&page=${page}&per_page=${perPage}`,
+      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/commits?sha=${encodeURIComponent(branch)}&page=${pagination.page}&per_page=${pagination.perPage}`,
       accessToken
     );
     return (data || []).map((c) => ({
       sha: c.sha,
-      shortSha: c.sha.slice(0, 7),
-      message: c.commit.message,
-      authorLogin: c.author?.login || c.commit.author?.name,
+      shortSha: typeof c.sha === "string" ? c.sha.slice(0, 7) : "",
+      message: c.commit?.message || "",
+      authorLogin: c.author?.login || c.commit?.author?.name,
       authorAvatar: c.author?.avatar_url || null,
-      date: c.commit.author?.date,
+      date: c.commit?.author?.date,
       htmlUrl: c.html_url,
     }));
   }
