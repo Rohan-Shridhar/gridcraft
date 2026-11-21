@@ -7,6 +7,7 @@ import { signSessionPayload, encryptToken } from "../src/utils/crypto.js";
 import {
   slugifyRepoName,
   CreateAlbumSchema,
+  UpdateAlbumSchema,
   AlbumManifestSchema,
 } from "../src/validators/albumValidator.js";
 
@@ -16,6 +17,7 @@ describe("Album Validator Tests", () => {
     assert.equal(slugifyRepoName("  Sword & Shield!!  "), "sword-shield");
     assert.equal(slugifyRepoName("Pixel_Art_123"), "pixel-art-123");
     assert.equal(slugifyRepoName("---spaced---"), "spaced");
+    assert.equal(slugifyRepoName("a".repeat(99) + "-bb"), "a".repeat(99));
   });
 
   it("validates album fields and derives a folder name from the title", () => {
@@ -26,6 +28,7 @@ describe("Album Validator Tests", () => {
     assert.equal(valid.name, "Pixel Creatures");
     assert.equal(slugifyRepoName(valid.name), "pixel-creatures");
     assert.throws(() => CreateAlbumSchema.parse({ name: "!!!" }));
+    assert.throws(() => UpdateAlbumSchema.parse({ name: "   " }));
   });
 
   it("validates album manifest schema", () => {

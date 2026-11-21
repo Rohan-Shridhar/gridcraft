@@ -11,6 +11,7 @@ import {
   SUPPORTED_GRID_SIZES,
 } from "../src/validators/artworkValidator.js";
 import { ArtworkService } from "../src/services/artworkService.js";
+import { CreateStoryInputSchema } from "../src/validators/storyValidator.js";
 
 describe("Artwork Validator and Data Model Tests", () => {
   it("sanitizes artwork IDs and prevents path traversal", () => {
@@ -18,6 +19,15 @@ describe("Artwork Validator and Data Model Tests", () => {
     assert.equal(sanitizeArtworkId("../../danger/file"), "danger-file");
     assert.equal(sanitizeArtworkId("creeper_face_v2!"), "creeper-face-v2");
     assert.equal(sanitizeArtworkId("  ---trim-me---  "), "trim-me");
+    assert.equal(sanitizeArtworkId("a".repeat(99) + "-bb"), "a".repeat(99));
+    assert.throws(() => CreateArtworkInputSchema.parse({ name: "!!!", gridSize: 16 }));
+    assert.throws(() => CreateStoryInputSchema.parse({ name: "!!!" }));
+    assert.throws(() =>
+      CreateStoryInputSchema.parse({
+        name: "Walk Cycle",
+        frames: [{ artworkId: "frame-1", artworkPath: "other.json", durationMs: 120 }],
+      })
+    );
   });
 
   it("validates exact pixel round-trips for all supported grid sizes: 16, 32, 64, 128", () => {
