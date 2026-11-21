@@ -59,9 +59,9 @@ export function requireAuth(req, res, next) {
 }
 
 export function getSessionAccessToken(req) {
-  if (!req.session?.encryptedToken) return null;
+  if (!req?.session?.encryptedToken) return null;
   try {
-    return decryptToken(req.session.encryptedToken, config.session.encryptionKey);
+    return decryptToken(req.session.encryptedToken, config.session.encryptionKey) || null;
   } catch (err) {
     console.error("Failed to decrypt session token:", err.message);
     return null;
