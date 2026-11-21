@@ -77,9 +77,24 @@ export class AuthController {
 
     // 2. Validate state against stored state cookie (CSRF prevention)
     if (!statesMatch(state, storedState)) {
-      const msg = "Invalid or expired OAuth state. Please try signing in again.";
+      const cookiePresent = storedState !== undefined;
+      console.warn(
+        "[OAUTH_STATE_FAILURE]",
+        JSON.stringify({
+          cookiePresent,
+          hostname: req.hostname,
+          protocol: req.protocol,
+          forwardedProto: req.get("x-forwarded-proto") || null,
+          statePresent: state !== undefined,
+        })
+      );
+
+      const code = cookiePresent ? "INVALID_STATE" : "STATE_COOKIE_MISSING";
+      const msg = cookiePresent
+        ? "Invalid or expired OAuth state. Please try signing in again."
+        : "Sign-in session cookie was not received. Start sign-in from https://<frontend host> and make sure cookies are enabled.";
       if (wantsJson) {
-        return res.status(400).json({ error: { code: "INVALID_STATE", message: msg } });
+        return res.status(400).json({ error: { code, message: msg } });
       }
       return res.redirect(`${frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
     }

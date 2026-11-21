@@ -39,6 +39,7 @@ export function createApp({
   forkController,
 } = {}) {
   const app = express();
+  app.set("trust proxy", 1);
 
   let resolvedAuthRoutes = authRoutes;
   if (authController) {

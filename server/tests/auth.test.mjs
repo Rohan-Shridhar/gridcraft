@@ -20,6 +20,7 @@ describe("Backend Health and Authentication API Integration Tests", () => {
   it("initiates GitHub OAuth and sets a secure state cookie", async () => {
     const res = await request(app).get("/api/v1/auth/github");
     assert.equal(res.status, 302);
+    assert.equal(res.header["cache-control"], "no-store");
     assert.ok(res.header.location.startsWith("https://github.com/login/oauth/authorize"));
     assert.ok(res.header.location.includes("client_id="));
     assert.ok(res.header.location.includes("state="));
@@ -49,7 +50,8 @@ describe("Backend Health and Authentication API Integration Tests", () => {
       .set("Accept", "application/json");
 
     assert.equal(res.status, 400);
-    assert.equal(res.body.error.code, "INVALID_STATE");
+    assert.equal(res.body.error.code, "STATE_COOKIE_MISSING");
+    assert.equal(res.header["cache-control"], "no-store");
   });
 
   it("rejects callback with 400 when OAuth state does not match cookie", async () => {
@@ -60,6 +62,7 @@ describe("Backend Health and Authentication API Integration Tests", () => {
 
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, "INVALID_STATE");
+    assert.equal(res.header["cache-control"], "no-store");
   });
 
   it("handles OAuth cancellation error from GitHub", async () => {

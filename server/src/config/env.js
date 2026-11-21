@@ -6,7 +6,8 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
-  isProduction: (process.env.NODE_ENV || "development") === "production",
+  isProduction:
+    process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production",
   port: parseInt(process.env.PORT || "4000", 10),
   frontendUrl: (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, ""),
   backendUrl: (process.env.BACKEND_URL || "http://localhost:4000").replace(/\/$/, ""),
