@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { config } from "./config/env.js";
+import { assertProductionSecrets, config } from "./config/env.js";
 import { APP_NAME, APP_VERSION } from "./config/version.js";
 import { requestLogger } from "./middleware/logger.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
@@ -38,6 +38,7 @@ export function createApp({
   forkService,
   forkController,
 } = {}) {
+  assertProductionSecrets(config);
   const app = express();
   app.set("trust proxy", 1);
 

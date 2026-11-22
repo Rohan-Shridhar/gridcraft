@@ -7,6 +7,8 @@ export function AuthProvider({ children, showToast }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [setupRequired, setSetupRequired] = useState(false);
+  const [setupCode, setSetupCode] = useState(null);
 
   const fetchCurrentUser = useCallback(async () => {
     try {
@@ -31,15 +33,27 @@ export function AuthProvider({ children, showToast }) {
     const params = new URLSearchParams(window.location.search);
     const authSuccess = params.get("auth_success");
     const authError = params.get("auth_error");
+    const setup = params.get("setup");
+    const requestedSetupCode = params.get("setup_code");
 
-    if (authSuccess) {
+    if (setup === "required") {
+      setSetupRequired(true);
+      setSetupCode(requestedSetupCode || "LIBRARY_SETUP_REQUIRED");
+    }
+
+    if (authSuccess || authError || params.has("setup") || params.has("setup_code")) {
       params.delete("auth_success");
+      params.delete("auth_error");
+      params.delete("setup");
+      params.delete("setup_code");
       const cleanUrl =
         window.location.pathname +
         (params.toString() ? `?${params.toString()}` : "") +
         window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
+    }
 
+    if (authSuccess) {
       fetchCurrentUser().then(() => {
         if (showToast) showToast("Signed in with GitHub successfully!", "success");
       });
@@ -47,13 +61,6 @@ export function AuthProvider({ children, showToast }) {
     }
 
     if (authError) {
-      params.delete("auth_error");
-      const cleanUrl =
-        window.location.pathname +
-        (params.toString() ? `?${params.toString()}` : "") +
-        window.location.hash;
-      window.history.replaceState({}, document.title, cleanUrl);
-
       setError(authError);
       if (showToast) showToast(`Sign in error: ${authError}`, "error");
       setIsLoading(false);
@@ -62,6 +69,11 @@ export function AuthProvider({ children, showToast }) {
 
     fetchCurrentUser();
   }, [fetchCurrentUser, showToast]);
+
+  const clearSetupNotice = useCallback(() => {
+    setSetupRequired(false);
+    setSetupCode(null);
+  }, []);
 
   const login = useCallback(() => {
     window.location.href = apiClient.getLoginUrl();
@@ -86,6 +98,9 @@ export function AuthProvider({ children, showToast }) {
     isAuthenticated: !!user,
     isLoading,
     error,
+    setupRequired,
+    setupCode,
+    clearSetupNotice,
     login,
     logout,
     refresh: fetchCurrentUser,

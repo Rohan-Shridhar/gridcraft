@@ -16,13 +16,13 @@ export function createAuthRoutes(controller = defaultAuthController) {
   router.get("/github/callback", preventCaching, controller.handleGitHubCallback);
 
   // Current user profile
-  router.get("/me", controller.getCurrentUser);
+  router.get("/me", preventCaching, controller.getCurrentUser);
 
   // Sign out
-  router.post("/logout", controller.logout);
+  router.post("/logout", preventCaching, controller.logout);
 
   // Disconnect / revoke
-  router.post("/disconnect", requireAuth, controller.disconnect);
+  router.post("/disconnect", preventCaching, requireAuth, controller.disconnect);
 
   return router;
 }

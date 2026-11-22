@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
 import { createApp } from "../src/app.js";
-import { config } from "../src/config/env.js";
+import { assertProductionSecrets, config } from "../src/config/env.js";
 import { signSessionPayload, encryptToken } from "../src/utils/crypto.js";
 import { AuthController } from "../src/controllers/authController.js";
 
@@ -140,9 +140,68 @@ describe("Backend Health and Authentication API Integration Tests", () => {
     assert.equal(initializedLibrary.user.login, "pixelcrafter");
   });
 
+  it("keeps the session when library setup is required", async () => {
+    const validState = "valid_setup_state";
+    const customApp = createApp({
+      authService: {
+        exchangeCodeForToken: async () => ({ accessToken: "test-access-token" }),
+        fetchUserProfile: async () => ({
+          id: 43,
+          login: "setupuser",
+          name: "Setup User",
+          avatarUrl: "https://avatars.githubusercontent.com/u/43",
+          htmlUrl: "https://github.com/setupuser",
+        }),
+      },
+      artworkLibraryService: {
+        initializeExistingRepo: async () => {
+          const error = new Error("Library setup is required");
+          error.status = 409;
+          error.code = "LIBRARY_SETUP_REQUIRED";
+          error.stage = "repo_create";
+          error.githubMethod = "POST";
+          error.githubPath = "/user/repos";
+          error.githubStatus = 403;
+          throw error;
+        },
+      },
+    });
+
+    const originalWarn = console.warn;
+    let setupWarning;
+    console.warn = (message) => {
+      setupWarning = message;
+    };
+    let res;
+    try {
+      res = await request(customApp)
+        .get(`/api/v1/auth/github/callback?code=setup_code&state=${validState}`)
+        .set("Cookie", [`${config.session.stateCookieName}=${validState}`]);
+    } finally {
+      console.warn = originalWarn;
+    }
+
+    assert.equal(res.status, 302);
+    assert.equal(
+      setupWarning,
+      "[AUTH_SETUP_WARN] stage=repo_create method=POST path=/user/repos status=403 code=LIBRARY_SETUP_REQUIRED"
+    );
+    assert.ok(!setupWarning.includes("test-access-token"));
+    const redirect = new URL(res.header.location);
+    assert.equal(redirect.searchParams.get("auth_success"), "1");
+    assert.equal(redirect.searchParams.get("setup"), "required");
+    assert.equal(redirect.searchParams.get("setup_code"), "LIBRARY_SETUP_REQUIRED");
+    const sessionCookie = res.header["set-cookie"]?.find((cookie) =>
+      cookie.startsWith(`${config.session.cookieName}=`)
+    );
+    assert.ok(sessionCookie);
+    assert.match(sessionCookie, /HttpOnly/i);
+  });
+
   it("returns unauthenticated for GET /api/v1/auth/me when no session cookie is provided", async () => {
     const res = await request(app).get("/api/v1/auth/me");
     assert.equal(res.status, 200);
+    assert.equal(res.header["cache-control"], "no-store");
     assert.equal(res.body.authenticated, false);
     assert.equal(res.body.user, null);
   });
@@ -170,6 +229,7 @@ describe("Backend Health and Authentication API Integration Tests", () => {
       .set("Cookie", [`${config.session.cookieName}=${signedCookie}`]);
 
     assert.equal(res.status, 200);
+    assert.equal(res.header["cache-control"], "no-store");
     assert.equal(res.body.authenticated, true);
     assert.deepEqual(res.body.user, userPayload);
   });
@@ -177,6 +237,7 @@ describe("Backend Health and Authentication API Integration Tests", () => {
   it("POST /api/v1/auth/logout clears the session cookie", async () => {
     const res = await request(app).post("/api/v1/auth/logout");
     assert.equal(res.status, 200);
+    assert.equal(res.header["cache-control"], "no-store");
     assert.equal(res.body.success, true);
 
     const setCookie = res.header["set-cookie"];
@@ -191,6 +252,7 @@ describe("Backend Health and Authentication API Integration Tests", () => {
     // Unauthenticated request should return 401
     const unauthRes = await request(app).post("/api/v1/auth/disconnect");
     assert.equal(unauthRes.status, 401);
+    assert.equal(unauthRes.header["cache-control"], "no-store");
     assert.equal(unauthRes.body.error.code, "UNAUTHORIZED");
 
     // Authenticated request
@@ -205,7 +267,57 @@ describe("Backend Health and Authentication API Integration Tests", () => {
       .set("Cookie", [`${config.session.cookieName}=${signedCookie}`]);
 
     assert.equal(authRes.status, 200);
+    assert.equal(authRes.header["cache-control"], "no-store");
     assert.equal(authRes.body.success, true);
+  });
+
+  it("requires strong distinct secrets only for production", () => {
+    const productionConfig = (session, nodeEnv = "production", isProduction = true) => ({
+      isProduction,
+      nodeEnv,
+      session,
+    });
+    const goodSecrets = {
+      secret: "session-secret-with-at-least-32-characters",
+      encryptionKey: "token-encryption-key-also-at-least-32",
+    };
+
+    assert.throws(
+      () => assertProductionSecrets(productionConfig({ secret: "", encryptionKey: goodSecrets.encryptionKey })),
+      /Production requires distinct/
+    );
+    assert.throws(
+      () => assertProductionSecrets(productionConfig({ secret: goodSecrets.secret, encryptionKey: "" })),
+      /Production requires distinct/
+    );
+    assert.throws(
+      () => assertProductionSecrets(productionConfig({
+        secret: "gridcraft-session-dev-secret-replace-in-prod-32ch",
+        encryptionKey: goodSecrets.encryptionKey,
+      })),
+      /Production requires distinct/
+    );
+    assert.throws(
+      () => assertProductionSecrets(productionConfig({ secret: "short", encryptionKey: goodSecrets.encryptionKey })),
+      /Production requires distinct/
+    );
+    assert.throws(
+      () => assertProductionSecrets(productionConfig({
+        secret: goodSecrets.secret,
+        encryptionKey: goodSecrets.secret,
+      })),
+      /Production requires distinct/
+    );
+    assert.doesNotThrow(() => assertProductionSecrets(productionConfig(goodSecrets)));
+    assert.doesNotThrow(() => assertProductionSecrets(productionConfig(
+      { secret: "", encryptionKey: "" },
+      "test"
+    )));
+    assert.doesNotThrow(() => assertProductionSecrets(productionConfig(
+      { secret: "", encryptionKey: "" },
+      "development",
+      false
+    )));
   });
 
   it("rejects signed sessions with non-numeric createdAt or non-object user", async () => {

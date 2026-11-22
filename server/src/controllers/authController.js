@@ -117,41 +117,14 @@ export class AuthController {
       return res.redirect(`${frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
     }
 
+    let tokenData;
+    let user;
     try {
       // 4. Exchange code for user access token
-      const tokenData = await this.service.exchangeCodeForToken(code);
+      tokenData = await this.service.exchangeCodeForToken(code);
 
       // 5. Fetch user profile from GitHub
-      const user = await this.service.fetchUserProfile(tokenData.accessToken);
-
-      await this.libraryService.initializeExistingRepo(tokenData.accessToken, user);
-
-      // 6. Encrypt access token at rest for session storage
-      const encryptedToken = encryptToken(
-        tokenData.accessToken,
-        config.session.encryptionKey
-      );
-
-      // 7. Sign session payload
-      const sessionPayload = {
-        user,
-        encryptedToken,
-        createdAt: Date.now(),
-      };
-
-      const signedSession = signSessionPayload(sessionPayload, config.session.secret);
-
-      // 8. Set HttpOnly session cookie
-      res.cookie(config.session.cookieName, signedSession, {
-        ...authCookieOptions(),
-        maxAge: config.session.maxAgeMs,
-      });
-
-      if (wantsJson) {
-        return res.json({ authenticated: true, user });
-      }
-
-      return res.redirect(`${frontendUrl}/?auth_success=1`);
+      user = await this.service.fetchUserProfile(tokenData.accessToken);
     } catch (err) {
       console.error("[AUTH_CALLBACK_ERROR]", err?.message || err);
       const msg = err?.message || "Failed to complete GitHub sign-in.";
@@ -167,6 +140,53 @@ export class AuthController {
       }
       return res.redirect(`${frontendUrl}/?auth_error=${encodeURIComponent(msg)}`);
     }
+
+    // 6. Encrypt the token and issue the authenticated session before optional setup.
+    const encryptedToken = encryptToken(
+      tokenData.accessToken,
+      config.session.encryptionKey
+    );
+    const sessionPayload = {
+      user,
+      encryptedToken,
+      createdAt: Date.now(),
+    };
+    const signedSession = signSessionPayload(sessionPayload, config.session.secret);
+    res.cookie(config.session.cookieName, signedSession, {
+      ...authCookieOptions(),
+      maxAge: config.session.maxAgeMs,
+    });
+
+    try {
+      await this.libraryService.initializeExistingRepo(tokenData.accessToken, user);
+    } catch (err) {
+      const expectedCodes = new Set([
+        "LIBRARY_SETUP_REQUIRED",
+        "APP_NOT_INSTALLED",
+        "APP_PERMISSION_DENIED",
+      ]);
+      const setupCode = expectedCodes.has(err?.code) ? err.code : "UNKNOWN";
+      const safeLogValue = (value) =>
+        typeof value === "string" && /^[A-Za-z0-9_]+$/.test(value) ? value : "unknown";
+      const status = Number.isInteger(err?.githubStatus)
+        ? err.githubStatus
+        : Number.isInteger(err?.status)
+          ? err.status
+          : "unknown";
+
+      console.warn(
+        `[AUTH_SETUP_WARN] stage=${safeLogValue(err?.stage)} method=${safeLogValue(err?.githubMethod)} path=${typeof err?.githubPath === "string" ? err.githubPath : "unknown"} status=${status} code=${setupCode}`
+      );
+      return res.redirect(
+        `${frontendUrl}/?auth_success=1&setup=required&setup_code=${encodeURIComponent(setupCode)}`
+      );
+    }
+
+    if (wantsJson) {
+      return res.json({ authenticated: true, user });
+    }
+
+    return res.redirect(`${frontendUrl}/?auth_success=1`);
   };
 
   getCurrentUser = (req, res) => {

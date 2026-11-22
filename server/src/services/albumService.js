@@ -7,8 +7,49 @@ import {
 import { APP_VERSION } from "../config/version.js";
 import { githubRequest } from "../utils/githubClient.js";
 import { appStore } from "./appStore.js";
+import { config } from "../config/env.js";
 
 export const ARTWORKS_REPOSITORY = "gridcraft-artworks";
+
+function setupError(originalError, status, code, userMessage) {
+  const error = new Error(originalError.message);
+  error.status = status;
+  error.code = code;
+  error.userMessage = userMessage;
+  error.installUrl = `https://github.com/apps/${encodeURIComponent(config.github.appSlug)}/installations/new`;
+  error.stage = originalError.stage;
+  error.githubMethod = originalError.githubMethod;
+  error.githubPath = originalError.githubPath;
+  error.githubStatus = originalError.githubStatus ?? originalError.status;
+  return error;
+}
+
+function librarySetupRequired(error) {
+  return setupError(
+    error,
+    409,
+    "LIBRARY_SETUP_REQUIRED",
+    "Create a public repository named gridcraft-artworks (with a README) on your GitHub account, then install the gridcraft-auth GitHub App on it."
+  );
+}
+
+function appNotInstalled(error) {
+  return setupError(
+    error,
+    403,
+    "APP_NOT_INSTALLED",
+    "Install the gridcraft-auth GitHub App on your gridcraft-artworks repository, then retry."
+  );
+}
+
+function appPermissionDenied(error) {
+  return setupError(
+    error,
+    403,
+    "APP_PERMISSION_DENIED",
+    "gridcraft-auth needs Contents: Read and write on gridcraft-artworks. Accept any pending permission update."
+  );
+}
 
 function albumPath(slug) {
   return slug;
@@ -79,10 +120,11 @@ export class AlbumService {
     return githubRequest(this.fetch, endpoint, accessToken, options);
   }
 
-  async #getRepository(accessToken, owner) {
+  async #getRepository(accessToken, owner, requestOptions = {}) {
     const { data } = await this.#request(
       `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}`,
-      accessToken
+      accessToken,
+      requestOptions
     );
     return data;
   }
@@ -90,14 +132,16 @@ export class AlbumService {
   async #ensureRepository(accessToken, user) {
     let repository;
     try {
-      repository = await this.#getRepository(accessToken, user.login);
+      repository = await this.#getRepository(accessToken, user.login, { stage: "repo_get" });
     } catch (error) {
+      if (error.status === 403) throw appNotInstalled(error);
       if (error.status !== 404) throw error;
     }
 
     if (!repository) {
       try {
         const { data } = await this.#request("/user/repos", accessToken, {
+          stage: "repo_create",
           method: "POST",
           body: JSON.stringify({
             name: ARTWORKS_REPOSITORY,
@@ -109,8 +153,17 @@ export class AlbumService {
         });
         repository = data;
       } catch (error) {
+        if (error.status === 403 || error.status === 404) {
+          throw librarySetupRequired(error);
+        }
         if (error.status !== 422) throw error;
-        repository = await this.#getRepository(accessToken, user.login);
+        try {
+          repository = await this.#getRepository(accessToken, user.login, { stage: "repo_get" });
+        } catch (repoError) {
+          if (repoError.status === 403) throw appNotInstalled(repoError);
+          if (repoError.status === 404) throw librarySetupRequired(repoError);
+          throw repoError;
+        }
       }
     }
 
@@ -125,17 +178,27 @@ export class AlbumService {
     const rootPath = ".gridcraft/catalog.json";
     const defaultBranch = repository.default_branch || "master";
     try {
-      await this.#readFile(accessToken, user.login, rootPath, defaultBranch);
+      await this.#readFile(accessToken, user.login, rootPath, defaultBranch, {
+        stage: "catalog_get",
+      });
     } catch (error) {
+      if (error.status === 403) throw appPermissionDenied(error);
       if (error.status !== 404) throw error;
-      await this.#writeFile(
-        accessToken,
-        user.login,
-        rootPath,
-        JSON.stringify({ format: "gridcraft-artworks", schemaVersion: 1 }, null, 2),
-        "chore: initialize GridCraft artwork library",
-        defaultBranch
-      );
+      try {
+        await this.#writeFile(
+          accessToken,
+          user.login,
+          rootPath,
+          JSON.stringify({ format: "gridcraft-artworks", schemaVersion: 1 }, null, 2),
+          "chore: initialize GridCraft artwork library",
+          defaultBranch,
+          undefined,
+          { stage: "catalog_put" }
+        );
+      } catch (writeError) {
+        if (writeError.status === 403) throw appPermissionDenied(writeError);
+        throw writeError;
+      }
     }
     this.store.upsertUser(user);
     this.store.setUserDefaultBranch(user.id, defaultBranch);
@@ -182,21 +245,23 @@ export class AlbumService {
     }
   }
 
-  async #readFile(accessToken, owner, filePath, branch = "master") {
+  async #readFile(accessToken, owner, filePath, branch = "master", requestOptions = {}) {
     const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
     const { data } = await this.#request(
       `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`,
-      accessToken
+      accessToken,
+      requestOptions
     );
     return data;
   }
 
-  async #writeFile(accessToken, owner, filePath, content, message, branch = "master", sha) {
+  async #writeFile(accessToken, owner, filePath, content, message, branch = "master", sha, requestOptions = {}) {
     const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
     const { data } = await this.#request(
       `/repos/${encodeURIComponent(owner)}/${ARTWORKS_REPOSITORY}/contents/${encodedPath}`,
       accessToken,
       {
+        ...requestOptions,
         method: "PUT",
         body: JSON.stringify({
           message,

@@ -37,6 +37,7 @@ export function errorHandler(err, req, res, next) {
       message: isBodyTooLarge
         ? "Request body exceeds the 2 MB limit."
         : zodMessage || errorObj.userMessage || errorObj.message || "An unexpected error occurred.",
+      ...(errorObj.installUrl ? { installUrl: errorObj.installUrl } : {}),
       ...(config.nodeEnv === "test" && errorObj.details ? { details: errorObj.details } : {}),
     },
   });

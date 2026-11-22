@@ -1,11 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 import apiClient from "../services/apiClient.js";
+import useAuth from "../hooks/useAuth.jsx";
 import CreateAlbumModal from "./CreateAlbumModal.jsx";
 
+const SETUP_ERROR_CODES = new Set([
+  "LIBRARY_SETUP_REQUIRED",
+  "APP_NOT_INSTALLED",
+  "APP_PERMISSION_DENIED",
+]);
+const DEFAULT_INSTALL_URL = "https://github.com/apps/gridcraft-auth/installations/new";
+
 export function DashboardShell({ user, onOpenEditor, onSelectAlbum, showToast }) {
+  const { setupRequired, setupCode, clearSetupNotice } = useAuth();
   const [albums, setAlbums] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [apiSetupNotice, setApiSetupNotice] = useState(null);
+  const [setupDismissed, setSetupDismissed] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [page, setPage] = useState(1);
@@ -17,9 +28,20 @@ export function DashboardShell({ user, onOpenEditor, onSelectAlbum, showToast })
       setError(null);
       const res = await apiClient.listAlbums(page, perPage);
       setAlbums(res.albums || []);
+      setApiSetupNotice(null);
     } catch (err) {
       console.error("Failed to load albums:", err);
-      setError(err.message || "Could not retrieve albums from GitHub.");
+      const apiError = err.data?.error;
+      if (SETUP_ERROR_CODES.has(apiError?.code)) {
+        setApiSetupNotice({
+          code: apiError.code,
+          installUrl: apiError.installUrl,
+        });
+        setSetupDismissed(false);
+        setError(null);
+      } else {
+        setError(err.message || "Could not retrieve albums from GitHub.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -45,6 +67,14 @@ export function DashboardShell({ user, onOpenEditor, onSelectAlbum, showToast })
       (a.description && a.description.toLowerCase().includes(term))
     );
   });
+  const setupNotice = apiSetupNotice || (setupRequired ? { code: setupCode } : null);
+  const showSetupNotice = setupNotice && !setupDismissed;
+
+  const dismissSetupNotice = () => {
+    clearSetupNotice();
+    setApiSetupNotice(null);
+    setSetupDismissed(true);
+  };
 
   if (!user) return null;
 
@@ -80,6 +110,36 @@ export function DashboardShell({ user, onOpenEditor, onSelectAlbum, showToast })
           </button>
         </div>
       </div>
+
+      {showSetupNotice && (
+        <section className="form-error-banner" role="alert" aria-label="GitHub library setup required">
+          <div className="dashboard-setup-banner-header">
+            <strong>Finish setting up your GitHub artwork library</strong>
+            <button className="btn-secondary" type="button" onClick={dismissSetupNotice}>
+              Dismiss
+            </button>
+          </div>
+          {setupNotice.code === "APP_PERMISSION_DENIED" ? (
+            <p>
+              gridcraft-auth needs Contents: Read and write on gridcraft-artworks. Accept any pending
+              permission update.
+            </p>
+          ) : (
+            <ol>
+              <li>Create a public repository named <code>gridcraft-artworks</code> with a README.</li>
+              <li>Install the gridcraft-auth GitHub App on that repository.</li>
+            </ol>
+          )}
+          <div className="dashboard-setup-banner-actions">
+            <a href={setupNotice.installUrl || DEFAULT_INSTALL_URL} target="_blank" rel="noreferrer">
+              Install GitHub App
+            </a>
+            <button className="btn-secondary" type="button" onClick={loadAlbums} disabled={isLoading}>
+              Retry
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Albums Section Heading & Filter Bar */}
       <div className="dashboard-section-bar">

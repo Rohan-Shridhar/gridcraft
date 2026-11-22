@@ -12,6 +12,15 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function attachRequestDetails(error, endpoint, method, stage, status) {
+  const requestError = error instanceof Error ? error : new Error(String(error));
+  if (stage) requestError.stage = stage;
+  requestError.githubMethod = method;
+  requestError.githubPath = new URL(endpoint, GITHUB_API_URL).pathname;
+  if (status !== undefined) requestError.githubStatus = status;
+  return requestError;
+}
+
 export function parseRetryAfterMs(header, fallbackMs, now = Date.now()) {
   if (typeof header !== "string") return fallbackMs;
   const trimmed = header.trim();
@@ -39,6 +48,7 @@ export function parseLinkHeader(header) {
 
 export async function githubRequest(fetchFn, endpoint, accessToken, options = {}) {
   const method = (options.method || "GET").toUpperCase();
+  const { stage, ...requestOptions } = options;
   const maxAttempts = options.retry === false || method !== "GET" ? 1 : 3;
   let lastError = null;
 
@@ -51,7 +61,12 @@ export async function githubRequest(fetchFn, endpoint, accessToken, options = {}
       ...options.headers,
     };
 
-    const response = await fetchFn(url, { ...options, headers, retry: undefined });
+    let response;
+    try {
+      response = await fetchFn(url, { ...requestOptions, headers, retry: undefined });
+    } catch (error) {
+      throw attachRequestDetails(error, url, method, stage);
+    }
     const retryAfterHeader = response.headers.get("retry-after");
     const rateRemaining = response.headers.get("x-ratelimit-remaining");
 
@@ -63,7 +78,13 @@ export async function githubRequest(fetchFn, endpoint, accessToken, options = {}
 
     if (response.status === 429 || (response.status === 403 && rateRemaining === "0")) {
       const retryAfter = parseRetryAfterMs(retryAfterHeader, 500 * 2 ** attempt);
-      lastError = githubError(data, response.status, "RATE_LIMITED");
+      lastError = attachRequestDetails(
+        githubError(data, response.status, "RATE_LIMITED"),
+        url,
+        method,
+        stage,
+        response.status
+      );
       lastError.retryAfter = retryAfterHeader;
       if (attempt < maxAttempts) {
         await sleep(retryAfter);
@@ -73,7 +94,13 @@ export async function githubRequest(fetchFn, endpoint, accessToken, options = {}
     }
 
     if (!response.ok) {
-      throw githubError(data, response.status);
+      throw attachRequestDetails(
+        githubError(data, response.status),
+        url,
+        method,
+        stage,
+        response.status
+      );
     }
 
     return { data, status: response.status, headers: response.headers };
